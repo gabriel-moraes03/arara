@@ -539,7 +539,14 @@ const globe = Globe({ animateIn: false })(el)
   .polygonCapCurvatureResolution(d => d.__lvl === 'area' ? clamp(sizeOf(d) / 8, 0.25, 4) : d.__lvl === 'municipio' || d.__lvl === 'lago' ? 1 : d.__lvl === 'estado' ? 2 : 2.5)
   .polygonLabel(d => drawMode ? '' : `<div class="tip">${esc(d.__name)}<small>${d.__lvlLabel}${d.__parent ? ' · ' + esc(d.__parent) : ''}</small></div>`)
   .onPolygonHover(d => { if (drawMode) return; hover = d; globe.polygonCapColor(capColor); el.style.cursor = d ? 'pointer' : ''; })
-  .onPolygonClick((d) => { if (dragMoved || drawMode) return; stopSpin(); selectFeature(d, { fly: true }); })
+  // o voo vai para o PONTO CLICADO (não para o centro do polígono): clicar em Minas com o Brasil na tela
+  // abre o Brasil mas mantém Minas no centro, em vez de teletransportar para o meio do país
+  .onPolygonClick((d, ev) => {
+    if (dragMoved || drawMode) return; stopSpin();
+    // não usar as coordenadas do globe.gl: ele não conhece a rotação manual deste app (gObj)
+    const at = ev ? pickGeo(ev.clientX, ev.clientY) : null;
+    selectFeature(d, { fly: true, at });
+  })
   .onGlobeClick(() => { if (!dragMoved) stopSpin(); })
   .htmlElementsData(HOTSPOTS)
   .htmlLat(d => d.lat).htmlLng(d => d.lng).htmlAltitude(d => d.kind === 'v' ? capAlt() : pin.alt)
@@ -858,7 +865,9 @@ function flyAltFor(f) {
   if (f.__lvl === 'area') return clamp(sizeOf(f) * 111 * 4.5 / (0.93 * 6371), 0.006, 0.045);
   const s = sizeOf(f);
   if (f.__lvl === 'lago') return 0.22;
-  return f.__lvl === 'municipio' ? 0.14 : f.__lvl === 'estado' ? clamp(s / 14, 0.3, 0.9) : clamp(s / 40, 0.5, 1.25);
+  if (f === mgState) return 0.4;   // Minas inteira na tela e com os municípios já desenhados (<0,42)
+  // país: no máximo 1,0, para o próximo clique já cair nos estados e não ter de aproximar à mão
+  return f.__lvl === 'municipio' ? 0.14 : f.__lvl === 'estado' ? clamp(s / 14, 0.3, 0.9) : clamp(s / 40, 0.5, 1.0);
 }
 function setSelected(f, targetAlt) {
   selected = f;
@@ -870,10 +879,12 @@ function ctxOf(f, hot) {
   if (!hot && f.__lvl === 'lago') hot = HOTSPOTS.find(h => h.id === 'furnas');
   return { f, key: f.__key, name: f.__name, lvl: f.__lvl, lvlLabel: f.__lvlLabel, parent: f.__parent, country: f.__country, lat: c.lat, lng: c.lng, hot, ha: f.__ha };
 }
-function selectFeature(f, { fly = false } = {}) {
+function selectFeature(f, { fly = false, at = null } = {}) {
   const alt = fly ? flyAltFor(f) : altitude();
   setSelected(f, alt);
-  const c = centerOf(f);
+  let c = centerOf(f);
+  // pelo clique: centraliza onde o usuário clicou; áreas, lago e Minas Gerais (enquadra o estado todo) usam o centro
+  if (at && f.__lvl !== 'area' && f.__lvl !== 'lago' && f !== mgState) c = at;
   if (fly) flyTo(c.lat, c.lng, alt);
   openPanel(ctxOf(f, null));
 }
