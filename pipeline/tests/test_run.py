@@ -18,7 +18,7 @@ def analise(tmp_path_factory):
     pasta = tmp_path_factory.mktemp("cenas")
     arquivos = [escrever(pasta / nome(d), disco(N, r), semente=i) for i, (d, r) in enumerate(zip(DATAS, RAIOS))]
     saida = tmp_path_factory.mktemp("saida")
-    spec = {"analysis_id": "teste", "aoi": mapping(aoi_lonlat(N, 60)), "local_scenes": arquivos}
+    spec = {"analysis_id": "teste", "aoi": mapping(aoi_lonlat(N, 60)), "local_scenes": arquivos, "optical": False}
     (saida / "spec.json").write_text(json.dumps(spec))
     return saida, spec
 
