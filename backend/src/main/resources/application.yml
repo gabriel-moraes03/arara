@@ -1,0 +1,55 @@
+server:
+  port: ${ARARA_PORT:8080}
+spring:
+  application:
+    name: arara
+  config:
+    import: "optional:file:.env[.properties],optional:file:../.env[.properties]"
+  datasource:
+    url: jdbc:h2:file:${arara.data-dir}/db/arara;AUTO_SERVER=FALSE
+    username: sa
+    password: ""
+  flyway:
+    enabled: true
+  jackson:
+    property-naming-strategy: SNAKE_CASE
+    default-property-inclusion: non_null
+  cache:
+    cache-names: scenes
+    caffeine:
+      spec: maximumSize=500,expireAfterWrite=1h
+
+arara:
+  # caminhos relativos à pasta backend/ (./mvnw -f backend spring-boot:run roda de lá)
+  data-dir: ${ARARA_DATA_DIR:../data}
+  pipeline-dir: ${ARARA_PIPELINE_DIR:../pipeline}
+  frontend-dir: ${ARARA_FRONTEND_DIR:../frontend}
+  python: ${ARARA_PYTHON:../.venv/bin/python}
+  algorithm-version: arara-water-0.1.0
+  asf-url: https://api.daac.asf.alaska.edu/services/search/param
+  aoi-max-km2: ${ARARA_AOI_MAX_KM2:2500}
+  max-scenes: ${ARARA_MAX_SCENES:12}
+  retention-days: ${ARARA_RETENTION_DAYS:7}
+  disk-limit-mb: ${ARARA_DISK_LIMIT_MB:4096}
+  pipeline-timeout-minutes: ${ARARA_PIPELINE_TIMEOUT_MIN:60}
+  # credenciais: só do ambiente / .env; nunca vão para log, resposta da API ou repositório
+  earthdata-username: ${EARTHDATA_USERNAME:}
+  earthdata-password: ${EARTHDATA_PASSWORD:}
+
+resilience4j:
+  retry:
+    instances:
+      asf:
+        max-attempts: 3
+        wait-duration: 1s
+  circuitbreaker:
+    instances:
+      asf:
+        sliding-window-size: 10
+        minimum-number-of-calls: 5
+        failure-rate-threshold: 60
+        wait-duration-in-open-state: 30s
+
+logging:
+  level:
+    root: INFO
