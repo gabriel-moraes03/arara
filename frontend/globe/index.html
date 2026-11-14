@@ -867,11 +867,12 @@ function crumbsOf(ctx) {
 /* ================= API do Arara: só dados reais ================= */
 const API = 'api/arara';
 function api(path, opt) {
-  return fetch(API + path, opt).then(async (r) => {
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60000);   // consulta nunca fica pendente para sempre
+  return fetch(API + path, Object.assign({ signal: ctl.signal }, opt)).finally(() => clearTimeout(timer)).then(async (r) => {
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(j.reason || `erro ${r.status} no servidor do Arara`), { status: r.status });
     return j;
-  }, () => { throw new Error('não foi possível falar com o servidor do Arara'); });
+  }, (e) => { throw new Error(e && e.name === 'AbortError' ? 'o servidor do Arara demorou mais de 60 s para responder' : 'não foi possível falar com o servidor do Arara (abra a página por http://localhost:8080/)'); });
 }
 let serverCfg = { aoi_max_km2: 2500, on_demand_available: false, on_demand_reason: 'servidor do Arara não respondeu' };
 api('/config').then(c => { serverCfg = c; }).catch(() => {});
@@ -937,7 +938,7 @@ function renderCatalogPanel(ctx) {
   const where = ctx.lvl === 'area' ? `aoi=${encodeURIComponent(JSON.stringify(geomOf(ctx)))}` : `bbox=${b.map(v => v.toFixed(5)).join(',')}`;
   live.timer = setTimeout(() => {          // debounce: mexer no período ou trocar de região não dispara uma consulta por tecla
     api(`/scenes?${where}&start=${period.start}&end=${period.end}`)
-      .then(r => { if (token === live.token && activeCtx === ctx) showCatalog(ctx, r, km2); })
+      .then(r => { if (token === live.token && activeCtx === ctx) { try { showCatalog(ctx, r, km2); } catch (err) { console.error('Arara: erro ao desenhar o catálogo', err); showUnavailable(ctx, 'erro ao mostrar o catálogo: ' + err.message); } } })
       .catch(e => { if (token === live.token && activeCtx === ctx) showUnavailable(ctx, e.message); });
   }, 600);
 }
