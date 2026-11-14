@@ -7,6 +7,7 @@ import java.time.Duration;
 import java.util.List;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.http.CacheControl;
 import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 import org.springframework.web.servlet.config.annotation.ResourceHandlerRegistry;
@@ -40,8 +41,8 @@ public class AppConfig implements WebMvcConfigurer {
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String base = Path.of(props.frontendDir()).toAbsolutePath().normalize().toUri().toString();
-        registry.addResourceHandler("/furnas/**").addResourceLocations(base + "furnas/");
-        registry.addResourceHandler("/**").addResourceLocations(base + "globe/");
+        registry.addResourceHandler("/furnas/**").addResourceLocations(base + "furnas/").setCacheControl(CacheControl.noCache());
+        registry.addResourceHandler("/**").addResourceLocations(base + "globe/").setCacheControl(CacheControl.noCache());
     }
 
     @Override

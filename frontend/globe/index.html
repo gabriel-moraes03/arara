@@ -400,6 +400,8 @@ const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const fmt = (v, d = 0) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
 const ptRegion = (() => { try { return new Intl.DisplayNames(['pt-BR'], { type: 'region' }); } catch (e) { return null; } })();
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+// abrir a página com ?reset=1 apaga o que o Arara guardou neste navegador (áreas e análises vinculadas)
+try { if (/[?&]reset(=|&|$)/.test(location.search)) { ['arara-areas-v3', 'arara-links-v1'].forEach(k => localStorage.removeItem(k)); history.replaceState(null, '', location.pathname); } } catch (e) { /* sem armazenamento */ }
 const store = {
   get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
   set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem armazenamento: segue só na sessão */ } },
