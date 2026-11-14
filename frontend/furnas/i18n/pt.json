@@ -1,6 +1,6 @@
 {
   "lang": "pt-BR",
-  "doc.title": "TerraPulse · Furnas visto pelo NISAR",
+  "doc.title": "Arara · Furnas visto pelo NISAR",
   "nav.instrument": "NISAR · banda L · trilha 024 D · frame 099",
   "nav.explore": "Explorar",
   "nav.switch": "EN",
@@ -178,5 +178,6 @@
     "out",
     "nov",
     "dez"
-  ]
+  ],
+  "nav.globe": "← Globo"
 }

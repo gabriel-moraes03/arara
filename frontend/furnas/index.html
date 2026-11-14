@@ -3,19 +3,23 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>TerraPulse · Furnas reservoir seen by NISAR</title>
+<title>Arara · Furnas reservoir seen by NISAR</title>
 <meta name="description" content="NISAR L-band radar measured the water area of Furnas reservoir (Brazil) on nine passes in 2026, checked against the official ANA water level.">
-<meta name="theme-color" content="#0e1418">
-<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e1418'/%3E%3Cpath d='M2 11h12M4 8h8M6 5h4' stroke='%237cf2c4' stroke-width='1.5'/%3E%3C/svg%3E">
+<meta name="theme-color" content="#04060c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2304060c'/%3E%3Cpath d='M4.5 12 5.6 4M8 12l1.1-8M11.5 12l1.1-8' stroke-width='1.8' stroke-linecap='round' fill='none' stroke='%23f4b63f'/%3E%3Cpath d='M3.4 12 4.5 4' stroke='%23e5482d' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M12.6 4 11.5 12' stroke='%233b8fd9' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
 
 <header class="bar">
-  <a class="brand" href="#top">Terra<span>Pulse</span></a>
+  <a class="brand" href="#top" aria-label="Arara"><span class="feather" aria-hidden="true"><i></i><i></i><i></i></span>Arara</a>
   <span class="instrument" data-i18n="nav.instrument">NISAR · L-band · Track 024 D · Frame 099</span>
   <div class="bar-actions">
+    <a class="btn back-globe" href="/" data-i18n="nav.globe">← Globe</a>
     <button class="btn btn-ghost" id="lang" type="button" data-i18n="nav.switch" data-i18n-aria="nav.switch.label">PT</button>
     <button class="btn btn-accent" id="open-explore" type="button" data-i18n="nav.explore">Explore</button>
   </div>
@@ -227,12 +231,12 @@
       <li><b data-i18n="reuse.i3.h"></b> <span data-i18n="reuse.i3"></span></li>
     </ol>
 <pre class="code"><code><span class="c" data-i18n="reuse.code.c1"></span>
-python scripts/area_agua.py data/raw/nisar \
+python pipeline/scripts/area_agua.py $FURNAS_H5_DIR \
   --poligono data/ana/furnas/Furnas.gdb --buffer 0 \
   --limiar <span id="code-limiar"></span> --saida outputs/furnas_poligono_b0
 
 <span class="c" data-i18n="reuse.code.c2"></span>
-python scripts/exportar_web.py</code></pre>
+python pipeline/scripts/exportar_web.py</code></pre>
     <p><a class="link" id="repo-link" href="#" data-i18n="reuse.link"></a> <span class="placeholder mono" id="repo-note" data-i18n="reuse.placeholder"></span></p>
   </div>
 </section>

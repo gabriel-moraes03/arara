@@ -1,4 +1,4 @@
-/* TerraPulse · app estático. Todos os números vêm de data/*.json. */
+/* Arara · estudo de Furnas, app estático. Todos os números vêm de data/*.json. */
 (() => {
   'use strict';
 
@@ -179,9 +179,9 @@
     // linha off-white de 1,6 px sobre halo escuro sutil: legível sobre água e sobre terra clara
     return L.layerGroup([
       L.geoJSON(S.geo, { interactive: false, renderer: opts.renderer,
-        style: { color: '#05080a', weight: 4, opacity: 0.45, fill: false, lineJoin: 'round' } }),
+        style: { color: '#04060c', weight: 4, opacity: 0.45, fill: false, lineJoin: 'round' } }),
       L.geoJSON(S.geo, { interactive: false, renderer: opts.renderer,
-        style: { color: '#f4efe2', weight: 1.6, opacity: 0.95, fill: false, lineJoin: 'round' } }),
+        style: { color: '#e9eef2', weight: 1.6, opacity: 0.95, fill: false, lineJoin: 'round' } }),
     ]).addTo(map);
   }
 
@@ -282,20 +282,20 @@
     const fs = (13 * 460) / Math.min(460, host.clientWidth || 460);
     s.style.fontSize = `${fs}px`;
     // satélite
-    svg('rect', { x: 24, y: 12, width: 24, height: 10, fill: 'none', stroke: '#aab1ad' }, s);
-    svg('line', { x1: 10, y1: 17, x2: 24, y2: 17, stroke: '#aab1ad' }, s);
-    svg('line', { x1: 48, y1: 17, x2: 62, y2: 17, stroke: '#aab1ad' }, s);
+    svg('rect', { x: 24, y: 12, width: 24, height: 10, fill: 'none', stroke: '#a8b6c1' }, s);
+    svg('line', { x1: 10, y1: 17, x2: 24, y2: 17, stroke: '#a8b6c1' }, s);
+    svg('line', { x1: 48, y1: 17, x2: 62, y2: 17, stroke: '#a8b6c1' }, s);
     svg('text', { x: 2, y: 34 + fs }, s).textContent = t('see.dia.sat');
     // água lisa e terreno rugoso
-    svg('line', { x1: 110, y1: 150, x2: 236, y2: 150, stroke: '#3b82d6', 'stroke-width': 2 }, s);
-    svg('path', { d: 'M296 150 l8 -6 l7 5 l9 -9 l6 7 l8 -4 l7 6 l9 -8 l7 6 l8 -5 l9 6 l6 -3 l8 5 l10 -4 l7 4 l9 -5 l6 5', fill: 'none', stroke: '#c97a34', 'stroke-width': 1.5 }, s);
+    svg('line', { x1: 110, y1: 150, x2: 236, y2: 150, stroke: '#3b8fd9', 'stroke-width': 2 }, s);
+    svg('path', { d: 'M296 150 l8 -6 l7 5 l9 -9 l6 7 l8 -4 l7 6 l9 -8 l7 6 l8 -5 l9 6 l6 -3 l8 5 l10 -4 l7 4 l9 -5 l6 5', fill: 'none', stroke: '#f4b63f', 'stroke-width': 1.5 }, s);
     // pulso na água: reflexão especular, para longe
-    svg('line', { x1: 40, y1: 24, x2: 172, y2: 148, stroke: '#7cf2c4', class: 'pulse' }, s);
-    svg('line', { x1: 172, y1: 148, x2: 262, y2: 64, stroke: '#7cf2c4', class: 'pulse', opacity: 0.5 }, s);
+    svg('line', { x1: 40, y1: 24, x2: 172, y2: 148, stroke: '#4fb6ee', class: 'pulse' }, s);
+    svg('line', { x1: 172, y1: 148, x2: 262, y2: 64, stroke: '#4fb6ee', class: 'pulse', opacity: 0.5 }, s);
     // pulso no terreno: espalha, parte volta
-    svg('line', { x1: 40, y1: 24, x2: 372, y2: 142, stroke: '#7cf2c4', class: 'pulse' }, s);
-    for (const [x2, y2] of [[408, 108], [420, 128], [352, 104], [390, 96]]) svg('line', { x1: 372, y1: 142, x2, y2, stroke: '#7cf2c4', opacity: 0.35 }, s);
-    svg('line', { x1: 372, y1: 142, x2: 58, y2: 30, stroke: '#7cf2c4', 'stroke-width': 1.5, opacity: 0.85 }, s);
+    svg('line', { x1: 40, y1: 24, x2: 372, y2: 142, stroke: '#4fb6ee', class: 'pulse' }, s);
+    for (const [x2, y2] of [[408, 108], [420, 128], [352, 104], [390, 96]]) svg('line', { x1: 372, y1: 142, x2, y2, stroke: '#4fb6ee', opacity: 0.35 }, s);
+    svg('line', { x1: 372, y1: 142, x2: 58, y2: 30, stroke: '#4fb6ee', 'stroke-width': 1.5, opacity: 0.85 }, s);
     svg('text', { x: 74, y: 4 + fs * 0.8 }, s).textContent = t('see.dia.pulse');
     const lab = document.createElement('div');
     lab.className = 'dia-labels';
@@ -540,9 +540,9 @@
     // faixa de ruído e linha esperada
     const top = serie.map((p) => `${X(p.data)},${Y(p.area_esperada_km2 + R)}`);
     const bot = serie.map((p) => `${X(p.data)},${Y(p.area_esperada_km2 - R)}`).reverse();
-    const band = svg('path', { d: `M${top.join('L')}L${bot.join('L')}Z`, fill: 'rgba(170,177,173,.11)' }, s);
+    const band = svg('path', { d: `M${top.join('L')}L${bot.join('L')}Z`, fill: 'rgba(168,182,193,.11)' }, s);
     const line = svg('path', { d: 'M' + serie.map((p) => `${X(p.data)},${Y(p.area_esperada_km2)}`).join('L'),
-      fill: 'none', stroke: '#aab1ad', 'stroke-width': 2 }, s);
+      fill: 'none', stroke: '#a8b6c1', 'stroke-width': 2 }, s);
     const last = serie[serie.length - 1];
     // rótulos diretos da ponta direita: afastados verticalmente se ficarem a menos de 18 px
     let yN = Y(last.area_nisar_km2), yE = Y(last.area_esperada_km2);
@@ -556,9 +556,9 @@
     const pts = serie.map((p, i) => {
       const gg = svg('g', { class: 'pt' }, s);
       svg('line', { x1: X(p.data), x2: X(p.data), y1: Y(p.area_esperada_km2), y2: Y(p.area_nisar_km2),
-        stroke: p.suspeita_vento ? '#c97a34' : '#7cf2c4', 'stroke-width': 1, opacity: 0.5 }, gg);
+        stroke: p.suspeita_vento ? '#f4b63f' : '#4fb6ee', 'stroke-width': 1, opacity: 0.5 }, gg);
       svg('circle', { cx: X(p.data), cy: Y(p.area_nisar_km2), r: 5.5,
-        fill: p.suspeita_vento ? '#0e1418' : '#7cf2c4', stroke: p.suspeita_vento ? '#c97a34' : '#0e1418', 'stroke-width': 2 }, gg);
+        fill: p.suspeita_vento ? '#04060c' : '#4fb6ee', stroke: p.suspeita_vento ? '#f4b63f' : '#04060c', 'stroke-width': 2 }, gg);
       if (p.suspeita_vento) {
         const tx = svg('text', { x: X(p.data) + 9, y: Y(p.area_nisar_km2) + 4, class: 'dlabel flag' }, gg);
         tx.textContent = t('proof.c1.windlbl');
@@ -615,7 +615,7 @@
     });
     svg('text', { x: W - m.r, y: H - 4, 'text-anchor': 'end' }, s).textContent = `${t('tt.level')} (m)`;
     svg('line', { x1: m.l, x2: W - m.r, y1: H - m.b, y2: H - m.b, class: 'base' }, s);
-    const cl = svg('path', { d: 'M' + curva.map((c) => `${X(c[0])},${Y(c[1])}`).join('L'), fill: 'none', stroke: '#aab1ad', 'stroke-width': 2 }, s);
+    const cl = svg('path', { d: 'M' + curva.map((c) => `${X(c[0])},${Y(c[1])}`).join('L'), fill: 'none', stroke: '#a8b6c1', 'stroke-width': 2 }, s);
     const calmC = S.calm.map((p) => p.cota_ana_m), a = Math.min(...calmC) - 0.05, b = Math.max(...calmC) + 0.05;
     // reta de mínimos quadrados nas datas calmas (a inclinação exibida vem de meta.json)
     const mc = calmC.reduce((u, v) => u + v, 0) / calmC.length;
@@ -623,10 +623,10 @@
     const sl = S.calm.reduce((u, p) => u + (p.cota_ana_m - mc) * (p.area_nisar_km2 - ma), 0) /
       S.calm.reduce((u, p) => u + (p.cota_ana_m - mc) ** 2, 0);
     const f = (c) => ma + sl * (c - mc);
-    const fl = svg('line', { x1: X(a), y1: Y(f(a)), x2: X(b), y2: Y(f(b)), stroke: '#7cf2c4', 'stroke-width': 2, 'stroke-dasharray': '6 5' }, s);
+    const fl = svg('line', { x1: X(a), y1: Y(f(a)), x2: X(b), y2: Y(f(b)), stroke: '#4fb6ee', 'stroke-width': 2, 'stroke-dasharray': '6 5' }, s);
     const pts = serie.map((p) => {
       const c = svg('circle', { cx: X(p.cota_ana_m), cy: Y(p.area_nisar_km2), r: 5.5, class: 'pt',
-        fill: p.suspeita_vento ? '#0e1418' : '#7cf2c4', stroke: p.suspeita_vento ? '#c97a34' : '#0e1418', 'stroke-width': 2 }, s);
+        fill: p.suspeita_vento ? '#04060c' : '#4fb6ee', stroke: p.suspeita_vento ? '#f4b63f' : '#04060c', 'stroke-width': 2 }, s);
       const hot = svg('circle', { cx: X(p.cota_ana_m), cy: Y(p.area_nisar_km2), r: 14, class: 'hot' }, s);
       hot.addEventListener('mousemove', (e) => tip(e, tipHtml(p)));
       hot.addEventListener('mouseleave', (e) => tip(e, null));
@@ -696,19 +696,19 @@
     // faixa de margem exposta: entre a cota e o nível máximo normal
     const pts = serie.map((p) => `${X(p.data)},${Y(p.cota_ana_m)}`);
     const xa = X(serie[0].data), xb = X(serie[serie.length - 1].data);
-    svg('path', { d: `M${pts.join('L')}L${xb},${Y(maxN)}L${xa},${Y(maxN)}Z`, fill: 'rgba(201,122,52,.16)' }, s);
-    svg('path', { d: `M${pts.join('L')}L${xb},${Y(v0)}L${xa},${Y(v0)}Z`, fill: 'rgba(59,130,214,.22)' }, s);
-    svg('line', { x1: m.l, x2: W - m.r, y1: Y(maxN), y2: Y(maxN), stroke: '#e8e3d7', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, s);
+    svg('path', { d: `M${pts.join('L')}L${xb},${Y(maxN)}L${xa},${Y(maxN)}Z`, fill: 'rgba(244,182,63,.16)' }, s);
+    svg('path', { d: `M${pts.join('L')}L${xb},${Y(v0)}L${xa},${Y(v0)}Z`, fill: 'rgba(59,143,217,.22)' }, s);
+    svg('line', { x1: m.l, x2: W - m.r, y1: Y(maxN), y2: Y(maxN), stroke: '#e9eef2', 'stroke-width': 1, 'stroke-dasharray': '3 3' }, s);
     svg('text', { x: m.l + 6, y: Y(maxN) - 7, class: 'dlabel' }, s).textContent = t('hum.g.max');
-    const ln = svg('path', { d: 'M' + pts.join('L'), fill: 'none', stroke: '#3b82d6', 'stroke-width': 2 }, s);
+    const ln = svg('path', { d: 'M' + pts.join('L'), fill: 'none', stroke: '#3b8fd9', 'stroke-width': 2 }, s);
     serie.forEach((p) => {
-      svg('circle', { cx: X(p.data), cy: Y(p.cota_ana_m), r: 4, fill: '#3b82d6', stroke: '#0e1418', 'stroke-width': 2 }, s);
+      svg('circle', { cx: X(p.data), cy: Y(p.cota_ana_m), r: 4, fill: '#3b8fd9', stroke: '#04060c', 'stroke-width': 2 }, s);
       const hot = svg('circle', { cx: X(p.data), cy: Y(p.cota_ana_m), r: 12, class: 'hot' }, s);
       hot.addEventListener('mousemove', (e) => tip(e, tipHtml(p) + `<div class="row"><span>${t('tt.storage')}</span><b>${fmt(p.volume_util_pct, 1)}%</b></div>`));
       hot.addEventListener('mouseleave', (e) => tip(e, null));
     });
     const midY = (Y(maxN) + Y(S.meta.metricas.cota_max_m)) / 2;
-    svg('text', { x: X('2026-08-20'), y: midY + 4, 'text-anchor': 'middle', class: 'dlabel', fill: '#d99a5a' }, s).textContent =
+    svg('text', { x: X('2026-08-20'), y: midY + 4, 'text-anchor': 'middle', class: 'dlabel', fill: '#f7c566' }, s).textContent =
       `${S.V.gapmin}–${S.V.gapmax} m`;
     svg('text', { x: X('2026-08-20'), y: Y(S.meta.metricas.cota_min_m) + 26, 'text-anchor': 'middle', class: 'dlabel' }, s).textContent = t('hum.g.season');
     if (animate && !REDUCED) {
@@ -722,7 +722,7 @@
 
   /* ---------------- 10 · fontes ---------------- */
   function fillConfig() {
-    const C = window.TP_CONFIG || {};
+    const C = window.ARARA_CONFIG || {};
     const team = (C.team || []).filter(Boolean);
     const dd = $('#team');
     dd.textContent = team.join(' · ');
@@ -798,7 +798,7 @@
     try {
       await load();
     } catch (err) {
-      document.body.insertAdjacentHTML('afterbegin', `<p style="padding:80px 24px;color:#d99a5a;font:14px monospace">Could not load data (${err.message}). Serve this folder over HTTP: python -m http.server</p>`);
+      document.body.insertAdjacentHTML('afterbegin', `<p style="padding:80px 24px;color:#f7c566;font:14px monospace">Could not load data (${err.message}). Serve this folder over HTTP: python -m http.server</p>`);
       throw err;
     }
     const q = new URLSearchParams(location.search).get('lang');

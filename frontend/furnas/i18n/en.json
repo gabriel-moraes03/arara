@@ -1,6 +1,6 @@
 {
   "lang": "en",
-  "doc.title": "TerraPulse · Furnas reservoir seen by NISAR",
+  "doc.title": "Arara · Furnas reservoir seen by NISAR",
   "nav.instrument": "NISAR · L-band · Track 024 D · Frame 099",
   "nav.explore": "Explore",
   "nav.switch": "PT",
@@ -178,5 +178,6 @@
     "Oct",
     "Nov",
     "Dec"
-  ]
+  ],
+  "nav.globe": "← Globe"
 }
