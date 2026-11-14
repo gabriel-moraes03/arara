@@ -1,0 +1,27 @@
+# prompt de trabalho (anexos de ~1,3 MB)
+PROMPT_ARARA_COMPLETO.md
+
+# ambiente e build
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+target/
+.env
+
+# dados brutos e pesados (não versionados; Furnas entra por FURNAS_H5_DIR)
+data/raw/
+*.h5
+data/cache/
+data/analyses/
+data/db/
+*.zip
+*.gdb/
+*.pdf
+
+# sistema/editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/

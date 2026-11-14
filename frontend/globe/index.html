@@ -1,0 +1,1503 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Arara</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: globo em tela cheia sobre um céu estrelado; HUD flutuante nos cantos; painel de região à direita (folha inferior no celular); histórico detalhado em tela cheia por cima. Visual escuro único, de propósito. */
+:root {
+  --space: #04060c;
+  --ink: #e9eef2;
+  --ink-2: #a8b6c1;
+  --ink-3: #6e7f8c;
+  --glass: rgba(10, 16, 26, 0.9);
+  --glass-line: rgba(160, 196, 214, 0.16);
+  --macaw-yellow: #f4b63f;
+  --macaw-red: #e5482d;
+  --macaw-blue: #3b8fd9;
+  /* uma cor por variável */
+  --v-agua: #4fb6ee;
+  --vc: var(--v-agua);
+  --down: #f07a6a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+html, body { height: 100%; }
+body { background: var(--space); color: var(--ink); font-family: var(--font-body); font-size: 14px; overflow: hidden; }
+#app { position: relative; height: 100%; overflow: hidden; }
+#stars, #globe { position: absolute; inset: 0; }
+#stars { width: 100%; height: 100%; display: block; }
+#globe { cursor: grab; touch-action: none; z-index: 1; isolation: isolate; }
+#globe.dragging { cursor: grabbing; }
+#globe.drawing { cursor: crosshair; }
+button { font-family: var(--font-body); }
+
+/* ---------- topo ---------- */
+.top {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 8;
+  display: flex; align-items: flex-start; justify-content: space-between; gap: 16px; flex-wrap: wrap;
+  padding-block: 18px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+.top > * { pointer-events: auto; }
+.brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
+.brand h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+.feather { display: inline-flex; gap: 3px; }
+.feather i { width: 6px; height: 20px; border-radius: 6px 6px 1px 1px; display: block; transform: skewX(-14deg); }
+.brand p { margin: 0; color: var(--ink-2); font-size: 13px; max-width: 34ch; }
+
+.search { position: relative; width: min(360px, 100%); }
+.search input {
+  width: 100%; box-sizing: border-box; height: 42px; padding: 0 14px 0 38px;
+  background: var(--glass); color: var(--ink); border: 1px solid var(--glass-line); border-radius: 10px;
+  font: 14px var(--font-body);
+}
+.search input::placeholder { color: var(--ink-3); }
+.search input:focus { outline: 2px solid var(--macaw-yellow); outline-offset: 1px; }
+.search > svg { position: absolute; left: 12px; top: 12px; width: 18px; height: 18px; color: var(--ink-3); }
+.results {
+  position: absolute; top: 48px; left: 0; right: 0; margin: 0; padding: 4px; list-style: none;
+  background: rgba(10, 16, 26, 0.97); border: 1px solid var(--glass-line); border-radius: 10px; max-height: 340px; overflow-y: auto;
+}
+.results li button {
+  width: 100%; text-align: left; display: flex; justify-content: space-between; gap: 12px; align-items: baseline;
+  padding: 9px 10px; border: 0; background: transparent; color: var(--ink); font: 14px var(--font-body); border-radius: 7px; cursor: pointer;
+}
+.results li button:hover, .results li button:focus-visible, .results li button.active { background: rgba(244, 182, 63, 0.14); outline: none; }
+.results li small { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+.results li.hint { padding: 8px 10px; color: var(--ink-3); font-size: 12px; }
+
+/* ---------- HUD inferior ---------- */
+.hud {
+  position: absolute; left: 0; bottom: 0; z-index: 4;
+  display: flex; flex-direction: column; gap: 10px; align-items: flex-start;
+  padding-block: 18px;
+  padding-left: max(20px, env(safe-area-inset-left, 0px));
+  padding-right: max(20px, env(safe-area-inset-right, 0px));
+  pointer-events: none; max-width: 100%; box-sizing: border-box;
+}
+.hud > * { pointer-events: auto; }
+.seg { display: flex; gap: 4px; padding: 4px; background: var(--glass); border: 1px solid var(--glass-line); border-radius: 10px; flex-wrap: wrap; }
+.levels span { padding: 6px 10px; border-radius: 7px; font-size: 12px; color: var(--ink-3); letter-spacing: 0.02em; transition: background .3s, color .3s; }
+.levels span.on { background: rgba(255, 255, 255, 0.08); color: var(--ink); }
+.varsw button { display: inline-flex; align-items: center; gap: 7px; border: 0; background: transparent; color: var(--ink-2); padding: 6px 10px; border-radius: 7px; font-size: 12.5px; cursor: pointer; }
+.varsw button i { width: 9px; height: 9px; border-radius: 50%; background: var(--c); }
+.varsw button[aria-pressed="true"] { background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--c); }
+.varsw button:focus-visible { outline: 2px solid var(--macaw-yellow); }
+.legend { display: flex; gap: 10px; align-items: center; padding: 8px 12px; font-size: 12px; color: var(--ink-2); background: var(--glass); border: 1px solid var(--glass-line); border-radius: 10px; flex-wrap: wrap; }
+.legend .ramp { width: 110px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #26323a, var(--vc)); }
+.legend small { font-family: var(--font-mono); color: var(--ink-3); font-size: 11px; }
+.hint { font-size: 12px; color: var(--ink-3); }
+.btns { display: flex; gap: 8px; flex-wrap: wrap; }
+.btn {
+  display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
+  border-radius: 9px; border: 1px solid var(--glass-line); background: var(--glass); color: var(--ink);
+  font: 500 13px var(--font-body); cursor: pointer; white-space: nowrap;
+}
+.btn:hover { border-color: rgba(244, 182, 63, 0.5); }
+.btn:focus-visible { outline: 2px solid var(--macaw-yellow); outline-offset: 2px; }
+.btn svg { width: 14px; height: 14px; flex: none; }
+.btn.primary { background: var(--macaw-yellow); color: #1a1205; border-color: transparent; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn:disabled { opacity: 0.45; cursor: not-allowed; }
+
+/* ---------- menu "Minha área" ---------- */
+.areamenu {
+  position: absolute; z-index: 7; left: max(20px, env(safe-area-inset-left, 0px)); bottom: 150px; width: min(340px, calc(100% - 40px));
+  background: rgba(8, 13, 22, 0.97); border: 1px solid var(--glass-line); border-radius: 12px; padding: 14px; box-sizing: border-box;
+  display: flex; flex-direction: column; gap: 10px;
+}
+.areamenu h3 { margin: 0; font-family: var(--font-display); font-size: 17px; }
+.areamenu p { margin: 0; color: var(--ink-2); font-size: 12.5px; line-height: 1.5; }
+.opt { display: flex; gap: 12px; align-items: flex-start; text-align: left; width: 100%; padding: 10px 12px; border-radius: 9px; border: 1px solid var(--glass-line); background: rgba(255, 255, 255, 0.02); color: var(--ink); cursor: pointer; font-size: 13.5px; }
+.opt:hover, .opt:focus-visible { border-color: var(--macaw-yellow); outline: none; }
+.opt svg { width: 18px; height: 18px; color: var(--macaw-yellow); flex: none; margin-top: 1px; }
+.opt span { display: flex; flex-direction: column; gap: 2px; }
+.opt small { color: var(--ink-3); font-size: 12px; }
+.saved { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.saved li { display: flex; gap: 6px; align-items: center; }
+.saved li button.go { flex: 1; min-width: 0; text-align: left; border: 0; background: rgba(255, 255, 255, 0.04); color: var(--ink); padding: 8px 10px; border-radius: 7px; cursor: pointer; font-size: 13px; display: flex; justify-content: space-between; gap: 8px; }
+.saved li button.go small { color: var(--ink-3); font-family: var(--font-mono); font-size: 11px; white-space: nowrap; }
+.saved li button.del { border: 0; background: transparent; color: var(--ink-3); cursor: pointer; padding: 6px 8px; border-radius: 6px; }
+.saved li button.del:hover { color: var(--down); }
+.eyebrow { font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); }
+
+/* ---------- barra de desenho ---------- */
+.drawbar {
+  position: absolute; z-index: 7; left: 50%; transform: translateX(-50%); top: 84px; width: max-content; max-width: calc(100% - 32px);
+  display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center;
+  padding: 10px 12px; background: rgba(8, 13, 22, 0.95); border: 1px solid var(--macaw-yellow); border-radius: 12px; box-sizing: border-box;
+}
+.drawbar p { margin: 0; font-size: 13px; color: var(--ink-2); }
+.drawbar b { color: var(--ink); font-weight: 600; font-variant-numeric: tabular-nums; }
+.vtx { width: 10px; height: 10px; margin: -5px 0 0 -5px; border-radius: 50%; background: #fff; box-shadow: 0 0 0 3px rgba(244, 182, 63, 0.7); pointer-events: none; }
+.vtx.first { width: 14px; height: 14px; margin: -7px 0 0 -7px; background: var(--macaw-yellow); }
+
+/* ---------- cards no globo ---------- */
+.hs { position: relative; width: 0; height: 0; transition: opacity .35s; }
+.hs .pin { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; cursor: pointer;
+  background: radial-gradient(circle at 34% 30%, #fff 0 8%, color-mix(in srgb, var(--c) 70%, #fff) 22%, var(--c) 48%, color-mix(in srgb, var(--c) 45%, #000) 100%);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.55), inset -2px -3px 4px rgba(0, 0, 0, 0.25); }
+.hs .card, .hs .pin { pointer-events: auto; }
+.hs .card {
+  position: absolute; left: 14px; bottom: 14px; width: 210px; padding: 10px 12px; border-radius: 10px; cursor: pointer; text-align: left;
+  background: var(--glass); border: 1px solid var(--glass-line); color: var(--ink);
+ 
+  font: 13px var(--font-body); display: flex; flex-direction: column; gap: 4px;
+  transition: border-color .2s, transform .2s, opacity .25s;
+}
+.hs .card:hover, .hs .card:focus-visible { border-color: var(--c, var(--macaw-yellow)); transform: translateY(-2px); outline: none; }
+.hs .tag { font-family: var(--font-mono); font-size: 10px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--ink-3); }
+.hs .title { font-weight: 600; font-size: 13.5px; line-height: 1.25; }
+.hs .metric { display: block; font-family: var(--font-mono); font-size: 12px; color: var(--ink-2); }
+.hs .metric i { display: inline-block; width: 8px; height: 8px; border-radius: 50%; background: var(--c); margin-right: 6px; }
+.hs .metric b { font-weight: 500; color: var(--c); }
+.hs .metric b.down { color: var(--down); }
+.hs.compact .card { width: max-content; max-width: 200px; padding: 5px 9px; font-size: 12px; }
+.hs.compact .title { font-size: 12px; font-weight: 500; }
+.hs.compact .tag, .hs.compact .metric { display: none; }
+.hs.dot .card { opacity: 0; pointer-events: none; }
+.hs.dot:hover .card { opacity: 1; pointer-events: auto; }
+.hs.dot .pin { cursor: pointer; }
+.hs.off { opacity: 0; pointer-events: none; }
+.hs.off * { pointer-events: none !important; }
+@keyframes ping { from { transform: scale(0.6); opacity: 1; } to { transform: scale(2); opacity: 0; } }
+
+.tip { padding: 6px 10px; border-radius: 8px; background: rgba(6, 10, 18, 0.92); border: 1px solid var(--glass-line); font-size: 12.5px; color: var(--ink); font-family: var(--font-body); }
+.tip small { display: block; color: var(--ink-3); font-size: 11px; }
+
+/* ---------- painel ---------- */
+#panel {
+  position: absolute; z-index: 6; top: 84px; right: max(16px, env(safe-area-inset-right, 0px)); bottom: 16px;
+  width: min(400px, calc(100% - 32px)); box-sizing: border-box; overflow-y: auto;
+  background: rgba(8, 13, 22, 0.94); border: 1px solid var(--glass-line); border-radius: 14px;
+ 
+  padding: 18px 18px 20px; display: flex; flex-direction: column; gap: 16px; animation: slidein .35s ease;
+}
+@keyframes slidein { from { transform: translateX(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+.ph { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.ph > div { min-width: 0; }
+.crumb { margin: 0 0 4px; font-size: 12px; color: var(--ink-3); }
+#panel h2, #detail h2 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 26px; letter-spacing: -0.015em; line-height: 1.1; text-wrap: balance; overflow-wrap: anywhere; }
+.sub { margin: 6px 0 0; color: var(--ink-2); font-size: 12.5px; }
+.close { flex: none; width: 34px; height: 34px; border-radius: 8px; border: 1px solid var(--glass-line); background: transparent; color: var(--ink-2); cursor: pointer; font-size: 18px; line-height: 1; }
+.close:hover { color: var(--ink); border-color: var(--ink-3); }
+.close:focus-visible { outline: 2px solid var(--macaw-yellow); }
+.example { display: inline-flex; gap: 6px; align-items: center; align-self: flex-start; padding: 4px 9px; border-radius: 999px; background: rgba(255, 255, 255, 0.06); color: var(--ink-2); font-size: 11.5px; }
+
+.tabs { display: grid; grid-template-columns: repeat(3, 1fr); gap: 4px; padding: 4px; border-radius: 10px; background: rgba(255, 255, 255, 0.04); }
+.tabs button { display: inline-flex; justify-content: center; align-items: center; gap: 7px; border: 0; background: transparent; color: var(--ink-2); padding: 8px 4px; border-radius: 7px; font: 500 12.5px var(--font-body); cursor: pointer; }
+.tabs button i { width: 8px; height: 8px; border-radius: 50%; background: var(--c); }
+.tabs button[aria-selected="true"] { background: color-mix(in srgb, var(--c) 18%, transparent); color: var(--c); }
+.tabs button:focus-visible { outline: 2px solid var(--macaw-yellow); }
+
+.now { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+.now .val { font-family: var(--font-display); font-size: 40px; font-weight: 700; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; color: var(--vc); }
+.now .val small { font-family: var(--font-body); font-size: 14px; font-weight: 500; color: var(--ink-2); margin-left: 4px; letter-spacing: 0; }
+.now .lbl { font-size: 12px; color: var(--ink-3); margin-top: 6px; }
+.delta { font-family: var(--font-mono); font-size: 12.5px; padding: 5px 9px; border-radius: 999px; white-space: nowrap; }
+.delta.up { background: color-mix(in srgb, var(--vc) 16%, transparent); color: var(--vc); }
+.delta.down { background: rgba(240, 122, 106, 0.14); color: var(--down); }
+
+.chart svg { width: 100%; height: auto; display: block; }
+.axis { fill: var(--ink-3); font: 10px var(--font-mono); }
+.chart-key { display: flex; gap: 14px; flex-wrap: wrap; font-size: 11.5px; color: var(--ink-3); margin-top: 6px; }
+.chart-key span { display: inline-flex; gap: 6px; align-items: center; }
+.chart-key i { width: 16px; height: 0; border-top: 2px solid var(--vc); display: inline-block; }
+.chart-key i.fc { border-top-style: dashed; opacity: 0.8; }
+.chart-key i.ev { width: 0; height: 0; border: 5px solid transparent; border-top: 7px solid var(--ink); border-bottom: 0; }
+
+.facts { display: grid; gap: 10px; }
+.fact { padding: 12px 14px; border-radius: 10px; border: 1px solid var(--glass-line); display: flex; flex-direction: column; gap: 6px; }
+.fact h3 { margin: 0; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; font-weight: 600; display: flex; justify-content: space-between; gap: 8px; align-items: center; }
+.fact p { margin: 0; line-height: 1.5; color: var(--ink); font-size: 13.5px; }
+.fact .chip { font-family: var(--font-mono); font-size: 10.5px; text-transform: none; letter-spacing: 0; padding: 3px 7px; border-radius: 999px; font-weight: 400; white-space: nowrap; }
+.fact.detected { background: color-mix(in srgb, var(--vc) 7%, transparent); }
+.fact.detected h3 { color: var(--vc); }
+.fact.detected .chip { background: color-mix(in srgb, var(--vc) 16%, transparent); color: var(--vc); }
+.fact.cause { border-style: dashed; }
+.fact.cause h3 { color: var(--ink-2); }
+.fact.cause .chip { background: rgba(255, 255, 255, 0.07); color: var(--ink-2); }
+.fact .check { color: var(--ink-2); font-size: 12.5px; }
+.example.real { background: color-mix(in srgb, var(--vc) 16%, transparent); color: var(--vc); font-weight: 600; }
+a.more { text-decoration: none; box-sizing: border-box; }
+.chart-key i.ana { border-top: 2px dashed rgba(255,255,255,.55); background: none !important; }
+.chart-key i.wind { width: 8px !important; height: 8px !important; border-radius: 50%; border: 2px solid #f0b44c; background: none !important; }
+.tag em.real { font-style: normal; font-weight: 700; color: #ffd166; letter-spacing: .04em; text-transform: uppercase; margin-right: 4px; }
+.note { margin: 0; color: var(--ink-3); font-size: 11.5px; line-height: 1.5; }
+.passes { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-3); border-top: 1px solid var(--glass-line); padding-top: 12px; }
+.more { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--vc) 45%, transparent); background: color-mix(in srgb, var(--vc) 10%, transparent); color: var(--ink); font: 600 13.5px var(--font-body); cursor: pointer; }
+.more:hover, .more:focus-visible { background: color-mix(in srgb, var(--vc) 18%, transparent); outline: none; }
+.more span { color: var(--vc); font-size: 18px; }
+
+/* ---------- histórico detalhado ---------- */
+#detail {
+  position: absolute; inset: 0; z-index: 9; overflow-y: auto; background: var(--space);
+  padding-block: 20px 40px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+}
+.dwrap { max-width: 1120px; margin: 0 auto; display: flex; flex-direction: column; gap: 18px; }
+.dhead { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; flex-wrap: wrap; }
+.dhead > div { min-width: 0; }
+.back { display: inline-flex; gap: 8px; align-items: center; border: 0; background: transparent; color: var(--ink-2); cursor: pointer; padding: 6px 0; font-size: 13px; margin-bottom: 8px; }
+.back:hover { color: var(--ink); }
+.dmeta { display: flex; gap: 16px; flex-wrap: wrap; color: var(--ink-3); font-size: 12.5px; margin-top: 8px; }
+.dmeta b { color: var(--ink-2); font-weight: 500; font-family: var(--font-mono); }
+.dgrid { display: grid; grid-template-columns: minmax(0, 1fr); gap: 18px; }
+.box { border: 1px solid var(--glass-line); border-radius: 14px; padding: 16px; background: rgba(12, 18, 28, 0.7); min-width: 0; }
+.box h3 { margin: 0 0 4px; font-family: var(--font-display); font-weight: 500; font-size: 18px; }
+.box .fact h3 { font: 600 11px var(--font-body); letter-spacing: 0.09em; margin: 0; }
+.box > p.lead { margin: 0 0 12px; color: var(--ink-3); font-size: 12.5px; }
+.bigchart { position: relative; }
+.bigchart svg { width: 100%; height: auto; display: block; touch-action: pan-y; }
+.ctip { position: absolute; pointer-events: none; background: rgba(6, 10, 18, 0.96); border: 1px solid var(--glass-line); border-radius: 8px; padding: 8px 10px; font-size: 12px; min-width: 150px; transform: translate(-50%, -100%); white-space: nowrap; }
+.ctip b { display: block; font-family: var(--font-mono); font-weight: 500; margin-bottom: 4px; }
+.ctip span { display: flex; justify-content: space-between; gap: 12px; color: var(--ink-2); font-family: var(--font-mono); }
+.ctip span em { font-style: normal; color: var(--ink); }
+.compare { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; }
+.compare figure { margin: 0; display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+.compare canvas { width: 100%; aspect-ratio: 1; max-width: 100%; border-radius: 10px; background: #070b12; display: block; }
+.compare figcaption { display: flex; justify-content: space-between; gap: 8px; align-items: center; font-size: 12px; color: var(--ink-2); flex-wrap: wrap; }
+.compare select { background: #0c121c; color: var(--ink); border: 1px solid var(--glass-line); border-radius: 7px; padding: 4px 6px; font: 12px var(--font-mono); }
+.mramp { height: 6px; border-radius: 3px; }
+.mlegend { display: flex; justify-content: space-between; font: 10.5px var(--font-mono); color: var(--ink-3); }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12.5px; font-variant-numeric: tabular-nums; }
+th, td { padding: 8px 10px; text-align: right; border-bottom: 1px solid rgba(160, 196, 214, 0.08); white-space: nowrap; }
+th { color: var(--ink-3); font-weight: 500; font-size: 11.5px; }
+th:first-child, td:first-child { text-align: left; }
+td { font-family: var(--font-mono); color: var(--ink-2); }
+td.hl { color: var(--vc); }
+tr.fc td { font-style: italic; color: var(--ink-3); }
+tr.sel td { background: rgba(255, 255, 255, 0.04); }
+.evchip { font-family: var(--font-body); font-size: 11px; padding: 2px 7px; border-radius: 999px; background: color-mix(in srgb, var(--vc) 16%, transparent); color: var(--vc); font-style: normal; }
+.evchip.down { background: rgba(240, 122, 106, 0.14); color: var(--down); }
+.tabletools { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; margin-bottom: 8px; }
+.toast { color: var(--ink-3); font-size: 12px; }
+
+#loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-2); font-size: 14px; z-index: 3; pointer-events: none; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+
+@media (min-width: 900px) { .dgrid.two { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); } }
+@media (max-width: 720px) {
+  .brand h1 { font-size: 24px; }
+  .brand p { display: none; }
+  .top { padding-block: 12px; }
+  .search { width: 100%; }
+  #panel { top: auto; left: max(8px, env(safe-area-inset-left, 0px)); right: max(8px, env(safe-area-inset-right, 0px)); width: auto; bottom: 8px; max-height: 62%; animation-name: rise; }
+  .hs .card { width: 170px; }
+  .hint { display: none; }
+  .levels { display: none; }
+  .compare { grid-template-columns: 1fr 1fr; }
+  .compare figure:last-child { grid-column: 1 / -1; }
+  .drawbar { top: 120px; }
+  .areamenu { bottom: 140px; }
+}
+@keyframes rise { from { transform: translateY(24px); opacity: 0; } to { transform: none; opacity: 1; } }
+@media (prefers-reduced-motion: reduce) {
+  #panel { animation: none; }
+}
+</style>
+
+<div id="app">
+  <canvas id="stars" aria-hidden="true"></canvas>
+  <div id="globe" aria-label="Globo interativo: arraste para girar, role para aproximar, clique numa região"></div>
+  <div id="loading">Carregando o globo…</div>
+
+  <header class="top">
+    <div class="brand">
+      <h1><span class="feather" aria-hidden="true"><i style="background:var(--macaw-red)"></i><i style="background:var(--macaw-yellow)"></i><i style="background:var(--macaw-blue)"></i></span>Arara</h1>
+      <p>Onde a água avançou ou recuou: rios, represas, açudes e áreas alagadas, vistos pelo radar NISAR a cada 12 dias.</p>
+    </div>
+    <div class="search" role="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="País, estado, cidade de MG ou coordenada" autocomplete="off" aria-label="Buscar lugar ou coordenada" aria-controls="results">
+      <ul id="results" class="results" role="listbox" hidden></ul>
+    </div>
+  </header>
+
+  <div class="hud">
+    <div class="seg levels" aria-label="Nível de detalhe">
+      <span data-l="pais" class="on">Países</span><span data-l="estado">Estados</span><span data-l="municipio">Municípios</span><span data-l="area">Minha área</span>
+    </div>
+    <div class="legend" id="legend" hidden>
+      <small id="lgLo">pouca</small><span class="ramp"></span><small id="lgHi">muita</small>
+      <span id="lgTxt">Água aberta, última passagem (ilustrativo)</span>
+    </div>
+    <div class="btns">
+      <button class="btn primary" id="areaBtn" type="button" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 18 9 5l6 6 5-4-2 12z"/></svg>Minha área</button>
+      <button class="btn" id="spin" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Retomar giro</button>
+      <button class="btn" id="reset" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Ver o planeta</button>
+    </div>
+    <div class="hint">Arraste para girar em qualquer direção · role para aproximar · aproxime do Brasil para ver estados e, em Minas Gerais, os municípios</div>
+  </div>
+
+  <div class="areamenu" id="areaMenu" hidden>
+    <h3>Acompanhar uma área sua</h3>
+    <p>Represa, açude, várzea ou trecho de rio. O radar NISAR tem pixel na casa de 20 m, então 1 hectare já tem cerca de 25 medições.</p>
+    <button class="opt" type="button" id="optDraw"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 18 9 5l6 6 5-4-2 12z"/></svg><span>Desenhar no mapa<small>Clique nos cantos da área. O mapa aproxima até o nível de talhão.</small></span></button>
+    <button class="opt" type="button" id="optFile"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 3H6a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V9z"/><path d="M14 3v6h6M12 18v-6M9 15l3-3 3 3"/></svg><span>Importar limite da propriedade<small>Arquivo KML ou GeoJSON, como o perímetro do CAR exportado pelo SICAR ou pelo Google Earth.</small></span></button>
+    <button class="opt" type="button" id="optCoord"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="10" r="3"/><path d="M12 21s-7-6.2-7-11a7 7 0 0 1 14 0c0 4.8-7 11-7 11z"/></svg><span>Digitar uma coordenada<small>Ex.: -21.2450, -44.9990. Cria um quadrado de 1 km em volta do ponto.</small></span></button>
+    <input type="file" id="fileIn" accept=".kml,.geojson,.json,application/vnd.google-earth.kml+xml,application/geo+json" class="sr" tabindex="-1">
+    <div id="savedWrap" hidden>
+      <div class="eyebrow">Áreas salvas neste navegador</div>
+      <ul class="saved" id="saved"></ul>
+    </div>
+  </div>
+
+  <div class="drawbar" id="drawbar" hidden>
+    <p>Clique no mapa para marcar os cantos · <b id="drawInfo">0 pontos</b></p>
+    <button class="btn" type="button" id="drawUndo">Desfazer</button>
+    <button class="btn" type="button" id="drawCancel">Cancelar</button>
+    <button class="btn primary" type="button" id="drawDone" disabled>Concluir área</button>
+  </div>
+
+  <aside id="panel" hidden aria-live="polite"></aside>
+  <section id="detail" hidden aria-label="Histórico detalhado"></section>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/globe.gl@2.41.6/dist/globe.gl.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ================= utilidades ================= */
+function hash(str) { let h = 2166136261; for (let i = 0; i < str.length; i++) { h ^= str.charCodeAt(i); h = Math.imul(h, 16777619); } return h >>> 0; }
+function rng(seed) { let a = seed; return () => { a |= 0; a = a + 0x6D2B79F5 | 0; let t = Math.imul(a ^ a >>> 15, 1 | a); t = t + Math.imul(t ^ t >>> 7, 61 | t) ^ t; return ((t ^ t >>> 14) >>> 0) / 4294967296; }; }
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = (v, d = 0) => v.toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const ptRegion = (() => { try { return new Intl.DisplayNames(['pt-BR'], { type: 'region' }); } catch (e) { return null; } })();
+const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem armazenamento: segue só na sessão */ } },
+};
+
+function ringsOf(geom) { return geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates; }
+function inRing(pt, ring) {
+  let inside = false; const [x, y] = pt;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function bbox(f) {
+  let b = [180, 90, -180, -90];
+  ringsOf(f.geometry).forEach(p => p[0].forEach(([x, y]) => { b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], y); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], y); }));
+  return b;
+}
+function inFeature(pt, f) {
+  if (!f.__bb) f.__bb = bbox(f);
+  const b = f.__bb; if (pt[0] < b[0] || pt[0] > b[2] || pt[1] < b[1] || pt[1] > b[3]) return false;
+  return ringsOf(f.geometry).some(poly => inRing(pt, poly[0]) && !poly.slice(1).some(h => inRing(pt, h)));
+}
+function centerOf(f) {
+  const p = f.properties || {};
+  if (p.lat != null && p.lng != null) return { lat: +p.lat, lng: +p.lng };
+  let best = null, bestA = -1;
+  ringsOf(f.geometry).forEach(poly => {
+    const r = poly[0]; let a = 0, cx = 0, cy = 0;
+    for (let i = 0, j = r.length - 1; i < r.length; j = i++) { const k = r[j][0] * r[i][1] - r[i][0] * r[j][1]; a += k; cx += (r[j][0] + r[i][0]) * k; cy += (r[j][1] + r[i][1]) * k; }
+    if (Math.abs(a) > bestA && a !== 0) { bestA = Math.abs(a); best = { lng: cx / (3 * a), lat: cy / (3 * a) }; }
+  });
+  return best || { lat: 0, lng: 0 };
+}
+function sizeOf(f) { const b = f.__bb || (f.__bb = bbox(f)); return Math.max(b[2] - b[0], (b[3] - b[1])); }
+function hectares(ring) {
+  const lat0 = ring.reduce((s, p) => s + p[1], 0) / ring.length * Math.PI / 180;
+  const kx = 111.32 * Math.cos(lat0), ky = 110.57; let a = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) a += (ring[j][0] * kx) * (ring[i][1] * ky) - (ring[i][0] * kx) * (ring[j][1] * ky);
+  return Math.abs(a) / 2 * 100; // km² → ha
+}
+
+/* ================= variáveis (uma cor cada) ================= */
+const VARS = {
+  agua: { label: 'Água aberta', short: 'Água', unit: '% da área', d: 1, lo: 0, hi: null, color: '#4fb6ee', rgb: [79, 182, 238], lgLo: 'pouca', lgHi: 'muita', ev: 0.15 },
+};
+const VKEYS = Object.keys(VARS);
+let mapVar = 'agua';
+
+/* ================= céu estrelado (com movimento leve) ================= */
+const sky = { c: $('#stars'), stars: [], bg: null, w: 0, h: 0, off: 0 };
+function buildSky() {
+  const c = sky.c, dpr = 1;
+  const w = c.clientWidth, h = c.clientHeight; sky.w = w; sky.h = h; sky.dpr = dpr;
+  c.width = w * dpr; c.height = h * dpr;
+  const bg = document.createElement('canvas'); bg.width = c.width; bg.height = c.height;
+  const g = bg.getContext('2d'); g.scale(dpr, dpr);
+  g.fillStyle = '#04060c'; g.fillRect(0, 0, w, h);
+  g.save(); g.translate(w * 0.5, h * 0.5); g.rotate(-0.5);
+  const band = g.createLinearGradient(0, -h * 0.35, 0, h * 0.35);
+  band.addColorStop(0, 'rgba(60,80,140,0)'); band.addColorStop(0.5, 'rgba(70,90,150,0.10)'); band.addColorStop(1, 'rgba(60,80,140,0)');
+  g.fillStyle = band; g.fillRect(-w * 1.5, -h * 0.35, w * 3, h * 0.7); g.restore();
+  const neb = g.createRadialGradient(w * 0.82, h * 0.2, 0, w * 0.82, h * 0.2, w * 0.35);
+  neb.addColorStop(0, 'rgba(229,72,45,0.07)'); neb.addColorStop(1, 'rgba(229,72,45,0)');
+  g.fillStyle = neb; g.fillRect(0, 0, w, h);
+  sky.bg = bg;
+  let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  const n = Math.min(Math.round(w * h / 2200), 650);
+  sky.stars = Array.from({ length: n }, () => {
+    const depth = rnd();
+    const tint = rnd();
+    return { x: rnd() * w, y: rnd() * h, r: rnd() ** 4 * 1.6 + 0.25, a: 0.25 + rnd() * 0.75, depth, tw: 0.4 + rnd() * 1.6, ph: rnd() * 6.28,
+      col: tint < 0.1 ? '255,214,170' : tint < 0.2 ? '180,210,255' : '255,255,255' };
+  });
+}
+function drawSky(t) {
+  const c = sky.c, g = c.getContext('2d');
+  g.setTransform(1, 0, 0, 1, 0, 0); g.drawImage(sky.bg, 0, 0);
+  g.setTransform(sky.dpr, 0, 0, sky.dpr, 0, 0);
+  const w = sky.w, h = sky.h;
+  for (const st of sky.stars) {
+    const sp = 0.25 + st.depth * 0.9;
+    let x = (st.x + sky.off * sp) % w; if (x < 0) x += w;
+    let y = (st.y + sky.offY * sp * 0.6) % h; if (y < 0) y += h;
+    const a = reduceMotion ? st.a : st.a * (0.72 + 0.28 * Math.sin(t / 1000 * st.tw + st.ph));
+    g.fillStyle = `rgba(${st.col},${a.toFixed(3)})`;
+    g.beginPath(); g.arc(x, y, st.r, 0, 6.2832); g.fill();
+  }
+}
+sky.offY = 0;
+buildSky();
+
+/* ================= exemplos de insights (cards) ================= */
+const HOTSPOTS = [
+  { id: 'furnas', real: true, lat: -20.85, lng: -45.95, place: 'Lago de Furnas, MG · caso validado', title: 'NISAR mede o lago de Furnas com 1% de erro', delta: -1.9, unit: '%', var: 'agua', select: { lake: true },
+    detected: '', cause: '', check: '' },
+  { id: 'pantanal', lat: -18.2, lng: -57.0, place: 'Pantanal, MS', title: 'Área alagada abaixo do normal para a época', delta: -38, unit: '%', var: 'agua', select: { state: 'Mato Grosso do Sul' },
+    detected: 'Menos pixels com o padrão de água aberta (HH muito baixo) do que nas primeiras passagens da série.',
+    cause: 'Cheia fraca do rio Paraguai após um verão com pouca chuva na bacia alta.',
+    check: 'régua de Ladário (Marinha) e mapa de água OPERA DSWx.' },
+  { id: 'manaus', lat: -3.1, lng: -60.0, place: 'Rio Negro, Manaus, AM', title: 'Vazante expôs bancos de areia e margens', delta: -21, unit: '%', var: 'agua', select: { state: 'Amazonas' },
+    detected: 'A área classificada como água encolheu nas margens e surgiram faixas com retroespalhamento de solo exposto.',
+    cause: 'Vazante sazonal, possivelmente reforçada por seca regional.',
+    check: 'cota do porto de Manaus.' },
+  { id: 'cv', lat: 36.6, lng: -119.9, place: 'Vale Central, Califórnia', title: 'Reservatórios mais baixos depois do verão seco', delta: -12, unit: '%', var: 'agua', select: { state: 'California' },
+    detected: 'Espelhos d\u2019água dos reservatórios encolheram de forma contínua desde julho.',
+    cause: 'Uso intenso para irrigação no verão sem chuva para repor.',
+    check: 'níveis dos reservatórios no CDEC.' },
+  { id: 'punjab', lat: 30.9, lng: 75.5, place: 'Punjab, Índia', title: 'Arrozais drenados depois da colheita', delta: -45, unit: '%', var: 'agua', select: { state: 'Punjab' },
+    detected: 'Os talhões que apareciam alagados no radar durante a monção perderam a lâmina d\u2019água.',
+    cause: 'Drenagem dos arrozais para a colheita. O padrão segue os talhões, o que descarta seca natural.',
+    check: 'calendário agrícola do estado.' },
+  { id: 'chad', lat: 13.3, lng: 14.1, place: 'Lago Chade', title: 'Água aberta recua na margem norte', delta: -15, unit: '%', var: 'agua', select: { state: 'Lac' },
+    detected: 'A margem norte perdeu área com padrão de água aberta nas últimas quatro passagens.',
+    cause: 'Recuo após a estação chuvosa. Plantas aquáticas também podem esconder a água do radar.',
+    check: 'imagem óptica (Sentinel-2) sem nuvens.' },
+  { id: 'mekong', lat: 10.0, lng: 105.8, place: 'Delta do Mekong, Vietnã', title: 'Fim da cheia libera os arrozais', delta: -26, unit: '%', var: 'agua', select: { state: 'Cần Thơ' },
+    detected: 'A água que cobria as várzeas do delta está recuando passagem a passagem.',
+    cause: 'Fim do pulso de cheia anual do Mekong.',
+    check: 'níveis da Comissão do Rio Mekong.' },
+  { id: 'murray', lat: -34.6, lng: 143.6, place: 'Bacia Murray-Darling, Austrália', title: 'Planícies alagadas secando há 4 passagens', delta: -17, unit: '%', var: 'agua', select: { state: 'New South Wales' },
+    detected: 'Redução contínua da água aberta nas planícies de inundação.',
+    cause: 'Fim do pulso de cheia somado à evaporação de primavera.',
+    check: 'vazões da MDBA.' },
+  { id: 'po', lat: 45.05, lng: 10.2, place: 'Vale do Pó, Itália', title: 'Áreas alagadas depois das chuvas de outono', delta: +30, unit: '%', var: 'agua', select: { state: 'Emilia-Romagna' },
+    detected: 'Surgiram manchas de água aberta em várzeas que estavam secas no fim do verão.',
+    cause: 'Frentes de chuva de outono que encheram os afluentes do Pó.',
+    check: 'rede hidrométrica da ARPAE.' },
+];
+
+/* ================= séries ilustrativas ================= */
+const PASS0 = Date.UTC(2026, 5, 29); // 29/06/2026: a 12ª passagem cai em 08/11/2026
+const DAY = 864e5, HIST_N = 12, FC_N = 3;
+const passDate = (i) => new Date(PASS0 + i * 12 * DAY);
+const dmy = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
+const dmyy = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
+function season(date, lat) {
+  const m = date.getUTCMonth() + date.getUTCDate() / 31;
+  if (lat < -8) return Math.cos((m - 0.5) / 12 * 2 * Math.PI);
+  if (lat > 8) return Math.cos((m - 7.5) / 12 * 2 * Math.PI);
+  return 0.3 * Math.cos((m - 3) / 6 * 2 * Math.PI);
+}
+const seriesCache = new Map();
+function makeSeries(key, lat, varKey, hot) {
+  const ck = key + '|' + varKey + '|' + (hot ? hot.id : '');
+  if (seriesCache.has(ck)) return seriesCache.get(ck);
+  const r = rng(hash(key + varKey));
+  const base = r(), amp = 0.6 + r() * 0.8, noise = 0.4 + r() * 0.6;
+  const pts = [];
+  for (let i = 0; i < HIST_N + FC_N; i++) {
+    const s = season(passDate(i), lat) * amp + (r() - 0.5) * noise * 0.5;
+    let v;
+    if (varKey === 'umidade') v = clamp(48 + base * 20 + s * 22, 4, 96);
+    else if (varKey === 'agua') v = clamp((2 + base * 10) * (1 + s * 0.35), 0.2, 60);
+    else v = clamp(-14 - base * 4 + s * 1.6, -23, -7);
+    pts.push(v);
+  }
+  if (hot && hot.var === varKey) {
+    const last = HIST_N - 1, first = last - 4;
+    const target = varKey === 'agua' ? pts[first] * (1 + hot.delta / 100) : pts[first] + hot.delta;
+    for (let i = first + 1; i <= last + FC_N; i++) {
+      const t = (i - first) / 4;
+      const want = pts[first] + (target - pts[first]) * Math.min(t, 1) + (i > last ? (target - pts[first]) * 0.18 * (i - last) : 0);
+      pts[i] = want * (1 + (r() - 0.5) * 0.03);
+    }
+  }
+  const out = pts.map(v => +v.toFixed(2));
+  seriesCache.set(ck, out);
+  return out;
+}
+function deltaOf(pts, varKey, a, b) { return varKey === 'agua' ? (pts[b] - pts[a]) / pts[a] * 100 : pts[b] - pts[a]; }
+function deltaTxt(diff, varKey) {
+  const u = varKey === 'umidade' ? ' pts' : varKey === 'agua' ? '%' : ' dB';
+  return `${diff >= 0 ? '+' : '−'}${fmt(Math.abs(diff), varKey === 'umidade' ? 0 : 1)}${u}`;
+}
+function normVal(v, k) { return k === 'umidade' ? (v - 22) / 62 : k === 'agua' ? v / 16 : (v + 21) / 12; }
+
+/* ================= cores do mapa ================= */
+const C = {
+  globe: '#0a1b2c', land: 'rgba(44, 78, 74, 0.94)', landHover: 'rgba(70, 116, 106, 0.98)',
+  side: 'rgba(20, 40, 44, 0.9)', stroke: 'rgba(164, 214, 204, 0.3)',
+  sel: 'rgba(250, 250, 246, 0.97)', selSide: 'rgba(229, 72, 45, 0.92)', selStroke: 'rgba(255, 255, 255, 0.95)',
+  area: 'rgba(244, 182, 63, 0.9)',
+};
+const LOW = [38, 50, 58];
+function rampColor(t, k, a = 0.93) {
+  t = clamp(t, 0, 1); const hi = VARS[k].rgb;
+  const e = 0.15 + 0.85 * t;
+  const c = LOW.map((v, i) => Math.round(v + (hi[i] - v) * e));
+  return `rgba(${c[0]},${c[1]},${c[2]},${a})`;
+}
+
+/* ================= estado ================= */
+let world = [], adm1 = {}, mgMun = [], mgState = null, areas = [], lake = null;
+const pin = { alt: 0.05, r: 0.28, bucket: null, shown: true };
+let selected = null, hover = null, current = 'pais', lodKeyNow = '', selElev = 0.03;
+let autoSpin = true, drawMode = false, drawPts = [];
+const searchIndex = [];
+const BASE_ALT = { pais: 0.006, estado: 0.009, municipio: 0.011, lago: 0.0125, area: 0.013 };
+const SEL_ALT = { pais: 0.045, estado: 0.03, municipio: 0.022, lago: 0.02, area: 0.012 };
+const LVL_LABEL = { pais: 'País', estado: 'Estado', municipio: 'Município', lago: 'Reservatório · dado real', area: 'Minha área' };
+
+/* ================= globo ================= */
+const el = $('#globe');
+const globe = Globe({ animateIn: false })(el)
+  .backgroundColor('rgba(0,0,0,0)')
+  .showAtmosphere(true).atmosphereColor('#7fc8ff').atmosphereAltitude(0.17)
+  .showGraticules(true)
+  .polygonsTransitionDuration(450)
+  .polygonCapCurvatureResolution(d => d.__lvl === 'area' ? clamp(sizeOf(d) / 30, 0.02, 4) : d.__lvl === 'municipio' || d.__lvl === 'lago' ? 1 : d.__lvl === 'estado' ? 2 : 2.5)
+  .polygonLabel(d => drawMode ? '' : `<div class="tip">${esc(d.__name)}<small>${d.__lvlLabel}${d.__parent ? ' · ' + esc(d.__parent) : ''}</small></div>`)
+  .onPolygonHover(d => { if (drawMode) return; hover = d; globe.polygonCapColor(capColor); el.style.cursor = d ? 'pointer' : ''; })
+  .onPolygonClick((d) => { if (dragMoved || drawMode) return; stopSpin(); selectFeature(d, { fly: true }); })
+  .onGlobeClick(() => { if (!dragMoved) stopSpin(); })
+  .htmlElementsData(HOTSPOTS)
+  .htmlLat(d => d.lat).htmlLng(d => d.lng).htmlAltitude(d => d.kind === 'v' ? capAlt() : pin.alt)
+  .htmlElement(d => d.kind === 'v' ? makeVertex(d) : makeCard(d))
+  .htmlElementVisibilityModifier(() => {})
+  .pathPoints(d => d.pts).pathPointLat(p => p[1]).pathPointLng(p => p[0]).pathPointAlt(() => capAlt() * 1.1)
+  .pathColor(() => '#f4b63f').pathStroke(2).pathTransitionDuration(0)
+  .pointsData(HOTSPOTS).pointLat(d => d.lat).pointLng(d => d.lng)
+  .pointAltitude(() => pin.alt).pointRadius(() => pin.r).pointResolution(16).pointsMerge(false).pointsTransitionDuration(0)
+  .pointColor(d => VARS[d.var].color).pointLabel(() => '')
+  .ringsData(reduceMotion ? [] : HOTSPOTS).ringLat(d => d.lat).ringLng(d => d.lng).ringAltitude(() => BASE_ALT.estado + 0.001)
+  .ringColor(d => { const c = VARS[d.var].rgb; return (t) => `rgba(${c[0]},${c[1]},${c[2]},${(1 - t) * 0.9})`; })
+  .ringMaxRadius(() => pin.r * 9).ringPropagationSpeed(() => pin.r * 6).ringRepeatPeriod(1800)
+  .onPointClick((d) => { if (dragMoved) return; stopSpin(); openHotspot(d); })
+  .width(el.clientWidth).height(el.clientHeight);
+refreshStyle();
+
+try { globe.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); } catch (e) { /* segue com o padrão */ }
+const mat = globe.globeMaterial();
+mat.color.set(C.globe); mat.shininess = 8; if (mat.specular) mat.specular.set('#1b3550');
+
+const R = globe.getGlobeRadius();
+const camera = globe.camera();
+const controls = globe.controls();
+controls.enableRotate = false; controls.enablePan = false;
+controls.minDistance = R * 1.0045; controls.maxDistance = R * 4.2;
+controls.zoomSpeed = 0.9;
+globe.pointOfView({ lat: 0, lng: 0, altitude: 2.35 }, 0);
+let gObj = null;
+const Q = camera.quaternion.constructor, V3 = camera.position.constructor;
+const AX_Y = new V3(0, 1, 0), AX_X = new V3(1, 0, 0);
+
+function orientationFor(lat, lng) {
+  const qy = new Q().setFromAxisAngle(AX_Y, -lng * Math.PI / 180);
+  const qx = new Q().setFromAxisAngle(AX_X, lat * Math.PI / 180);
+  return qx.multiply(qy);
+}
+function findGlobe() {
+  globe.scene().traverse(o => { if (!gObj && typeof o.getGlobeRadius === 'function') gObj = o; });
+  if (!gObj) { requestAnimationFrame(findGlobe); return; }
+  gObj.quaternion.copy(orientationFor(-12, -38));
+  requestAnimationFrame(frame);
+}
+function altitude() { return camera.position.length() / R - 1; }
+function localToGeo(v) {
+  const d = v.clone().normalize().applyQuaternion(gObj.quaternion.clone().invert());
+  const lat = Math.asin(clamp(d.y, -1, 1)) * 180 / Math.PI;
+  let lng = 90 - Math.atan2(d.z, d.x) * 180 / Math.PI;
+  lng = ((lng + 540) % 360) - 180;
+  return { lat, lng };
+}
+function centerGeo() { return localToGeo(camera.position); }
+function pickGeo(cx, cy) {
+  const rect = el.getBoundingClientRect();
+  const nx = ((cx - rect.left) / rect.width) * 2 - 1, ny = -((cy - rect.top) / rect.height) * 2 + 1;
+  const dir = new V3(nx, ny, 0.5).unproject(camera).sub(camera.position).normalize();
+  const o = camera.position, rr = R * (1 + capAlt());
+  const b = o.dot(dir), c = o.lengthSq() - rr * rr, disc = b * b - c;
+  if (disc < 0) return null;
+  return localToGeo(o.clone().addScaledVector(dir, -b - Math.sqrt(disc)));
+}
+
+/* ---- arrastar livremente ---- */
+let dragging = false, dragMoved = false, last = null, vel = { x: 0, y: 0 }, downAt = null;
+const qTmp = new Q();
+function rotateBy(dx, dy) {
+  const k = 0.0017 * altitude() + 0.000004;
+  qTmp.setFromAxisAngle(AX_Y, dx * k); gObj.quaternion.premultiply(qTmp);
+  qTmp.setFromAxisAngle(AX_X, dy * k); gObj.quaternion.premultiply(qTmp);
+  sky.off += dx * 0.05; sky.offY += dy * 0.05;
+}
+el.addEventListener('pointerdown', (e) => {
+  if (!gObj || e.target.closest('.hs') || e.button !== 0) return;
+  dragging = true; dragMoved = false; downAt = { x: e.clientX, y: e.clientY };
+  last = { x: e.clientX, y: e.clientY, t: performance.now() }; vel = { x: 0, y: 0 };
+  tween = null; stopSpin();
+  el.classList.add('dragging');
+});
+window.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - last.x, dy = e.clientY - last.y;
+  if (Math.abs(e.clientX - downAt.x) + Math.abs(e.clientY - downAt.y) > 4) dragMoved = true;
+  rotateBy(dx, dy);
+  const now = performance.now(), dt = Math.max(now - last.t, 1);
+  vel = { x: dx / dt * 16, y: dy / dt * 16 };
+  last = { x: e.clientX, y: e.clientY, t: now };
+});
+window.addEventListener('pointerup', (e) => {
+  if (!dragging) return;
+  dragging = false; el.classList.remove('dragging');
+  if (performance.now() - last.t > 80) vel = { x: 0, y: 0 };
+  if (drawMode && !dragMoved) addDrawPoint(e.clientX, e.clientY);
+  setTimeout(() => { dragMoved = false; }, 0);
+});
+
+/* ---- giro automático ---- */
+function stopSpin() { if (!autoSpin) return; autoSpin = false; $('#spin').hidden = false; }
+function startSpin() { autoSpin = true; $('#spin').hidden = true; }
+$('#spin').addEventListener('click', startSpin);
+$('#reset').addEventListener('click', () => { closePanel(); flyTo(-12, -38, 2.35); });
+
+/* ---- voo animado ---- */
+let tween = null;
+function flyTo(lat, lng, alt, ms = 1500) {
+  if (!gObj) return;
+  tween = { q0: gObj.quaternion.clone(), q1: orientationFor(lat, lng), a0: altitude(), a1: alt, t0: performance.now(), ms: reduceMotion ? 1 : ms };
+}
+const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+
+/* ---- loop ---- */
+const camDir = new V3(), wp = new V3();
+let frameN = 0;
+function frame(now) {
+  if (tween) {
+    const t = clamp((performance.now() - tween.t0) / tween.ms, 0, 1), e = ease(t);
+    gObj.quaternion.slerpQuaternions(tween.q0, tween.q1, e);
+    // zoom em escala logarítmica: voos longos até a fazenda ficam suaves
+    const la = Math.log(tween.a0), lb = Math.log(tween.a1);
+    camera.position.setLength(R * (1 + Math.exp(la + (lb - la) * e)));
+    if (t >= 1) tween = null;
+  } else if (!dragging && (Math.abs(vel.x) + Math.abs(vel.y) > 0.05)) {
+    rotateBy(vel.x, vel.y); vel.x *= 0.92; vel.y *= 0.92;
+  } else if (autoSpin && !reduceMotion) {
+    qTmp.setFromAxisAngle(AX_Y, 0.0011); gObj.quaternion.multiply(qTmp);
+    sky.off += 0.12;
+  }
+  if (!reduceMotion) sky.off += 0.035;
+  frameN++;
+  if (detail.hidden && frameN % 3 === 0) drawSky(now || 0);
+  if (detail.hidden) { updateCards(); if (frameN % 6 === 0) { updateLOD(); updatePins(); } }
+  requestAnimationFrame(frame);
+}
+
+/* ---- pinos 3D: tamanho acompanha o zoom ---- */
+function updatePins() {
+  const a = altitude();
+  const show = !drawMode && a > 0.06;
+  if (show !== pin.shown) { pin.shown = show; globe.pointsData(show ? HOTSPOTS : []).ringsData(show && !reduceMotion ? HOTSPOTS : []); }
+  const b = Math.round(Math.log2(a) * 3);
+  if (b === pin.bucket) return;
+  pin.bucket = b;
+  const q2 = Math.pow(2, b / 3);
+  pin.alt = clamp(q2 * 0.045, 0.012, 0.09);
+  pin.r = clamp(q2 * 0.13, 0.03, 0.32);
+  globe.pointAltitude(() => pin.alt).pointRadius(() => pin.r).ringMaxRadius(() => pin.r * 9).ringPropagationSpeed(() => pin.r * 6);
+  globe.htmlAltitude(d => d.kind === 'v' ? capAlt() : pin.alt);
+}
+
+/* ---- cards ---- */
+function makeCard(d) {
+  const w = document.createElement('div'); w.className = 'hs'; d.__el = w;
+  const v = VARS[d.var]; w.style.setProperty('--c', v.color);
+  const up = d.delta > 0;
+  w.innerHTML = `<span class="pin"></span>
+    <button class="card" type="button">
+      <span class="tag">${d.real ? '<em class="real">Dado real</em> ' : 'Exemplo de insight · '}${esc(d.place)}</span>
+      <span class="title">${esc(d.title)}</span>
+      ${d.real ? `<span class="metric"><i></i>1.020 km² de água · cota −0,87 m em 9 passagens</span>` : `<span class="metric"><i></i>${v.short} <b class="${up ? 'up' : 'down'}">${up ? '+' : '−'}${fmt(Math.abs(d.delta), d.unit === 'dB' ? 1 : 0)} ${d.unit}</b> em 4 passagens</span>`}
+    </button>`;
+  const open = (e) => { e.stopPropagation(); stopSpin(); openHotspot(d); };
+  w.querySelector('.card').addEventListener('click', open);
+  w.querySelector('.pin').addEventListener('click', open);
+  w.addEventListener('pointerdown', (e) => e.stopPropagation());
+  return w;
+}
+function makeVertex(d) { const v = document.createElement('div'); v.className = 'vtx' + (d.first ? ' first' : ''); return v; }
+function measure(h) { const c = h.__el.querySelector('.card'); return [c.offsetWidth || 210, c.offsetHeight || 90]; }
+let panelRect = null;
+function updateCards() {
+  camDir.copy(camera.position).normalize();
+  const alt = altitude(), compact = alt < 0.9;
+  const W = el.clientWidth, H = el.clientHeight;
+  if (frameN % 10 === 0 || (panelRect === null) !== panel.hidden) panelRect = panel.hidden ? null : panel.getBoundingClientRect();
+  const pr = panel.hidden ? null : panelRect;
+  const vis = [];
+  HOTSPOTS.forEach(h => {
+    if (!h.__el) return;
+    const c = globe.getCoords(h.lat, h.lng, pin.alt);
+    wp.set(c.x, c.y, c.z).applyQuaternion(gObj.quaternion);
+    const facing = wp.clone().normalize().dot(camDir);
+    let on = !drawMode && alt > 0.06 && facing > (alt < 0.6 ? 0.82 : 0.3);
+    let x = 0, y = 0;
+    if (on) {
+      const sp = wp.project(camera); x = (sp.x + 1) / 2 * W; y = (1 - sp.y) / 2 * H;
+      // pino escondido quando cai atrás do painel
+      if (pr && x > pr.left - 12 && x < pr.right + 12 && y > pr.top - 12 && y < pr.bottom + 12) on = false;
+    }
+    h.__el.classList.toggle('off', !on);
+    h.__el.classList.toggle('compact', compact);
+    if (on) vis.push({ h, facing, x, y });
+  });
+  const placed = [];
+  const sel = activeCtx && activeCtx.hot;
+  vis.sort((a, b) => (b.h === sel) - (a.h === sel) || b.facing - a.facing).forEach(v => {
+    const sz = compact ? (v.h.__szC || (v.h.__szC = measure(v.h))) : (v.h.__sz || (v.h.__sz = measure(v.h)));
+    const cw = sz[0], ch = sz[1];
+    const r = { x0: v.x + 12, y0: v.y - 14 - ch, x1: v.x + 14 + cw, y1: v.y - 12 };
+    const clash = placed.some(p => r.x0 < p.x1 + 8 && r.x1 + 8 > p.x0 && r.y0 < p.y1 + 8 && r.y1 + 8 > p.y0)
+      || (pr && r.x1 > pr.left - 8 && r.x0 < pr.right && r.y1 > pr.top && r.y0 < pr.bottom)
+      || r.y0 < 70;
+    v.h.__el.classList.toggle('dot', clash);
+    if (!clash) placed.push(r);
+  });
+}
+
+/* ---- níveis de detalhe ---- */
+function countryAt(pt) { return world.find(f => adm1[f.__a2] && inFeature(pt, f)); }
+function updateLOD(force) {
+  if (!world.length) return;
+  const alt = altitude(); const c = centerGeo(); const pt = [c.lng, c.lat];
+  let country = null, inMG = false;
+  if (alt < 1.35) country = countryAt(pt) || null;
+  if (country && country.__a2 === 'BR' && alt < 0.42 && mgState && inFeature(pt, mgState)) inMG = true;
+  const key = (country ? country.__a2 : '-') + (inMG ? ':MG' : '') + ':' + areas.length + (alt < 0.05 ? ':z' : '');
+  if (key === lodKeyNow && !force) return;
+  lodKeyNow = key;
+  let data = world.filter(f => f !== country);
+  if (country) {
+    const states = adm1[country.__a2];
+    data = data.concat(inMG ? states.filter(s => s !== mgState).concat(mgMun) : states);
+  }
+  if (lake && country && country.__a2 === 'BR') data.push(lake);
+  data = data.concat(areas);
+  current = alt < 0.05 ? 'area' : inMG ? 'municipio' : country ? 'estado' : 'pais';
+  document.querySelectorAll('.levels span').forEach(s => s.classList.toggle('on', s.dataset.l === current));
+  $('#legend').hidden = current === 'pais';
+  globe.polygonsData(data);
+  refreshStyle();
+}
+
+function isSel(d) {
+  if (!selected) return false;
+  if (d === selected) return true;
+  return selected.__lvl === 'pais' && d.__lvl === 'estado' && d.__country === selected.__name;
+}
+function capColor(d) {
+  const t = d.__vals ? normVal(d.__vals[mapVar], mapVar) : 0.5;
+  if (isSel(d)) return d.__lvl === 'pais' ? C.sel : rampColor(t + 0.3, mapVar, 1);
+  if (d.__lvl === 'lago') return d === hover ? 'rgba(120, 205, 250, 1)' : 'rgba(79, 182, 238, 0.92)';
+  if (d.__lvl === 'area') return d === hover ? 'rgba(255, 205, 110, 0.95)' : C.area;
+  if (d.__lvl === 'pais') return d === hover ? C.landHover : C.land;
+  // no nível de fazenda o entorno fica mais apagado para a área se destacar
+  const a = current === 'area' ? 0.5 : d === hover ? 1 : 0.93;
+  return rampColor(d === hover ? t + 0.15 : t, mapVar, a);
+}
+// no nível de fazenda as camadas descem quase até o chão, senão o polígono flutua perto da câmera
+const altScale = () => current === 'area' ? 0.02 : 1;
+const capAlt = () => BASE_ALT.area * altScale();
+function altFor(d) {
+  const base = BASE_ALT[d.__lvl] * altScale();
+  if (isSel(d)) return base + (current === 'area' ? Math.min(selElev, 0.0005) : selElev);
+  return base;
+}
+function refreshStyle() {
+  globe.polygonCapColor(capColor).polygonAltitude(altFor)
+    .polygonSideColor(d => isSel(d) ? C.selSide : C.side)
+    .polygonStrokeColor(d => isSel(d) ? C.selStroke : d.__lvl === 'area' ? '#fff' : d.__lvl === 'lago' ? '#bfe6ff' : C.stroke);
+}
+
+/* ---- variável do mapa ---- */
+function setVar(k) {
+  mapVar = k; activeVar = k;
+  document.documentElement.style.setProperty('--vc', VARS[k].color);
+  $('#lgLo').textContent = VARS[k].lgLo; $('#lgHi').textContent = VARS[k].lgHi;
+  $('#lgTxt').textContent = `${VARS[k].label}, última passagem (ilustrativo)`;
+  refreshStyle();
+  if (!panel.hidden) renderPanel();
+  if (!detail.hidden) renderDetail();
+}
+
+/* ================= seleção e painel ================= */
+const panel = $('#panel'), detail = $('#detail');
+let activeVar = 'agua', activeCtx = null;
+
+function flyAltFor(f) {
+  if (f.__lvl === 'area') return clamp(sizeOf(f) * 111 * 4.5 / (0.93 * 6371), 0.006, 0.045);
+  const s = sizeOf(f);
+  if (f.__lvl === 'lago') return 0.22;
+  return f.__lvl === 'municipio' ? 0.14 : f.__lvl === 'estado' ? clamp(s / 14, 0.3, 0.9) : clamp(s / 40, 0.5, 1.25);
+}
+function setSelected(f, targetAlt) {
+  selected = f;
+  if (f) selElev = Math.min(SEL_ALT[f.__lvl], Math.max(targetAlt * 0.12, 0.0005));
+  refreshStyle();
+}
+function ctxOf(f, hot) {
+  const c = centerOf(f);
+  if (!hot && f.__lvl === 'lago') hot = HOTSPOTS.find(h => h.real);
+  return { f, key: f.__key, name: f.__name, lvl: f.__lvl, lvlLabel: f.__lvlLabel, parent: f.__parent, country: f.__country, lat: c.lat, lng: c.lng, hot, ha: f.__ha };
+}
+function selectFeature(f, { fly = false } = {}) {
+  const alt = fly ? flyAltFor(f) : altitude();
+  setSelected(f, alt);
+  const c = centerOf(f);
+  if (fly) flyTo(c.lat, c.lng, alt);
+  openPanel(ctxOf(f, null));
+}
+function openHotspot(h) {
+  let f = null;
+  if (h.select.lake) f = lake;
+  else if (h.select.mun) f = mgMun.find(m => m.__name === h.select.mun);
+  else if (h.select.state) Object.values(adm1).some(list => (f = list.find(s => s.__name === h.select.state)));
+  setVar(h.var);
+  if (f) {
+    const alt = f.__lvl === 'lago' ? 0.22 : f.__lvl === 'municipio' ? 0.14 : 0.38;
+    if (f.__lvl === 'lago') updateLOD(true);
+    setSelected(f, alt); flyTo(h.lat, h.lng, alt);
+    openPanel(ctxOf(f, h));
+  } else {
+    const d = 0.25, sq = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[h.lng - d, h.lat - d], [h.lng + d, h.lat - d], [h.lng + d, h.lat + d], [h.lng - d, h.lat + d], [h.lng - d, h.lat - d]]] } };
+    setSelected(null); flyTo(h.lat, h.lng, 0.5);
+    openPanel({ f: sq, key: h.id, name: h.place, lvl: 'estado', lvlLabel: 'Região', parent: '', lat: h.lat, lng: h.lng, hot: h });
+  }
+}
+function closePanel() { panel.hidden = true; setSelected(null); activeCtx = null; }
+function openPanel(ctx) { activeCtx = ctx; if (ctx.hot) setVar(ctx.hot.var); renderPanel(); panel.hidden = false; }
+
+function crumbsOf(ctx) {
+  const c = [];
+  if (ctx.country && ctx.lvl !== 'pais') c.push(ctx.country);
+  if (ctx.lvl === 'municipio' || ctx.lvl === 'lago') c.push('Minas Gerais');
+  if (ctx.lvl === 'area' && ctx.parent) c.push(ctx.parent);
+  return c;
+}
+function analysis(ctx, k) {
+  const hot = ctx.hot, pts = makeSeries(ctx.key, ctx.lat, k, hot);
+  const lastI = HIST_N - 1, cmpI = lastI - 4;
+  const diff = deltaOf(pts, k, cmpI, lastI);
+  const useHot = hot && hot.var === k;
+  return {
+    pts, lastI, cmpI, diff,
+    detected: useHot ? hot.detected : genericDetected(k, diff, cmpI, lastI, ctx.lvl),
+    cause: useHot ? hot.cause : genericCause(k, diff, ctx.lat, ctx.lvl),
+    check: useHot ? hot.check : genericCheck(k),
+    conf: Math.abs(diff) > (k === 'vegetacao' ? 1.5 : 10) ? 'confiança média' : 'confiança baixa',
+  };
+}
+
+function renderPanel() {
+  const ctx = activeCtx; if (!ctx) return;
+  if (ctx.hot && ctx.hot.real) return renderFurnasPanel(ctx);
+  const k = activeVar, v = VARS[k], A = analysis(ctx, k);
+  const val = A.pts[A.lastI], up = A.diff >= 0, fc = A.pts[HIST_N + FC_N - 1];
+  const crumbs = crumbsOf(ctx);
+  const sub = ctx.lvl === 'area' ? `${fmt(ctx.ha, ctx.ha < 100 ? 1 : 0)} ha · cerca de ${fmt(Math.round(ctx.ha * 25))} pixels de radar por passagem` : 'Radar NISAR, banda L · passagem a cada 12 dias';
+  panel.innerHTML = `
+    <div class="ph">
+      <div>
+        <p class="crumb">${crumbs.map(esc).join(' › ')}${crumbs.length ? ' › ' : ''}${ctx.lvlLabel}</p>
+        <h2>${esc(ctx.name)}</h2>
+        <p class="sub">${sub}</p>
+      </div>
+      <button class="close" type="button" aria-label="Fechar painel">×</button>
+    </div>
+    <span class="example">Dados ilustrativos: o pipeline ainda vai preencher esta região</span>
+    <div class="now">
+      <div>
+        <div class="val">${fmt(val, v.d)}<small>${v.unit}</small></div>
+        <div class="lbl">${v.label} na passagem de ${dmy(passDate(A.lastI))}${ctx.f ? ` · ≈ ${fmtArea(val / 100 * areaHa(ctx.f))} de água` : ''}</div>
+      </div>
+      <span class="delta ${up ? 'up' : 'down'}">${deltaTxt(A.diff, k)} desde ${dmy(passDate(A.cmpI))}</span>
+    </div>
+    <div class="chart">${chartSVG(A.pts, k, { W: 360, H: 180 })}
+      <div class="chart-key"><span><i></i>Histórico medido pelo radar</span><span><i class="fc"></i>Previsão das próximas 3 passagens</span></div>
+    </div>
+    <button class="more" type="button" id="moreBtn">Ver histórico detalhado <span aria-hidden="true">→</span></button>
+    <div class="facts">
+      <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>${A.detected}</p></section>
+      <section class="fact cause"><h3>Causa provável <span class="chip">hipótese · ${A.conf}</span></h3><p>${A.cause}</p><p class="check">Para confirmar: ${A.check}</p></section>
+    </div>
+    <div class="passes"><span>Última passagem ${dmyy(passDate(A.lastI))}</span><span>Próxima ${dmyy(passDate(A.lastI + 1))}</span><span>Previsão até ${dmy(passDate(HIST_N + FC_N - 1))}: ${fmt(fc, v.d)} ${v.unit}</span></div>
+    <p class="note">No app final, cada valor vem dos arquivos que o pipeline gera a partir do NISAR L2 GCOV (polarizações HH e HV). A previsão é uma extrapolação estatística da série e não substitui a previsão do tempo.</p>`;
+  panel.querySelector('.close').addEventListener('click', closePanel);
+  $('#moreBtn').addEventListener('click', openDetail);
+}
+
+/* ================= caso validado: Furnas (dados reais do TerraPulse) ================= */
+// cópia de furnas/data/serie.json e meta.json (pipeline TerraPulse, NISAR L2 GCOV, trilha 24 D, frame 99)
+const FURNAS = {
+  serie: [
+    ['2026-06-27', 763.65, 1041.8, 1039.8, false], ['2026-07-09', 763.72, 1045.0, 1041.98, false],
+    ['2026-07-21', 763.67, 1042.7, 1071.43, false], ['2026-08-14', 763.41, 1030.2, 1052.53, false],
+    ['2026-08-26', 763.22, 1021.8, 1024.06, false], ['2026-09-07', 762.85, 1005.6, 924.09, true],
+    ['2026-09-19', 763.01, 1012.7, 1024.1, false], ['2026-10-01', 762.93, 1009.2, 986.45, true],
+    ['2026-10-13', 763.10, 1016.6, 1019.84, false],
+  ].map(([d, cota, esp, nisar, vento]) => ({ d, cota, esp, nisar, vento })),
+  erroPct: 1.0, erroKm2: 10.4, ruido: 12.3, incN: 47.4, incA: 45.0, queda: 0.87, secou: 32.94, nova: 12.99,
+};
+const dIso = (s) => { const [y, m, d] = s.split('-'); return `${d}/${m}`; };
+function furnasChart() {
+  const S = FURNAS.serie, W = 360, H = 190, L = 40, R = 10, T = 12, B = 26, lo = 910, hi = 1080;
+  const x = (i) => L + i * (W - L - R) / (S.length - 1), y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
+  const line = (k, f = () => true) => S.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p[k]).toFixed(1)}`).join('');
+  const grid = [925, 975, 1025, 1075].map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v)}" y2="${y(v)}" stroke="rgba(255,255,255,.07)"/><text x="${L - 6}" y="${y(v) + 4}" text-anchor="end" fill="var(--ink-3)" font-size="10" font-family="var(--font-mono)">${v}</text>`).join('');
+  const xl = S.map((p, i) => i % 2 ? '' : `<text x="${x(i)}" y="${H - 8}" text-anchor="${i === S.length - 1 ? 'end' : i ? 'middle' : 'start'}" fill="var(--ink-3)" font-size="10" font-family="var(--font-mono)">${dIso(p.d)}</text>`).join('');
+  const dots = S.map((p, i) => p.vento
+    ? `<circle cx="${x(i)}" cy="${y(p.nisar)}" r="4.5" fill="var(--bg, #05070d)" stroke="#f0b44c" stroke-width="2"><title>${dIso(p.d)}: ${fmt(p.nisar, 1)} km² · suspeita de vento</title></circle>`
+    : `<circle cx="${x(i)}" cy="${y(p.nisar)}" r="3.5" fill="var(--vc)"><title>${dIso(p.d)}: NISAR ${fmt(p.nisar, 1)} km² · ANA ${fmt(p.esp, 1)} km²</title></circle>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Área do lago medida pelo NISAR comparada com a área esperada pela cota da ANA">${grid}${xl}
+    <path d="${line('esp')}" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.6" stroke-dasharray="4 4"/>
+    <path d="${line('nisar')}" fill="none" stroke="var(--vc)" stroke-width="2"/>${dots}</svg>`;
+}
+function renderFurnasPanel(ctx) {
+  const F = FURNAS, S = F.serie, last = S[S.length - 1], first = S[0];
+  panel.innerHTML = `
+    <div class="ph">
+      <div>
+        <p class="crumb">Brasil › Minas Gerais › Reservatório</p>
+        <h2>Lago de Furnas</h2>
+        <p class="sub">Radar NISAR, banda L · 9 passagens de 27/06 a 13/10/2026</p>
+      </div>
+      <button class="close" type="button" aria-label="Fechar painel">×</button>
+    </div>
+    <span class="example real">Dados reais · caso validado com a ANA</span>
+    <div class="now">
+      <div>
+        <div class="val">${fmt(last.nisar, 0)}<small>km² de água</small></div>
+        <div class="lbl">Medido pelo radar em ${dIso(last.d)} · a cota da ANA indicava ${fmt(last.esp, 0)} km²</div>
+      </div>
+      <span class="delta up">erro médio ${fmt(F.erroPct, 1)}%</span>
+    </div>
+    <div class="chart">${furnasChart()}
+      <div class="chart-key"><span><i></i>Água medida pelo NISAR</span><span><i class="fc ana"></i>Esperado pela cota da ANA</span><span><i class="wind"></i>Suspeita de vento</span></div>
+    </div>
+    <a class="more" href="furnas/index.html?lang=pt">Abrir estudo completo de Furnas <span aria-hidden="true">→</span></a>
+    <div class="facts">
+      <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>De ${dIso(first.d)} a ${dIso(last.d)} a cota caiu ${fmt(F.queda, 2)} m e o radar viu ${fmt(F.secou, 1)} km² de margem secar, contra ${fmt(F.nova, 1)} km² de água nova. Nas 7 passagens sem vento, a área do NISAR ficou a ${fmt(F.erroKm2, 1)} km² em média da área esperada pela ANA.</p></section>
+      <section class="fact cause"><h3>Por que confiar <span class="chip">validação</span></h3><p>A área responde à cota como a curva oficial: ${fmt(F.incN, 1)} km² por metro no radar contra ${fmt(F.incA, 1)} km² na ANA. Em 07/09 e 01/10 o vento encrespou a água e ela pareceu menor, por isso essas datas ficam marcadas e fora da conta.</p><p class="check">Método: canal HH, média 5×5 em dB, limiar −15,65 dB, só dentro do polígono oficial da ANA.</p></section>
+    </div>
+    <div class="passes"><span>Última passagem ${dIso(last.d)}/2026</span><span>Ruído ±${fmt(F.ruido, 1)} km²</span><span>Funil fora: só 21% no quadro</span></div>
+    <p class="note">Fonte: pipeline TerraPulse sobre NISAR L2 GCOV (ASF DAAC) e cota × área da ANA/SNIRH. O estudo completo traz os mapas de cada passagem e a imagem de antes e depois.</p>`;
+  panel.querySelector('.close').addEventListener('click', closePanel);
+}
+
+function areaHa(f) { if (f.__haAll == null) f.__haAll = ringsOf(f.geometry).reduce((t, poly) => t + hectares(poly[0]), 0); return f.__haAll; }
+function fmtArea(ha) { return ha >= 100 ? `${fmt(ha / 100, ha >= 1e5 ? 0 : 1)} km²` : `${fmt(ha, 1)} ha`; }
+function genericDetected(k, diff, a, b, lvl) {
+  const range = `entre ${dmy(passDate(a))} e ${dmy(passDate(b))}`;
+  const where = lvl === 'area' ? 'na sua área' : 'na maior parte da área';
+  if (k === 'umidade') return `O retroespalhamento HH ${diff >= 0 ? 'subiu' : 'caiu'} cerca de ${fmt(Math.abs(diff) * 0.12, 1)} dB ${range}, o que indica solo mais ${diff >= 0 ? 'úmido' : 'seco'} ${where}.`;
+  if (k === 'agua') return `A área com padrão de água aberta (HH muito baixo) ${diff >= 0 ? 'aumentou' : 'diminuiu'} ${fmt(Math.abs(diff), 0)}% ${range}.`;
+  return `O HV, canal sensível à estrutura da vegetação, ${diff >= 0 ? 'subiu' : 'caiu'} ${fmt(Math.abs(diff), 1)} dB ${range}.`;
+}
+function genericCause(k, diff, lat, lvl) {
+  const wetting = season(passDate(HIST_N - 1), lat) > season(passDate(HIST_N - 5), lat);
+  const farm = lvl === 'area';
+  if (k === 'umidade') return diff >= 0
+    ? (wetting ? 'Início ou reforço da estação chuvosa na região.' : (farm ? 'Irrigação ou chuva localizada. Se o padrão segue os talhões, é provável que seja irrigação.' : 'Chuva fora de época ou irrigação. Vale olhar se o padrão segue talhões.'))
+    : (wetting ? 'Veranico: dias seguidos sem chuva em plena estação úmida.' : 'Estiagem sazonal, com evaporação maior que a chuva.');
+  if (k === 'agua') return diff >= 0 ? (farm ? 'Represa ou açude enchendo, ou área alagada depois de chuva forte.' : 'Cheia sazonal, chuva forte recente ou aumento do nível de um reservatório.') : (farm ? 'Açude baixando por uso na irrigação ou evaporação.' : 'Vazante sazonal ou uso maior da água (irrigação, geração de energia).');
+  return diff >= 0 ? (farm ? 'Lavoura crescendo ou pasto rebrotando depois das chuvas.' : 'Rebrota após chuvas ou crescimento da safra.') : (farm ? 'Colheita, roçada ou queimada recente.' : 'Colheita, queimada ou desmatamento recente.');
+}
+function genericCheck(k) {
+  if (k === 'umidade') return 'chuva acumulada (INMET ou CHIRPS) no mesmo período.';
+  if (k === 'agua') return 'mapa de água OPERA DSWx e nível de reservatórios na ANA.';
+  return 'imagem óptica (Sentinel-2) e focos de fogo no FIRMS.';
+}
+function eventsOf(pts, k) {
+  const ev = [];
+  for (let i = 1; i < HIST_N; i++) {
+    const d = deltaOf(pts, k, i - 1, i);
+    const thr = k === 'agua' ? VARS.agua.ev * 100 : VARS[k].ev;
+    if (Math.abs(d) >= thr) ev.push({ i, d });
+  }
+  return ev;
+}
+
+/* ---- gráfico (painel e tela detalhada) ---- */
+function yDomain(pts, k) {
+  const v = VARS[k]; let lo = v.lo, hi = v.hi;
+  if (k === 'agua') { lo = 0; hi = Math.max(...pts) * 1.35; }
+  if (k === 'vegetacao') { lo = Math.floor(Math.min(...pts) - 2); hi = Math.ceil(Math.max(...pts) + 2); }
+  return [lo, hi];
+}
+function chartSVG(pts, k, { W, H, big = false, selA = null, selB = null }) {
+  const v = VARS[k], col = v.color;
+  const L = big ? 44 : 34, Rr = 12, T = big ? 22 : 12, B = 26;
+  const n = pts.length, [lo, hi] = yDomain(pts, k);
+  const x = (i) => L + i * (W - L - Rr) / (n - 1);
+  const y = (val) => T + (1 - (val - lo) / (hi - lo)) * (H - T - B);
+  const tv = [...Array(5)].map((_, i) => lo + (hi - lo) * i / 4);
+  const hist = pts.slice(0, HIST_N), lastI = HIST_N - 1;
+  const line = hist.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p).toFixed(1)}`).join('');
+  const area = `${line}L${x(lastI).toFixed(1)},${H - B}L${x(0).toFixed(1)},${H - B}Z`;
+  const spread = (hi - lo) * 0.05;
+  const fcIdx = [lastI, ...Array.from({ length: FC_N }, (_, kk) => HIST_N + kk)];
+  const upper = fcIdx.map((i, kk) => `${kk ? 'L' : 'M'}${x(i).toFixed(1)},${y(Math.min(hi, pts[i] + spread * kk)).toFixed(1)}`).join('');
+  const lower = fcIdx.slice().reverse().map((i) => { const kk = fcIdx.indexOf(i); return `L${x(i).toFixed(1)},${y(Math.max(lo, pts[i] - spread * kk)).toFixed(1)}`; }).join('');
+  const fcLine = fcIdx.map((i, kk) => `${kk ? 'L' : 'M'}${x(i).toFixed(1)},${y(pts[i]).toFixed(1)}`).join('');
+  const labelsAt = big && W >= 1000 ? [...Array(n).keys()] : big ? [0, 3, 6, 9, lastI, n - 1].filter((v, i, a) => a.indexOf(v) === i && !(v === 9 && lastI - v < 3)) : [0, 4, 8, lastI, n - 1];
+  const gid = 'g' + k + (big ? 'b' : 's');
+  const ev = big ? eventsOf(pts, k) : [];
+  const fmtTick = (t) => fmt(t, k === 'agua' && hi < 8 ? 1 : 0);
+  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${v.label}: histórico de ${HIST_N} passagens e previsão de ${FC_N}">
+    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0.35"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
+    ${tv.map(t => `<line x1="${L}" x2="${W - Rr}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="rgba(160,196,214,0.1)"/><text class="axis" x="${L - 6}" y="${(y(t) + 3).toFixed(1)}" text-anchor="end">${fmtTick(t)}</text>`).join('')}
+    <rect x="${x(lastI).toFixed(1)}" y="${T}" width="${(x(n - 1) - x(lastI)).toFixed(1)}" height="${H - T - B}" fill="rgba(255,255,255,0.035)"/>
+    <line x1="${x(lastI).toFixed(1)}" x2="${x(lastI).toFixed(1)}" y1="${T}" y2="${H - B}" stroke="rgba(233,238,242,0.3)" stroke-dasharray="2 3"/>
+    <text class="axis" x="${(x(lastI) + 5).toFixed(1)}" y="${T + 10}">previsão</text>
+    ${big && selA != null && selB != null ? `<rect x="${x(Math.min(selA, selB)).toFixed(1)}" y="${T}" width="${Math.abs(x(selB) - x(selA)).toFixed(1)}" height="${H - T - B}" fill="${col}" fill-opacity="0.07"/>` : ''}
+    <path d="${area}" fill="url(#${gid})"/>
+    <path d="${upper}${lower}Z" fill="${col}" fill-opacity="0.16"/>
+    <path d="${line}" fill="none" stroke="${col}" stroke-width="${big ? 2.5 : 2}" stroke-linejoin="round"/>
+    <path d="${fcLine}" fill="none" stroke="${col}" stroke-opacity="0.85" stroke-width="2" stroke-dasharray="5 4"/>
+    ${ev.map(e => `<path d="M${(x(e.i) - 5).toFixed(1)},${T - 14}L${(x(e.i) + 5).toFixed(1)},${T - 14}L${x(e.i).toFixed(1)},${T - 6}Z" fill="${e.d >= 0 ? col : '#f07a6a'}"/>`).join('')}
+    ${hist.map((p, i) => { const s = i === lastI || i === selA || i === selB; return `<circle cx="${x(i).toFixed(1)}" cy="${y(p).toFixed(1)}" r="${s ? 4.5 : big ? 3 : 2.2}" fill="${s ? '#e9eef2' : col}" ${s ? `stroke="${col}" stroke-width="2"` : ''}/>`; }).join('')}
+    ${big ? `<line class="cross" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="rgba(233,238,242,0.5)" visibility="hidden"/>` : ''}
+    ${labelsAt.map(i => `<text class="axis" x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}">${dmy(passDate(i))}</text>`).join('')}
+  </svg>`;
+}
+
+/* ================= histórico detalhado ================= */
+let cmpA = HIST_N - 5, cmpB = HIST_N - 1;
+const BW = () => (detail.clientWidth || window.innerWidth) < 640 ? 440 : 1000;
+function openDetail() {
+  cmpA = HIST_N - 5; cmpB = HIST_N - 1;
+  detail.hidden = false; renderDetail(); detail.scrollTop = 0;
+  globe.pauseAnimation();
+  detail.querySelector('.back').focus();
+}
+function closeDetail() { detail.hidden = true; globe.resumeAnimation(); }
+
+function renderDetail() {
+  const ctx = activeCtx; if (!ctx) return;
+  const k = activeVar, v = VARS[k], A = analysis(ctx, k);
+  const all = Object.fromEntries(VKEYS.map(kk => [kk, makeSeries(ctx.key, ctx.lat, kk, ctx.hot)]));
+  const ev = eventsOf(A.pts, k);
+  const crumbs = crumbsOf(ctx);
+  const opts = (sel) => [...Array(HIST_N).keys()].map(i => `<option value="${i}" ${i === sel ? 'selected' : ''}>${dmy(passDate(i))}</option>`).join('');
+  const d = deltaOf(A.pts, k, cmpA, cmpB);
+  detail.innerHTML = `<div class="dwrap">
+    <div class="dhead">
+      <div>
+        <button class="back" type="button">← Voltar ao globo</button>
+        <p class="crumb">${crumbs.map(esc).join(' › ')}${crumbs.length ? ' › ' : ''}${ctx.lvlLabel}</p>
+        <h2>${esc(ctx.name)}</h2>
+        <div class="dmeta">
+          <span>Passagens medidas <b>${HIST_N}</b></span>
+          <span>Período <b>${dmyy(passDate(0))} a ${dmyy(passDate(HIST_N - 1))}</b></span>
+          ${ctx.ha ? `<span>Área <b>${fmt(ctx.ha, ctx.ha < 100 ? 1 : 0)} ha</b></span>` : ''}
+          <span>Mudanças marcadas <b>${ev.length}</b></span>
+        </div>
+      </div>
+    </div>
+    <span class="example">Dados ilustrativos: o pipeline ainda vai preencher esta região</span>
+
+    <div class="box">
+      <h3>${v.label} a cada passagem</h3>
+      <p class="lead">Passe o mouse para ver os valores. Clique num ponto para usá-lo como "depois" no comparativo. Os triângulos marcam saltos grandes entre passagens seguidas.</p>
+      <div class="bigchart" id="bigchart">${chartSVG(A.pts, k, { W: BW(), H: BW() < 1000 ? 280 : 300, big: true, selA: cmpA, selB: cmpB })}<div class="ctip" hidden></div></div>
+      <div class="chart-key"><span><i></i>Histórico medido</span><span><i class="fc"></i>Previsão (faixa = incerteza)</span><span><i class="ev"></i>Mudança detectada entre passagens</span></div>
+    </div>
+
+    <div class="dgrid two">
+      <div class="box">
+        <h3>Antes e depois</h3>
+        <p class="lead">Onde há água dentro da área em duas passagens, e onde ela avançou ou recuou.</p>
+        <div class="compare">
+          <figure><canvas id="cvA" width="260" height="260"></canvas><figcaption>Antes <select id="selA" aria-label="Passagem de antes">${opts(cmpA)}</select></figcaption>
+            <div class="mramp" style="background:linear-gradient(90deg, rgb(${LOW}), ${v.color})"></div><div class="mlegend"><span>${v.lgLo}</span><span>${v.lgHi}</span></div></figure>
+          <figure><canvas id="cvB" width="260" height="260"></canvas><figcaption>Depois <select id="selB" aria-label="Passagem de depois">${opts(cmpB)}</select></figcaption>
+            <div class="mramp" style="background:linear-gradient(90deg, rgb(${LOW}), ${v.color})"></div><div class="mlegend"><span>${v.lgLo}</span><span>${v.lgHi}</span></div></figure>
+          <figure><canvas id="cvD" width="260" height="260"></canvas><figcaption>Diferença <b style="font-family:var(--font-mono);font-weight:500;color:${d >= 0 ? v.color : 'var(--down)'}">${deltaTxt(d, k)}</b></figcaption>
+            <div class="mramp" style="background:linear-gradient(90deg, #f07a6a, #1a222b, ${v.color})"></div><div class="mlegend"><span>diminuiu</span><span>aumentou</span></div></figure>
+        </div>
+      </div>
+      <div class="box">
+        <h3>O que o radar viu</h3>
+        <p class="lead">Leitura da mudança entre ${dmy(passDate(cmpA))} e ${dmy(passDate(cmpB))}.</p>
+        <div class="facts" style="--vc:${v.color}">
+          <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>${genericDetected(k, d, cmpA, cmpB, ctx.lvl)}</p></section>
+          <section class="fact cause"><h3>Causa provável <span class="chip">hipótese · ${A.conf}</span></h3><p>${ctx.hot && ctx.hot.var === k && cmpB === HIST_N - 1 ? A.cause : genericCause(k, d, ctx.lat, ctx.lvl)}</p><p class="check">Para confirmar: ${A.check}</p></section>
+        </div>
+      </div>
+    </div>
+
+    <div class="box">
+      <div class="tabletools">
+        <div><h3>Todas as passagens</h3><p class="lead" style="margin:0">Valores médios da área. HH e HV são o retroespalhamento bruto do radar.</p></div>
+        <div style="display:flex;gap:10px;align-items:center"><span class="toast" id="toast" aria-live="polite"></span><button class="btn" type="button" id="copyCsv">Copiar como CSV</button></div>
+      </div>
+      <div class="tablewrap">
+        <table>
+          <thead><tr><th>Passagem</th><th>HH (dB)</th><th>HV (dB)</th><th>Água aberta (%)</th><th>Área de água</th><th>Variação</th><th></th></tr></thead>
+          <tbody>${[...Array(HIST_N + FC_N).keys()].map(i => {
+            const fc = i >= HIST_N, hh = hhOf(all.agua[i]), hv = hvOf(all.agua[i]);
+            const dd = i ? deltaOf(all[k], k, i - 1, i) : null;
+            const e = ev.find(x => x.i === i);
+            return `<tr class="${fc ? 'fc' : ''} ${i === cmpA || i === cmpB ? 'sel' : ''}"><td>${dmyy(passDate(i))}${fc ? ' (previsão)' : ''}</td><td>${fc ? '–' : fmt(hh, 1)}</td><td>${fc ? '–' : fmt(hv, 1)}</td><td class="hl">${fmt(all.agua[i], 1)}</td><td>${ctx.f ? fmtArea(all.agua[i] / 100 * areaHa(ctx.f)) : '–'}</td><td>${dd == null ? '–' : deltaTxt(dd, k)}</td><td>${e ? `<span class="evchip ${e.d < 0 ? 'down' : ''}">mudança</span>` : ''}</td></tr>`;
+          }).join('')}</tbody>
+        </table>
+      </div>
+    </div>
+    <p class="note">Protótipo: os mapas de antes e depois são simulados a partir do limite da área. No app final eles vêm dos GeoTIFF/PNG recortados pelo pipeline para cada passagem.</p>
+  </div>`;
+  detail.querySelector('.back').addEventListener('click', closeDetail);
+  $('#selA').addEventListener('change', (e) => { cmpA = +e.target.value; renderDetail(); });
+  $('#selB').addEventListener('change', (e) => { cmpB = +e.target.value; renderDetail(); });
+  $('#copyCsv').addEventListener('click', () => copyCsv(all));
+  wireBigChart(A.pts, k, all);
+  drawMaps(ctx, k, A.pts);
+}
+
+function wireBigChart(pts, k, all) {
+  const box = $('#bigchart'), svg = box.querySelector('svg'), tip = box.querySelector('.ctip'), cross = svg.querySelector('.cross');
+  const W = BW(), L = 44, Rr = 12, n = pts.length;
+  const idxAt = (cx) => { const r = svg.getBoundingClientRect(); const vx = (cx - r.left) / r.width * W; return clamp(Math.round((vx - L) / (W - L - Rr) * (n - 1)), 0, n - 1); };
+  const show = (e) => {
+    const i = idxAt(e.clientX), r = svg.getBoundingClientRect(), br = box.getBoundingClientRect();
+    const px = (L + i * (W - L - Rr) / (n - 1)) / W * r.width;
+    cross.setAttribute('x1', L + i * (W - L - Rr) / (n - 1)); cross.setAttribute('x2', L + i * (W - L - Rr) / (n - 1)); cross.setAttribute('visibility', 'visible');
+    const fc = i >= HIST_N;
+    tip.innerHTML = `<b>${dmyy(passDate(i))}${fc ? ' · previsão' : ''}</b><span>Água aberta <em style="color:${VARS.agua.color}">${fmt(all.agua[i], 1)}%</em></span>${fc ? '' : `<span>HH <em>${fmt(hhOf(all.agua[i]), 1)} dB</em></span><span>HV <em>${fmt(hvOf(all.agua[i]), 1)} dB</em></span>`}`;
+    tip.hidden = false;
+    tip.style.left = clamp(px + (r.left - br.left), 80, br.width - 80) + 'px';
+    tip.style.top = (e.clientY - br.top - 12) + 'px';
+  };
+  svg.addEventListener('pointermove', show);
+  svg.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
+  svg.addEventListener('click', (e) => { const i = idxAt(e.clientX); if (i < HIST_N && i !== cmpA) { cmpB = i; if (cmpA > cmpB) [cmpA, cmpB] = [cmpB, cmpA]; renderDetail(); } });
+}
+
+/* ---- mapas simulados dentro do limite da área ---- */
+function noiseGrid(seed, n = 9) { const r = rng(seed); return Array.from({ length: n * n }, () => r() * 2 - 1); }
+function sampleGrid(g, u, v, n = 9) {
+  const x = u * (n - 1), y = v * (n - 1), i = Math.min(Math.floor(x), n - 2), j = Math.min(Math.floor(y), n - 2);
+  const fx = x - i, fy = y - j, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
+  const a = g[j * n + i], b = g[j * n + i + 1], c = g[(j + 1) * n + i], d = g[(j + 1) * n + i + 1];
+  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+}
+function drawMaps(ctx, k, pts) {
+  const f = ctx.f; if (!f) return;
+  const b = bbox(f), lat0 = (b[1] + b[3]) / 2, kx = Math.cos(lat0 * Math.PI / 180);
+  const spanX = (b[2] - b[0]) * kx, spanY = b[3] - b[1], span = Math.max(spanX, spanY) * 1.08;
+  const cx = (b[0] + b[2]) / 2, cy = lat0, S = 260;
+  const toPx = ([lng, lat]) => [S / 2 + (lng - cx) * kx / span * S, S / 2 - (lat - cy) / span * S];
+  const path = new Path2D();
+  ringsOf(f.geometry).forEach(poly => poly.forEach(ring => ring.forEach((p, i) => { const [x, y] = toPx(p); i ? path.lineTo(x, y) : path.moveTo(x, y); })));
+  const g1 = noiseGrid(hash(ctx.key + k + 'a')), g2 = noiseGrid(hash(ctx.key + k + 'b'));
+  const g3 = noiseGrid(hash(ctx.key + 'fine'), 17);
+  const amp = k === 'umidade' ? 14 : k === 'agua' ? Math.max(pts[cmpA], 2) * 0.9 : 2.2;
+  const w = (t) => (t - HIST_N / 2) / (HIST_N / 2);
+  const field = (t, u, v) => pts[t] + amp * (0.7 * sampleGrid(g1, u, v) + 0.25 * sampleGrid(g3, u, v, 17) + 0.9 * w(t) * sampleGrid(g2, u, v));
+  const N = 96;
+  const paint = (id, fn) => {
+    const cv = $(id), c2 = cv.getContext('2d');
+    const off = document.createElement('canvas'); off.width = N; off.height = N;
+    const oc = off.getContext('2d'), img = oc.createImageData(N, N);
+    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
+      const [r, g, bb] = fn(i / (N - 1), j / (N - 1)); const o = (j * N + i) * 4;
+      img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = bb; img.data[o + 3] = 255;
+    }
+    oc.putImageData(img, 0, 0);
+    c2.clearRect(0, 0, S, S); c2.fillStyle = '#070b12'; c2.fillRect(0, 0, S, S);
+    c2.save(); c2.clip(path, 'evenodd'); c2.imageSmoothingEnabled = true; c2.drawImage(off, 0, 0, S, S); c2.restore();
+    c2.lineWidth = 1.5; c2.strokeStyle = 'rgba(233,238,242,0.7)'; c2.stroke(path);
+  };
+  const [lo, hi] = yDomain(pts, k);
+  const rgbAt = (t) => { const e = 0.12 + 0.88 * clamp(t, 0, 1); return LOW.map((v, i) => Math.round(v + (VARS[k].rgb[i] - v) * e)); };
+  paint('#cvA', (u, v) => rgbAt((field(cmpA, u, v) - lo) / (hi - lo)));
+  paint('#cvB', (u, v) => rgbAt((field(cmpB, u, v) - lo) / (hi - lo)));
+  const dmax = amp * 1.2 + Math.abs(pts[cmpB] - pts[cmpA]);
+  paint('#cvD', (u, v) => {
+    const dd = clamp((field(cmpB, u, v) - field(cmpA, u, v)) / dmax, -1, 1), mid = [26, 34, 43];
+    const to = dd >= 0 ? VARS[k].rgb : [240, 122, 106], a = Math.abs(dd);
+    return mid.map((m, i) => Math.round(m + (to[i] - m) * a));
+  });
+}
+
+// retroespalhamento médio ilustrativo: quanto mais água aberta, mais escuro o radar fica
+function hhOf(w) { return -8.5 - w * 0.22; }
+function hvOf(w) { return -15.5 - w * 0.12; }
+function copyCsv(all) {
+  const head = 'data,previsao,hh_db,hv_db,agua_pct';
+  const rows = [...Array(HIST_N + FC_N).keys()].map(i => [passDate(i).toISOString().slice(0, 10), i >= HIST_N ? 1 : 0, i >= HIST_N ? '' : hhOf(all.agua[i]).toFixed(2), i >= HIST_N ? '' : hvOf(all.agua[i]).toFixed(2), all.agua[i]].join(','));
+  const text = [head, ...rows].join('\n');
+  const t = $('#toast');
+  const fallback = () => { const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; } ta.remove(); t.textContent = ok ? 'CSV copiado' : 'Não deu para copiar neste navegador'; };
+  try { navigator.clipboard.writeText(text).then(() => { t.textContent = 'CSV copiado'; }, fallback); } catch (e) { fallback(); }
+}
+
+/* ================= minha área ================= */
+const areaMenu = $('#areaMenu'), areaBtn = $('#areaBtn');
+areaBtn.addEventListener('click', () => { const open = areaMenu.hidden; areaMenu.hidden = !open; areaBtn.setAttribute('aria-expanded', open); if (open) renderSaved(); });
+document.addEventListener('pointerdown', (e) => { if (!areaMenu.hidden && !e.target.closest('#areaMenu, #areaBtn')) { areaMenu.hidden = true; areaBtn.setAttribute('aria-expanded', 'false'); } });
+$('#optDraw').addEventListener('click', startDraw);
+$('#optFile').addEventListener('click', () => $('#fileIn').click());
+$('#optCoord').addEventListener('click', () => { areaMenu.hidden = true; q.value = ''; q.placeholder = 'Ex.: -21.2450, -44.9990'; q.focus(); });
+$('#fileIn').addEventListener('change', importFile);
+
+function startDraw() {
+  const from = selected;
+  areaMenu.hidden = true; closePanel(); stopSpin();
+  drawMode = true; drawPts = []; hover = null; refreshStyle();
+  el.classList.add('drawing'); $('#drawbar').hidden = false; updateDraw();
+  // só aproxima sozinho quando sabe onde: região selecionada ou centro da tela sobre terra
+  const a = altitude();
+  let target = from ? centerOf(from) : null;
+  if (!target && a < 0.8) { const c = centerGeo(); if (world.some(f => inFeature([c.lng, c.lat], f))) target = c; }
+  if (target && a > 0.03) flyTo(target.lat, target.lng, 0.012, 1800);
+  else if (!target) $('#drawInfo').textContent = 'busque a cidade ou aproxime do local para começar';
+}
+function stopDraw() {
+  drawMode = false; drawPts = []; el.classList.remove('drawing'); $('#drawbar').hidden = true;
+  globe.pathsData([]); globe.htmlElementsData(HOTSPOTS);
+}
+function addDrawPoint(cx, cy) {
+  if (tween || altitude() > 0.08) { $('#drawInfo').textContent = 'aproxime mais o mapa para marcar'; return; }
+  const g = pickGeo(cx, cy); if (!g) return;
+  drawPts.push([g.lng, g.lat]); updateDraw();
+}
+function updateDraw() {
+  const n = drawPts.length;
+  let info = `${n} ${n === 1 ? 'ponto' : 'pontos'}`;
+  if (n >= 3) info += ` · ${fmt(hectares(drawPts), 1)} ha`;
+  $('#drawInfo').textContent = info;
+  $('#drawDone').disabled = n < 3; $('#drawUndo').disabled = n === 0;
+  globe.pathsData(n >= 2 ? [{ pts: n >= 3 ? drawPts.concat([drawPts[0]]) : drawPts }] : []);
+  globe.htmlElementsData(HOTSPOTS.concat(drawPts.map((p, i) => ({ kind: 'v', lat: p[1], lng: p[0], first: i === 0 }))));
+}
+$('#drawUndo').addEventListener('click', () => { drawPts.pop(); updateDraw(); });
+$('#drawCancel').addEventListener('click', stopDraw);
+$('#drawDone').addEventListener('click', () => {
+  const ring = drawPts.concat([drawPts[0]]);
+  stopDraw();
+  addArea(ring, null, true);
+});
+
+function placeOf(lat, lng) {
+  const pt = [lng, lat];
+  const country = world.find(f => inFeature(pt, f));
+  if (!country) return { parent: '', country: '' };
+  let parent = '';
+  if (country.__a2 === 'BR' && mgState && inFeature(pt, mgState)) { const m = mgMun.find(f => inFeature(pt, f)); parent = m ? `${m.__name}, MG` : 'Minas Gerais'; }
+  else if (adm1[country.__a2]) { const s = adm1[country.__a2].find(f => inFeature(pt, f)); parent = s ? s.__name : ''; }
+  return { parent, country: country.__name };
+}
+function makeAreaFeature(rec) {
+  const f = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [rec.ring] } };
+  const c = centerOf(f), pl = placeOf(c.lat, c.lng);
+  const ha = hectares(rec.ring);
+  const vals = Object.fromEntries(VKEYS.map(kk => [kk, makeSeries(rec.id, c.lat, kk)[HIST_N - 1]]));
+  return Object.assign(f, { __lvl: 'area', __lvlLabel: LVL_LABEL.area, __name: rec.name, __key: rec.id, __parent: pl.parent, __country: pl.country, __ha: ha, __vals: vals, __rec: rec });
+}
+function saveAreas() { store.set('arara-areas-v3', areas.map(a => a.__rec)); }
+function addArea(ring, name, open) {
+  const n = areas.length + 1;
+  const rec = { id: 'area-' + Date.now().toString(36), name: name || `Minha área ${n}`, ring: ring.map(p => [+p[0].toFixed(6), +p[1].toFixed(6)]) };
+  const f = makeAreaFeature(rec);
+  areas.push(f); saveAreas(); updateLOD(true);
+  if (open) { stopSpin(); selectFeature(f, { fly: true }); }
+  return f;
+}
+function renderSaved() {
+  const ul = $('#saved');
+  $('#savedWrap').hidden = !areas.length;
+  ul.innerHTML = areas.map((a, i) => `<li><button class="go" type="button" data-i="${i}">${esc(a.__name)}<small>${fmt(a.__ha, a.__ha < 100 ? 1 : 0)} ha</small></button><button class="del" type="button" data-del="${i}" aria-label="Remover ${esc(a.__name)}">Remover</button></li>`).join('');
+  ul.querySelectorAll('.go').forEach(b => b.addEventListener('click', () => { areaMenu.hidden = true; selectFeature(areas[+b.dataset.i], { fly: true }); }));
+  ul.querySelectorAll('.del').forEach(b => b.addEventListener('click', () => {
+    const a = areas[+b.dataset.del]; if (selected === a) closePanel();
+    areas.splice(+b.dataset.del, 1); saveAreas(); updateLOD(true); renderSaved();
+  }));
+}
+function importFile(e) {
+  const file = e.target.files && e.target.files[0]; if (!file) return;
+  const reader = new FileReader();
+  reader.onload = () => {
+    let rings = [], name = file.name.replace(/\.(kml|geojson|json)$/i, '');
+    try {
+      const txt = String(reader.result);
+      if (/^\s*</.test(txt)) {
+        const doc = new DOMParser().parseFromString(txt, 'application/xml');
+        const nm = doc.querySelector('Placemark > name, Document > name'); if (nm && nm.textContent.trim()) name = nm.textContent.trim();
+        doc.querySelectorAll('Polygon').forEach(pg => {
+          const c = pg.querySelector('outerBoundaryIs coordinates') || pg.querySelector('coordinates');
+          if (c) rings.push(c.textContent.trim().split(/\s+/).map(t => t.split(',').map(Number)).filter(p => p.length >= 2 && !isNaN(p[0])).map(p => [p[0], p[1]]));
+        });
+      } else {
+        const gj = JSON.parse(txt);
+        const feats = gj.type === 'FeatureCollection' ? gj.features : gj.type === 'Feature' ? [gj] : [{ geometry: gj, properties: {} }];
+        feats.forEach(ft => {
+          const g = ft.geometry; if (!g) return;
+          const p = ft.properties || {}; const nm = p.name || p.nome || p.NOME || p.cod_imovel || p.COD_IMOVEL; if (nm && rings.length === 0) name = String(nm);
+          if (g.type === 'Polygon') rings.push(g.coordinates[0]);
+          if (g.type === 'MultiPolygon') g.coordinates.forEach(pp => rings.push(pp[0]));
+        });
+      }
+    } catch (err) { rings = []; }
+    rings = rings.filter(r => r.length >= 4);
+    areaMenu.hidden = true;
+    if (!rings.length) { flash('Não encontrei nenhum polígono no arquivo. Use KML ou GeoJSON com o perímetro da área.'); return; }
+    rings.sort((a, b) => hectares(b) - hectares(a));
+    addArea(rings[0].map(p => [p[0], p[1]]), name, true);
+  };
+  reader.readAsText(file);
+  e.target.value = '';
+}
+let flashT = null;
+function flash(msg) {
+  const d = $('#drawbar'); d.hidden = false; d.innerHTML = `<p>${esc(msg)}</p>`;
+  clearTimeout(flashT); flashT = setTimeout(() => { d.hidden = true; restoreDrawbar(); }, 4200);
+}
+const drawbarHTML = $('#drawbar').innerHTML;
+function restoreDrawbar() {
+  const d = $('#drawbar'); d.innerHTML = drawbarHTML;
+  $('#drawUndo').addEventListener('click', () => { drawPts.pop(); updateDraw(); });
+  $('#drawCancel').addEventListener('click', stopDraw);
+  $('#drawDone').addEventListener('click', () => { const ring = drawPts.concat([drawPts[0]]); stopDraw(); addArea(ring, null, true); });
+}
+
+/* ================= busca ================= */
+const q = $('#q'), results = $('#results');
+let hits = [], activeHit = -1;
+function parseCoord(s) {
+  s = s.trim();
+  const m = s.match(/^(-?\d{1,3}(?:\.\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:\.\d+)?)$/) || s.match(/^(-?\d{1,3}(?:,\d+)?)\s*[;\s]\s*(-?\d{1,3}(?:,\d+)?)$/);
+  if (!m) return null;
+  const lat = parseFloat(m[1].replace(',', '.')), lng = parseFloat(m[2].replace(',', '.'));
+  if (isNaN(lat) || isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180) return null;
+  return { lat, lng };
+}
+q.addEventListener('input', () => {
+  const raw = q.value.trim(), s = norm(raw);
+  const co = parseCoord(raw);
+  if (co) {
+    hits = [{ kind: 'coord', ...co, label: 'Ir para a coordenada', small: `${fmt(co.lat, 4)}, ${fmt(co.lng, 4)}` },
+            { kind: 'coordArea', ...co, label: 'Criar área de 1 km em volta', small: '≈ 100 ha' }];
+  } else if (s.length >= 2) {
+    hits = searchIndex.filter(e => e.n.includes(s)).sort((a, b) => (a.n.startsWith(s) ? 0 : 1) - (b.n.startsWith(s) ? 0 : 1) || a.rank - b.rank).slice(0, 8)
+      .map(h => ({ kind: 'f', f: h.f, label: h.f.__name, small: h.f.__lvlLabel + (h.f.__parent ? ' · ' + h.f.__parent : '') }));
+  } else { results.hidden = true; return; }
+  activeHit = -1;
+  results.innerHTML = hits.length ? hits.map((h, i) => `<li><button type="button" data-i="${i}" role="option">${esc(h.label)}<small>${esc(h.small)}</small></button></li>`).join('')
+    : '<li class="hint">Nada encontrado. Também dá para digitar uma coordenada, como -21.245, -44.999.</li>';
+  results.hidden = false;
+});
+q.addEventListener('keydown', (e) => {
+  const btns = [...results.querySelectorAll('button[data-i]')];
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') {
+    e.preventDefault(); if (!btns.length) return;
+    activeHit = (activeHit + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length;
+    btns.forEach((b, i) => b.classList.toggle('active', i === activeHit));
+  } else if (e.key === 'Enter') { const i = activeHit >= 0 ? activeHit : 0; if (hits[i]) pickHit(hits[i]); }
+  else if (e.key === 'Escape') { results.hidden = true; }
+});
+results.addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b) pickHit(hits[+b.dataset.i]); });
+document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.search')) results.hidden = true; });
+function pickHit(h) {
+  results.hidden = true; q.blur(); stopSpin();
+  if (h.kind === 'f') {
+    q.value = h.f.__name;
+    if (drawMode) { const c = centerOf(h.f); flyTo(c.lat, c.lng, 0.012, 1800); updateDraw(); return; }
+    selectFeature(h.f, { fly: true }); return;
+  }
+  q.value = '';
+  if (h.kind === 'coord' || drawMode) { closePanel(); flyTo(h.lat, h.lng, 0.012, 1800); return; }
+  const dLat = 0.5 / 110.57, dLng = 0.5 / (111.32 * Math.cos(h.lat * Math.PI / 180));
+  addArea([[h.lng - dLng, h.lat - dLat], [h.lng + dLng, h.lat - dLat], [h.lng + dLng, h.lat + dLat], [h.lng - dLng, h.lat + dLat], [h.lng - dLng, h.lat - dLat]], `Área em ${fmt(h.lat, 3)}, ${fmt(h.lng, 3)}`, true);
+}
+
+/* ================= dados ================= */
+function tag(f, lvl, extra) { return Object.assign(f, extra, { __lvl: lvl, __lvlLabel: LVL_LABEL[lvl] }); }
+function valsFor(key, lat, hot) { return Object.fromEntries(VKEYS.map(kk => [kk, makeSeries(key, lat, kk, hot)[HIST_N - 1]])); }
+fetch('geo.json').then(r => r.json()).then(geo => {
+  world = topojson.feature(geo.world, geo.world.objects.countries).features
+    .filter(f => f.properties.n !== 'Antarctica')
+    .map(f => {
+      const a2 = f.properties.a2;
+      const nm = (a2 && ptRegion && ptRegion.of(a2)) || f.properties.n;
+      return tag(f, 'pais', { __a2: a2, __name: nm, __key: 'c-' + (a2 || f.properties.n), __parent: '' });
+    });
+  const nameOfA2 = (a2) => (ptRegion && ptRegion.of(a2)) || a2;
+  Object.entries(geo.adm1).forEach(([a2, feats]) => {
+    adm1[a2] = feats.map(f => {
+      const c = centerOf(f);
+      return tag(f, 'estado', { __name: f.properties.n || f.properties.pc || f.properties.k, __key: f.properties.k, __parent: nameOfA2(a2), __country: nameOfA2(a2), __vals: valsFor(f.properties.k, c.lat) });
+    });
+  });
+  mgState = adm1.BR.find(f => f.properties.pc === 'MG' || f.properties.k === 'br-mg');
+  mgMun = geo.mgmun.map(f => tag(f, 'municipio', { __name: f.properties.n, __key: f.properties.k, __parent: 'MG', __country: 'Brasil', __vals: valsFor(f.properties.k, +f.properties.lat, null) }));
+  world.forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 0 }));
+  Object.values(adm1).flat().forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 1 }));
+  mgMun.forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 2 }));
+  fetch('furnas_globe.json').then(r => r.json()).then(g => {
+    lake = tag({ type: 'Feature', properties: {}, geometry: g }, 'lago', { __name: 'Lago de Furnas', __key: 'lago-furnas', __parent: 'Minas Gerais', __country: 'Brasil', __vals: { agua: 100 } });
+    searchIndex.push({ n: norm('Lago de Furnas'), f: lake, rank: 0 }, { n: norm('Furnas'), f: lake, rank: 0 });
+    updateLOD(true);
+  }).catch(() => {});
+  areas = store.get('arara-areas-v3', []).filter(r => r && r.ring && r.ring.length >= 4).map(makeAreaFeature);
+  globe.polygonsData(world.concat(areas));
+  $('#loading').hidden = true;
+}).catch(() => { $('#loading').textContent = 'Não foi possível carregar os mapas. Recarregue a página.'; });
+
+/* ================= tamanho e teclado ================= */
+function resize() { globe.width(el.clientWidth).height(el.clientHeight); buildSky(); }
+window.addEventListener('resize', resize);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape') return;
+  if (!detail.hidden) closeDetail();
+  else if (drawMode) stopDraw();
+  else if (!panel.hidden) closePanel();
+});
+
+setVar('agua');
+findGlobe();
+})();
+</script>
+
+</body></html>

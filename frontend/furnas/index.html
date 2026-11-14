@@ -1,0 +1,303 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>TerraPulse · Furnas reservoir seen by NISAR</title>
+<meta name="description" content="NISAR L-band radar measured the water area of Furnas reservoir (Brazil) on nine passes in 2026, checked against the official ANA water level.">
+<meta name="theme-color" content="#0e1418">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' fill='%230e1418'/%3E%3Cpath d='M2 11h12M4 8h8M6 5h4' stroke='%237cf2c4' stroke-width='1.5'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="bar">
+  <a class="brand" href="#top">Terra<span>Pulse</span></a>
+  <span class="instrument" data-i18n="nav.instrument">NISAR · L-band · Track 024 D · Frame 099</span>
+  <div class="bar-actions">
+    <button class="btn btn-ghost" id="lang" type="button" data-i18n="nav.switch" data-i18n-aria="nav.switch.label">PT</button>
+    <button class="btn btn-accent" id="open-explore" type="button" data-i18n="nav.explore">Explore</button>
+  </div>
+</header>
+
+<main id="top">
+
+<!-- 1 · ABERTURA -->
+<section class="hero" id="hero">
+  <div class="map hero-map" id="map-hero" aria-label="NISAR radar image of Furnas reservoir"></div>
+  <div class="sweep" aria-hidden="true"><div class="veil"></div><div class="beam"></div></div>
+  <div class="hero-text">
+    <p class="kicker" data-i18n="hero.kicker"></p>
+    <h1 data-i18n="hero.title"></h1>
+    <p class="dek" data-i18n="hero.dek"></p>
+  </div>
+  <div class="hero-meta mono" id="hero-meta"></div>
+  <p class="hero-cap mono"><span data-i18n="hero.caption"></span><br><span id="hero-credit"></span></p>
+  <a class="scroll-cue mono" href="#see"><span data-i18n="hero.scroll">Scroll</span><i></i></a>
+</section>
+
+<!-- 2 · O QUE O RADAR VÊ -->
+<section class="sec" id="see">
+  <div class="grid-2">
+    <div class="col-text reveal">
+      <p class="kicker" data-i18n="see.kicker"></p>
+      <h2 data-i18n="see.title"></h2>
+      <p data-i18n="see.p1"></p>
+      <figure class="diagram" id="diagram" aria-hidden="true"></figure>
+      <p data-i18n="see.p2"></p>
+      <p data-i18n="see.p3"></p>
+      <div class="legend-classes" id="classes">
+        <p class="label" data-i18n="see.legend"></p>
+        <button type="button" data-class="1"><i class="sw sw-water"></i><b data-i18n="see.l.water"></b><span data-i18n="see.l.water.d"></span></button>
+        <button type="button" data-class="2"><i class="sw sw-volume"></i><b data-i18n="see.l.volume"></b><span data-i18n="see.l.volume.d"></span></button>
+        <button type="button" data-class="3"><i class="sw sw-field"></i><b data-i18n="see.l.field"></b><span data-i18n="see.l.field.d"></span></button>
+        <p class="note" data-i18n="see.l.note"></p>
+      </div>
+    </div>
+    <figure class="col-fig reveal">
+      <div class="map tall" id="map-see" data-lazy="see"></div>
+      <div class="probe mono" id="probe-see" data-i18n="see.probe"></div>
+      <figcaption class="mono" data-i18n="see.cap"></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 3 · LINHA DO TEMPO -->
+<section class="sec" id="timeline">
+  <div class="wrap reveal">
+    <p class="kicker" data-i18n="time.kicker"></p>
+    <h2 data-i18n="time.title"></h2>
+    <div class="cols-3">
+      <p data-i18n="time.p1"></p>
+      <p data-i18n="time.p2"></p>
+      <p data-i18n="time.p3"></p>
+    </div>
+  </div>
+  <div class="wrap wide">
+    <div class="tl">
+      <div class="map tl-map" id="map-time" data-lazy="time"></div>
+      <aside class="tl-panel">
+        <div class="tl-date mono" id="tl-date"></div>
+        <div class="tl-flag mono" id="tl-flag"></div>
+        <div class="readout">
+          <span class="label" data-i18n="time.area"></span>
+          <span class="big num" id="tl-area">—</span><span class="unit">km²</span>
+        </div>
+        <dl class="mini mono">
+          <dt data-i18n="time.expected"></dt><dd id="tl-exp"></dd>
+          <dt data-i18n="time.level"></dt><dd id="tl-level"></dd>
+          <dt data-i18n="time.signal"></dt><dd id="tl-signal"></dd>
+        </dl>
+        <label class="check mono"><input type="checkbox" id="tl-mask" checked><span data-i18n="time.mask"></span></label>
+      </aside>
+    </div>
+    <div class="ruler-row">
+      <button class="btn btn-accent play" id="tl-play" type="button"><i class="ico-play"></i><span data-i18n="time.play">Play</span></button>
+      <div class="ruler" id="ruler"></div>
+    </div>
+    <p class="ruler-legend mono"><i class="tri"></i><span data-i18n="time.legend.flag"></span> <i class="tick"></i><span data-i18n="time.legend.pass"></span></p>
+  </div>
+</section>
+
+<!-- 4 · ANTES × DEPOIS -->
+<section class="sec" id="compare">
+  <div class="grid-2 flip">
+    <figure class="col-fig reveal">
+      <div class="map tall swipe-map" id="map-cmp" data-lazy="cmp">
+        <div class="swipe" id="swipe"><span class="swipe-tag l mono" id="cmp-l"></span><span class="swipe-tag r mono" id="cmp-r"></span><button class="swipe-handle" type="button" aria-label="Drag to compare"></button></div>
+      </div>
+    </figure>
+    <div class="col-text reveal">
+      <p class="kicker" data-i18n="cmp.kicker"></p>
+      <h2 data-i18n="cmp.title"></h2>
+      <p data-i18n="cmp.p1"></p>
+      <label class="check mono"><input type="checkbox" id="cmp-change"><span data-i18n="cmp.change"></span></label>
+      <p data-i18n="cmp.p2"></p>
+      <div class="chg-stats">
+        <div><i class="sw sw-dried"></i><span class="num" id="cmp-dried"></span> km² <span class="label" data-i18n="cmp.dried"></span></div>
+        <div><i class="sw sw-new"></i><span class="num" id="cmp-new"></span> km² <span class="label" data-i18n="cmp.new"></span></div>
+        <div><i class="sw sw-net"></i><span class="num" id="cmp-net"></span> km² <span class="label" data-i18n="cmp.net"></span></div>
+      </div>
+      <p class="aside" data-i18n="cmp.caveat"></p>
+    </div>
+  </div>
+</section>
+
+<!-- 5 · A PROVA -->
+<section class="sec proof" id="proof">
+  <div class="wrap reveal">
+    <p class="kicker" data-i18n="proof.kicker"></p>
+    <h2 data-i18n="proof.title"></h2>
+    <p class="lede" data-i18n="proof.p1"></p>
+  </div>
+  <div class="wrap wide">
+    <div class="stats reveal">
+      <div class="stat"><span class="stat-v num" data-i18n="proof.s1.v"></span><p data-i18n="proof.s1.l"></p></div>
+      <div class="stat"><span class="stat-v num"><span data-i18n="proof.s2.v"></span><small data-i18n="proof.s2.u"></small></span><p data-i18n="proof.s2.l"></p></div>
+      <div class="stat"><span class="stat-v num" data-i18n="proof.s3.v"></span><p data-i18n="proof.s3.l"></p></div>
+    </div>
+    <div class="charts">
+      <figure class="chart reveal" id="chart-series">
+        <figcaption class="chart-title" data-i18n="proof.c1.title"></figcaption>
+        <div class="chart-legend mono" id="leg-series"></div>
+        <div class="svg-host"></div>
+      </figure>
+      <figure class="chart reveal" id="chart-scatter">
+        <figcaption class="chart-title" data-i18n="proof.c2.title"></figcaption>
+        <div class="chart-legend mono" id="leg-scatter"></div>
+        <div class="svg-host"></div>
+      </figure>
+    </div>
+    <div class="tooltip mono" id="tooltip" role="status"></div>
+    <p class="honest reveal" data-i18n="proof.honest"></p>
+    <button class="btn btn-ghost" type="button" id="toggle-table" data-i18n="proof.table" aria-expanded="false"></button>
+    <div class="table-wrap" id="table-wrap" hidden></div>
+  </div>
+</section>
+
+<!-- 6 · POLARIZAÇÕES -->
+<section class="sec" id="pol">
+  <div class="grid-2">
+    <div class="col-text reveal">
+      <p class="kicker" data-i18n="pol.kicker"></p>
+      <h2 data-i18n="pol.title"></h2>
+      <div class="seg" role="tablist" id="pol-seg">
+        <button type="button" role="tab" data-pol="hh" aria-selected="true" data-i18n="pol.b.hh">HH</button>
+        <button type="button" role="tab" data-pol="hv" aria-selected="false" data-i18n="pol.b.hv">HV</button>
+        <button type="button" role="tab" data-pol="cor" aria-selected="false" data-i18n="pol.b.cor">Colour</button>
+      </div>
+      <p class="pol-text" data-pol-text="hh" data-i18n="pol.hh"></p>
+      <p class="pol-text" data-pol-text="hv" data-i18n="pol.hv"></p>
+      <p class="pol-text" data-pol-text="cor" data-i18n="pol.cor"></p>
+    </div>
+    <figure class="col-fig reveal">
+      <div class="map tall" id="map-pol" data-lazy="pol"></div>
+      <figcaption class="mono" id="pol-cap"></figcaption>
+    </figure>
+  </div>
+</section>
+
+<!-- 7 · FATOR HUMANO -->
+<section class="sec" id="human">
+  <div class="grid-2">
+    <div class="col-text reveal">
+      <p class="kicker" data-i18n="hum.kicker"></p>
+      <h2 data-i18n="hum.title"></h2>
+      <p data-i18n="hum.p1"></p>
+      <p data-i18n="hum.p2"></p>
+      <p data-i18n="hum.p3"></p>
+      <dl class="evidence">
+        <dt data-i18n="hum.m.h"></dt><dd data-i18n="hum.m"></dd>
+        <dt data-i18n="hum.c.h"></dt><dd data-i18n="hum.c"></dd>
+        <dt data-i18n="hum.e.h"></dt><dd data-i18n="hum.e"></dd>
+        <dt data-i18n="hum.n.h"></dt><dd data-i18n="hum.n"></dd>
+      </dl>
+    </div>
+    <figure class="col-fig gauge reveal" id="gauge">
+      <figcaption class="chart-title" data-i18n="hum.g.title"></figcaption>
+      <div class="svg-host"></div>
+    </figure>
+  </div>
+</section>
+
+<!-- 8 · LIMITAÇÕES -->
+<section class="sec" id="limits">
+  <div class="wrap reveal">
+    <p class="kicker" data-i18n="lim.kicker"></p>
+    <h2 data-i18n="lim.title"></h2>
+    <ol class="limits">
+      <li><b data-i18n="lim.1.h"></b> <span data-i18n="lim.1"></span></li>
+      <li><b data-i18n="lim.2.h"></b> <span data-i18n="lim.2"></span></li>
+      <li><b data-i18n="lim.3.h"></b> <span data-i18n="lim.3"></span></li>
+      <li><b data-i18n="lim.4.h"></b> <span data-i18n="lim.4"></span></li>
+      <li><b data-i18n="lim.5.h"></b> <span data-i18n="lim.5"></span></li>
+    </ol>
+  </div>
+</section>
+
+<!-- 9 · USE EM OUTRO LAGO -->
+<section class="sec" id="reuse">
+  <div class="wrap reveal">
+    <p class="kicker" data-i18n="reuse.kicker"></p>
+    <h2 data-i18n="reuse.title"></h2>
+    <ol class="inputs">
+      <li><b data-i18n="reuse.i1.h"></b> <span data-i18n="reuse.i1"></span></li>
+      <li><b data-i18n="reuse.i2.h"></b> <span data-i18n="reuse.i2"></span></li>
+      <li><b data-i18n="reuse.i3.h"></b> <span data-i18n="reuse.i3"></span></li>
+    </ol>
+<pre class="code"><code><span class="c" data-i18n="reuse.code.c1"></span>
+python scripts/area_agua.py data/raw/nisar \
+  --poligono data/ana/furnas/Furnas.gdb --buffer 0 \
+  --limiar <span id="code-limiar"></span> --saida outputs/furnas_poligono_b0
+
+<span class="c" data-i18n="reuse.code.c2"></span>
+python scripts/exportar_web.py</code></pre>
+    <p><a class="link" id="repo-link" href="#" data-i18n="reuse.link"></a> <span class="placeholder mono" id="repo-note" data-i18n="reuse.placeholder"></span></p>
+  </div>
+</section>
+
+<!-- 10 · FONTES E TIME -->
+<section class="sec" id="sources">
+  <div class="wrap reveal">
+    <p class="kicker" data-i18n="src.kicker"></p>
+    <h2 data-i18n="src.title"></h2>
+    <dl class="sources">
+      <dt data-i18n="src.nisar.h"></dt>
+      <dd><span data-i18n="src.nisar"></span><ul class="scenes mono" id="scenes"></ul></dd>
+      <dt data-i18n="src.ana.h"></dt>
+      <dd><span data-i18n="src.ana"></span> <a class="link" id="src-ana" href="#">gov.br/ana</a></dd>
+      <dt data-i18n="src.cav.h"></dt>
+      <dd><span data-i18n="src.cav"></span> <a class="link" id="src-cav" href="#">metadados.snirh.gov.br</a></dd>
+      <dt data-i18n="src.team.h"></dt>
+      <dd id="team"></dd>
+    </dl>
+    <p class="aside mono" data-i18n="src.method"></p>
+    <p class="aside" data-i18n="src.sensor"></p>
+    <p class="aside" data-i18n="src.license"></p>
+  </div>
+</section>
+
+</main>
+
+<!-- MODO EXPLORAR -->
+<div class="explore" id="explore" hidden role="dialog" aria-modal="true" aria-labelledby="ex-title">
+  <div class="map ex-map" id="map-ex"></div>
+  <aside class="ex-panel">
+    <div class="ex-head">
+      <h2 id="ex-title" data-i18n="ex.title"></h2>
+      <button class="btn btn-ghost" type="button" id="close-explore" data-i18n="ex.close"></button>
+    </div>
+    <fieldset>
+      <legend class="label" data-i18n="ex.base"></legend>
+      <div class="seg" id="ex-base">
+        <button type="button" data-base="hh" aria-pressed="true">HH</button>
+        <button type="button" data-base="hv" aria-pressed="false">HV</button>
+        <button type="button" data-base="cor" aria-pressed="false" data-i18n="pol.b.cor">Colour</button>
+      </div>
+      <p class="note" id="ex-hhnote" data-i18n="ex.hhnote"></p>
+    </fieldset>
+    <fieldset>
+      <legend class="label" data-i18n="ex.date"></legend>
+      <div class="ex-dates mono" id="ex-dates"></div>
+    </fieldset>
+    <fieldset>
+      <legend class="label" data-i18n="ex.overlays"></legend>
+      <label class="check mono"><input type="checkbox" id="ex-mask" checked><span data-i18n="ex.mask"></span></label>
+      <label class="check mono"><input type="checkbox" id="ex-change"><span data-i18n="ex.change"></span></label>
+      <label class="check mono"><input type="checkbox" id="ex-outline" checked><span data-i18n="ex.outline"></span></label>
+      <label class="range mono"><span data-i18n="ex.opacity"></span><input type="range" id="ex-opacity" min="0" max="100" value="80"></label>
+    </fieldset>
+    <fieldset>
+      <legend class="label" data-i18n="ex.readout"></legend>
+      <div class="probe mono static" id="probe-ex">—</div>
+    </fieldset>
+    <p class="map-credit" id="ex-credit"></p>
+  </aside>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="config.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
