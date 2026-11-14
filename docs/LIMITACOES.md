@@ -2,9 +2,14 @@
 
 ## Estado da verificação
 
-- **Nenhuma análise real de NISAR fora de Furnas foi executada.** A máquina de desenvolvimento não tinha
-  credenciais Earthdata; a leitura por streaming foi testada com arquivos sintéticos e com objeto de
-  arquivo, não com uma cena remota. O catálogo (ASF) e o Sentinel-2 foram testados ao vivo.
+- **Duas regiões reais analisadas de ponta a ponta em 14/11/2026**, por streaming, pelo servidor:
+  Represa de Três Marias (MG), 9 datas, limiar −15,64 dB, IoU médio 0,90 com o Sentinel-2; e Pantanal
+  em Corumbá (MS), 8 datas, marcada **experimental** (várzea alagada sem margem água/terra nítida,
+  limiar −11,8 dB pelo Otsu), IoU médio 0,58. Não houve conferência com dado de campo nessas regiões.
+- Em Três Marias, 07/09, 19/09 e 13/10 têm água ~1,3 a 1,5 dB mais clara que a mediana e área menor,
+  mas ficam abaixo do corte de 1,75 dB do flag de vento: podem ser vento não marcado.
+- A cobertura de um grupo é calculada pelo contorno da cena no catálogo; uma cena pode cobrir a área no
+  contorno e não ter dado válido ali (aconteceu no Pantanal em 05/07). Ela é descartada com o motivo.
 - **A regressão de Furnas com os `.h5` não foi rodada depois da migração** (os arquivos e o `Furnas.gdb`
   não estavam no disco). Os testes da ANA reproduzem os números publicados.
 - **O globo não foi aberto num navegador real**, só testado com DOM simulado.
