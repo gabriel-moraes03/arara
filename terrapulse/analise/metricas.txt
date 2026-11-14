@@ -1,0 +1,35 @@
+cobertura do polígono de Furnas (dado válido em todas as datas): 100.0%
+cobertura do polígono do Funil: 21.3%
+inclinação da curva ANA em 762.85-763.72 m: 45.0 km²/m
+polígono + 500 m −15,6 [9 datas]: erro abs médio 36.9 km² (3.6%), viés +20.5 km², desvio padrão das diferenças 43.1 km²; Δ: erro abs médio 33.8 km², r(Δ) +0.71
+polígono + 500 m −15,6 [sem vento]: erro abs médio 36.9 km² (3.6%), viés +36.9 km², desvio padrão das diferenças 24.7 km²; Δ: erro abs médio 31.2 km², r(Δ) +0.46
+sem buffer −15,6 [9 datas]: erro abs médio 19.7 km² (1.9%), viés -4.6 km², desvio padrão das diferenças 32.5 km²; Δ: erro abs médio 19.9 km², r(Δ) +0.79
+sem buffer −15,6 [sem vento]: erro abs médio 10.4 km² (1.0%), viés +9.0 km², desvio padrão das diferenças 12.4 km²; Δ: erro abs médio 11.3 km², r(Δ) +0.74
+polígono + 500 m −18 [9 datas]: erro abs médio 322.8 km² (31.7%), viés -322.8 km², desvio padrão das diferenças 241.2 km²; Δ: erro abs médio 151.9 km², r(Δ) +0.71
+polígono + 500 m −18 [sem vento]: erro abs médio 213.0 km² (20.7%), viés -213.0 km², desvio padrão das diferenças 80.6 km²; Δ: erro abs médio 50.0 km², r(Δ) +0.44
+r_m15_todas: +0.717
+incl_m15_todas: +111.526
+r_m15_sem_vento: +0.469
+incl_m15_sem_vento: +44.615
+r_sem_buffer_todas: +0.795
+incl_sem_buffer_todas: +101.490
+r_sem_buffer_sem_vento: +0.748
+incl_sem_buffer_sem_vento: +47.420
+r_m18_todas: +0.713
+incl_m18_todas: +530.814
+r_m18_sem_vento: +0.440
+incl_m18_sem_vento: +128.981
+r_bruta_todas: +0.476
+incl_bruta_todas: +151.488
+r_bruta_sem_vento: +0.101
+incl_bruta_sem_vento: +31.417
+amplitude: esperada 39.4 | +500 m 177.6 (sem vento 75.4) | sem buffer 147.3 (sem vento 51.6)
+20260627 cota 763.65 esp  1041.8 Δesp   +0.0 | +500  1047.4 Δ   +0.0 | b0  1039.8 Δ   +0.0 | −18  843.2 | funil 4.67
+20260709 cota 763.72 esp  1045.0 Δesp   +3.2 | +500  1063.3 Δ  +15.9 | b0  1042.0 Δ   +2.2 | −18  820.4 | funil 4.38
+20260721 cota 763.67 esp  1042.7 Δesp   +0.9 | +500  1109.4 Δ  +62.0 | b0  1071.4 Δ  +31.6 | −18  894.4 | funil 4.88
+20260814 cota 763.41 esp  1030.2 Δesp  -11.6 | +500  1095.3 Δ  +47.8 | b0  1052.5 Δ  +12.7 | −18  896.6 | funil 4.71
+20260826 cota 763.22 esp  1021.8 Δesp  -20.0 | +500  1074.9 Δ  +27.4 | b0  1024.1 Δ  -15.7 | −18  642.7 | funil 4.81
+20260907 cota 762.85 esp  1005.6 Δesp  -36.2 | +500   931.8 Δ -115.6 | b0   924.1 Δ -115.7 | −18  145.9 | funil 3.64
+20260919 cota 763.01 esp  1012.7 Δesp  -29.1 | +500  1044.6 Δ   -2.8 | b0  1024.1 Δ  -15.7 | −18  795.3 | funil 4.18
+20261001 cota 762.93 esp  1009.2 Δesp  -32.6 | +500  1009.1 Δ  -38.3 | b0   986.5 Δ  -53.3 | −18  455.1 | funil 4.42
+20261013 cota 763.10 esp  1016.6 Δesp  -25.2 | +500  1034.1 Δ  -13.4 | b0  1019.8 Δ  -20.0 | −18  827.4 | funil 4.51

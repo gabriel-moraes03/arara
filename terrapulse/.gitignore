@@ -1,0 +1,29 @@
+﻿# ambiente e cache
+.venv/
+__pycache__/
+.pytest_cache/
+*.pyc
+
+# dados brutos e pesados (baixar à parte; ver README)
+data/raw/
+*.h5
+data/ana/*.zip
+data/ana/furnas/
+data/ana/funil/
+*.pdf
+
+# saídas: só o método oficial é versionado
+outputs/*
+!outputs/furnas_poligono_b0/
+
+# entregas e artefatos gerados
+*.zip
+web/screenshots/
+/cota_furnas_ana.csv
+
+# sistema/editor
+.DS_Store
+Thumbs.db
+desktop.ini
+.vscode/
+.idea/
