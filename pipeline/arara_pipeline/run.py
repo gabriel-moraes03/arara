@@ -18,7 +18,7 @@ import traceback
 
 import numpy as np
 
-from . import ALGORITHM_VERSION, catalog_nisar, change, gcov_read, publish, water
+from . import ALGORITHM_VERSION, catalog_nisar, change, gcov_read, patterns, publish, water
 from .geom import aneis_do_geojson, mascara_do_poligono, reprojetar_aneis
 from .sar import db_filtrado
 
@@ -207,6 +207,22 @@ def executar(spec, saida):
     else:
         avisos.append("só uma data válida: sem comparação entre datas")
 
+    # ---- padrões medidos: tendência, alerta, permanência, trechos que mais secaram, modo evento ----
+    nomes = [d["date"] for d in datas]
+    areas_km2 = [d["water_km2"] for d in datas]
+    padroes = {"trend": patterns.tendencia(nomes, areas_km2, cls["wind"]), "anomaly": patterns.anomalia(nomes, areas_km2, cls["wind"])}
+    classes_freq, info_freq = patterns.permanencia(cls["water"], cls["common_valid"])
+    padroes["frequency"] = ({**patterns.resumo_permanencia(classes_freq, area_px), "n_dates": info_freq["n_dates"],
+                             "thresholds": info_freq["thresholds"]} if classes_freq is not None else info_freq)
+    padroes["retraction_hotspots"] = (patterns.trechos_secos(classes == change.RETRACAO, xs, ys, epsg, area_px) if classes is not None else [])
+    classes_evento = None
+    if len(datas) >= 3:
+        classes_evento, m_ev = change.comparar(cls["water"][-2], cls["water"][-1], cls["common_valid"], area_px)
+        padroes["event"] = {"before": datas[-2]["date"], "after": datas[-1]["date"], **m_ev,
+                            "wind_caveat": datas[-2]["suspeita_vento"] or datas[-1]["suspeita_vento"]}
+    elif comparacao:
+        padroes["event"] = {k: comparacao[k] for k in comparacao}
+
     contexto = {"spec": spec, "aoi": aoi, "xs": xs, "ys": ys, "epsg": epsg, "pixel_m": pixel_m, "area_px": area_px,
                 "cls": cls, "datas": datas, "comparacao": comparacao, "saida": saida, "avisos": avisos}
     extras = etapas_opcionais(contexto)
@@ -239,6 +255,11 @@ def executar(spec, saida):
         publish.salvar_cog(os.path.join(saida, "cog", "change.tif"), classes, xs, ys, epsg, nodata=0)
         camada("change", "change", None, publish.rgba_classes(classes),
                f"Mudança {comparacao['before']} → {comparacao['after']}")
+    if classes_freq is not None:
+        publish.salvar_cog(os.path.join(saida, "cog", "frequency.tif"), classes_freq, xs, ys, epsg, nodata=0)
+        camada("frequency", "frequency", None, publish.rgba_classes(classes_freq, publish.CORES_FREQUENCIA), "Permanência da água")
+    if classes_evento is not None:
+        camada("change_last", "change", datas[-1]["date"], publish.rgba_classes(classes_evento), f"Última passagem: {datas[-2]['date']} → {datas[-1]['date']}")
     for ident, (tipo, data, img, titulo) in extras.get("camadas", {}).items():
         camada(ident, tipo, data, img, titulo)
     tiles = publish.gerar_tiles(rgba, xs, ys, epsg, os.path.join(saida, "tiles"))
@@ -278,12 +299,12 @@ def executar(spec, saida):
         "dates": datas, "comparison": comparacao, "layers": camadas, "warnings": avisos, "skipped_scenes": puladas,
         "optical_validation": extras.get("validacao", {"status": "not_optically_validated",
                                                        "reason": "validação óptica não executada nesta versão"}),
-        "forecast": extras.get("previsao"), "insights": extras.get("insights"),
+        "forecast": extras.get("previsao"), "insights": extras.get("insights"), "patterns": padroes,
     }
     with open(os.path.join(saida, "metrics.json"), "w", encoding="utf-8") as f:
         json.dump({k: resultado[k] for k in ("analysis_id", "algorithm_version", "method", "sensor", "params", "group",
                                               "experimental", "experimental_reasons", "dates", "comparison",
-                                              "optical_validation", "forecast", "warnings")}, f, ensure_ascii=False, indent=1)
+                                              "optical_validation", "forecast", "patterns", "warnings")}, f, ensure_ascii=False, indent=1)
     return resultado
 
 

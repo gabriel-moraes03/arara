@@ -39,7 +39,7 @@ public class AnalysisService {
     private static final Logger log = LoggerFactory.getLogger(AnalysisService.class);
     private static final ObjectMapper JSON = new ObjectMapper();
 
-    public record Request(String name, JsonNode aoi, String bbox, String start, String end, String groupId, String maturity) {
+    public record Request(String name, JsonNode aoi, String bbox, String start, String end, String groupId, String maturity, Boolean refresh) {
     }
 
     public record Submitted(String analysisId, String jobId, JobStatus status, boolean reused) {
@@ -76,6 +76,10 @@ public class AnalysisService {
         String hash = AnalysisId.hash(aoi, rq.start(), rq.end(), rq.groupId(), rq.maturity(), props.algorithmVersion());
         String id = AnalysisId.shortId(hash);
 
+        if (Boolean.TRUE.equals(rq.refresh()) && repo.activeJob(id).isEmpty()) {   // refazer: apaga o resultado anterior desta identidade
+            storage.delete(id);
+            repo.delete(id);
+        }
         var existing = repo.find(id);
         if (existing.isPresent() && existing.get().status() == JobStatus.COMPLETED && storage.file(id, "result.json").isPresent()) {
             return new Submitted(id, null, JobStatus.COMPLETED, true);

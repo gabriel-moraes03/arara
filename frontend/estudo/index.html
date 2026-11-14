@@ -1,0 +1,29 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Estudo · Arara</title>
+<meta name="theme-color" content="#04060c">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%2304060c'/%3E%3Cpath d='M3.4 12 4.5 4' stroke='%23e5482d' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M8 12l1.1-8' stroke='%23f4b63f' stroke-width='1.8' stroke-linecap='round'/%3E%3Cpath d='M12.6 4 11.5 12' stroke='%233b8fd9' stroke-width='1.8' stroke-linecap='round'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="../furnas/vendor/leaflet/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:ital,wght@0,400;0,500;0,600;1,400&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="../furnas/css/style.css">
+<link rel="stylesheet" href="estudo.css">
+</head>
+<body>
+<header class="bar">
+  <a class="brand" href="/" aria-label="Arara"><span class="feather" aria-hidden="true"><i></i><i></i><i></i></span>Arara</a>
+  <span class="instrument" id="bar-info">Estudo automático</span>
+  <div class="bar-actions">
+    <a class="btn back-globe" href="/">← Globo</a>
+    <a class="btn btn-accent" id="csv" href="#" hidden>Baixar CSV</a>
+  </div>
+</header>
+<main id="top"><p class="state" id="state">Carregando o estudo…</p></main>
+<script src="../furnas/vendor/leaflet/leaflet.js"></script>
+<script src="estudo.js"></script>
+</body>
+</html>

@@ -1286,6 +1286,7 @@ function renderAnalysisPanel(ctx, a) {
       <div class="chart-key"><span><i></i>Água medida pelo NISAR</span>${a.forecast && a.forecast.status === 'ok' ? '<span><i class="fc"></i>Projeção experimental</span>' : ''}${wind.length ? '<span><i class="wind"></i>Suspeita de vento</span>' : ''}</div>
     </div>
     ${layerPicker(a)}
+    <a class="more" href="/estudo/?id=${a.analysis_id}" target="_blank" rel="noopener"><span style="color:var(--ink)">Abrir estudo completo (gerado automaticamente)</span> <span aria-hidden="true">→</span></a>
     <button class="more" type="button" id="moreBtn">Ver histórico detalhado e mapas <span aria-hidden="true">→</span></button>
     <div class="facts">
       <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>${measuredText(a)}</p></section>
