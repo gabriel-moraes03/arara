@@ -66,3 +66,9 @@ A regressão de Furnas com as cenas reais só roda com `FURNAS_H5_DIR` (pasta do
 
 Derivados ficam em `data/analyses/{id}/` e são apagados após 7 dias (`ARARA_RETENTION_DAYS`). As
 janelas brutas só existem em memória durante o job. Limites em `.env.example`.
+
+## Bacias de Minas
+
+`pipeline/scripts/exportar_bacias.py` baixa as 43 Circunscrições Hidrográficas do GeoServer da IDE-Sisema/IGAM e
+grava `frontend/globe/bacias_mg.json` (contorno simplificado para exibir, não para medir). No globo, dentro de
+Minas, o botão **Bacias / Municípios** alterna a divisão.

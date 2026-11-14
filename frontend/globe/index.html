@@ -289,6 +289,14 @@ tr.sel td { background: rgba(255, 255, 255, 0.04); }
 #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-2); font-size: 14px; z-index: 3; pointer-events: none; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
+.mgmode { position: absolute; z-index: 7; left: max(20px, env(safe-area-inset-left, 0px)); bottom: 206px; padding: 3px; }
+.mgmode button { border: 0; background: transparent; color: var(--ink-2); padding: 6px 12px; border-radius: 7px; font: 12.5px var(--font-body); cursor: pointer; }
+.mgmode button[aria-pressed="true"] { background: var(--accent-dim, rgba(79,182,238,.16)); color: var(--vc); }
+.bfacts { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; margin: 0; font-size: 12.5px; }
+.bfacts dt { color: var(--ink-3); } .bfacts dd { margin: 0; color: var(--ink); }
+.studies { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; }
+.studies button { width: 100%; text-align: left; border: 1px solid var(--glass-line); background: rgba(255,255,255,.04); color: var(--ink); border-radius: 9px; padding: 9px 11px; font: 13px var(--font-body); cursor: pointer; }
+.studies button small { display: block; color: var(--ink-3); font: 11px var(--font-mono); margin-top: 2px; }
 .chips { display: flex; gap: 6px; flex-wrap: wrap; }
 .example.down { background: rgba(240, 122, 106, 0.14); color: var(--down); font-weight: 600; }
 .example.warn { background: rgba(240, 180, 76, 0.16); color: #f0b44c; font-weight: 600; }
@@ -343,9 +351,11 @@ a.btn { text-decoration: none; }
     </div>
   </header>
 
+  <div class="seg mgmode" id="mgmode" role="group" aria-label="Divisão de Minas Gerais" hidden><button type="button" data-m="bacia" aria-pressed="true">Bacias</button><button type="button" data-m="municipio" aria-pressed="false">Municípios</button></div>
+
   <div class="hud">
     <div class="seg levels" aria-label="Nível de detalhe">
-      <span data-l="pais" class="on">Países</span><span data-l="estado">Estados</span><span data-l="municipio">Municípios</span><span data-l="area">Minha área</span>
+      <span data-l="pais" class="on">Países</span><span data-l="estado">Estados</span><span data-l="bacia">Bacias</span><span data-l="municipio">Municípios</span><span data-l="area">Minha área</span>
     </div>
     <div class="legend" id="legend" hidden>
       <small id="lgLo">pouca</small><span class="ramp"></span><small id="lgHi">muita</small>
@@ -520,14 +530,15 @@ function rampColor(t, k, a = 0.93) {
 }
 
 /* ================= estado ================= */
-let world = [], adm1 = {}, mgMun = [], mgState = null, areas = [], lake = null;
+let world = [], adm1 = {}, mgMun = [], mgState = null, areas = [], lake = null, basins = [];
+let basinMode = store.get('arara-mgmode', 'bacia') === 'municipio' ? 'municipio' : 'bacia';
 const pin = { alt: 0.05, r: 0.28, bucket: null, shown: true };
 let selected = null, hover = null, current = 'pais', lodKeyNow = '', selElev = 0.03;
 let autoSpin = true, drawMode = false, drawPts = [];
 const searchIndex = [];
-const BASE_ALT = { pais: 0.006, estado: 0.009, municipio: 0.011, lago: 0.0125, area: 0.013 };
-const SEL_ALT = { pais: 0.045, estado: 0.03, municipio: 0.022, lago: 0.02, area: 0.012 };
-const LVL_LABEL = { pais: 'País', estado: 'Estado', municipio: 'Município', lago: 'Reservatório · dado real', area: 'Minha área' };
+const BASE_ALT = { pais: 0.006, estado: 0.009, bacia: 0.011, municipio: 0.011, lago: 0.0125, area: 0.013 };
+const SEL_ALT = { pais: 0.045, estado: 0.03, bacia: 0.022, municipio: 0.022, lago: 0.02, area: 0.012 };
+const LVL_LABEL = { pais: 'País', estado: 'Estado', bacia: 'Bacia hidrográfica (IGAM)', municipio: 'Município', lago: 'Reservatório · dado real', area: 'Minha área' };
 
 /* ================= globo ================= */
 const el = $('#globe');
@@ -536,7 +547,7 @@ const globe = Globe({ animateIn: false })(el)
   .showAtmosphere(true).atmosphereColor('#7fc8ff').atmosphereAltitude(0.17)
   .showGraticules(true)
   .polygonsTransitionDuration(450)
-  .polygonCapCurvatureResolution(d => d.__lvl === 'area' ? clamp(sizeOf(d) / 8, 0.25, 4) : d.__lvl === 'municipio' || d.__lvl === 'lago' ? 1 : d.__lvl === 'estado' ? 2 : 2.5)
+  .polygonCapCurvatureResolution(d => d.__lvl === 'area' ? clamp(sizeOf(d) / 8, 0.25, 4) : d.__lvl === 'municipio' || d.__lvl === 'bacia' || d.__lvl === 'lago' ? 1 : d.__lvl === 'estado' ? 2 : 2.5)
   .polygonLabel(d => drawMode ? '' : `<div class="tip">${esc(d.__name)}<small>${d.__lvlLabel}${d.__parent ? ' · ' + esc(d.__parent) : ''}</small></div>`)
   .onPolygonHover(d => { if (drawMode) return; hover = d; globe.polygonCapColor(capColor); el.style.cursor = d ? 'pointer' : ''; })
   // o voo vai para o PONTO CLICADO (não para o centro do polígono): clicar em Minas com o Brasil na tela
@@ -560,7 +571,7 @@ const globe = Globe({ animateIn: false })(el)
   .ringsData(reduceMotion ? [] : HOTSPOTS).ringLat(d => d.lat).ringLng(d => d.lng).ringAltitude(() => BASE_ALT.estado + 0.001)
   .ringColor(d => { const c = VARS[d.var].rgb; return (t) => `rgba(${c[0]},${c[1]},${c[2]},${(1 - t) * 0.9})`; })
   .ringMaxRadius(() => pin.r * 9).ringPropagationSpeed(() => pin.r * 6).ringRepeatPeriod(1800)
-  .onPointClick((d) => { if (dragMoved) return; stopSpin(); openHotspot(d); })
+  .onPointClick((d) => { if (dragMoved) return; stopSpin(); openHotspotSmart(d); })
   .width(el.clientWidth).height(el.clientHeight);
 refreshStyle();
 
@@ -646,6 +657,12 @@ window.addEventListener('pointerup', (e) => {
 function stopSpin() { if (!autoSpin) return; autoSpin = false; $('#spin').hidden = false; }
 function startSpin() { autoSpin = true; $('#spin').hidden = true; }
 $('#spin').addEventListener('click', startSpin);
+document.querySelectorAll('#mgmode button').forEach(b => b.addEventListener('click', () => {
+  basinMode = b.dataset.m; store.set('arara-mgmode', basinMode);
+  document.querySelectorAll('#mgmode button').forEach(x => x.setAttribute('aria-pressed', String(x === b)));
+  closePanel(); updateLOD(true);
+}));
+document.querySelectorAll('#mgmode button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.m === basinMode)));
 $('#reset').addEventListener('click', () => { closePanel(); flyTo(-12, -38, 2.35); });
 
 /* ---- voo animado ---- */
@@ -706,7 +723,7 @@ function makeCard(d) {
       <span class="title">${esc(d.title)}</span>
       <span class="metric"><i></i>${d.api ? cardMetric(d.api) : '1.020 km² de água · cota −0,87 m em 9 passagens'}</span>
     </button>`;
-  const open = (e) => { e.stopPropagation(); stopSpin(); openHotspot(d); };
+  const open = (e) => { e.stopPropagation(); stopSpin(); openHotspotSmart(d); };
   w.querySelector('.card').addEventListener('click', open);
   w.querySelector('.pin').addEventListener('click', open);
   w.addEventListener('pointerdown', (e) => e.stopPropagation());
@@ -763,18 +780,20 @@ function updateLOD(force) {
   const alt = altitude(); const c = centerGeo(); const pt = [c.lng, c.lat];
   let country = null, inMG = false;
   if (alt < 1.35) country = countryAt(pt) || null;
-  if (country && country.__a2 === 'BR' && alt < 0.42 && mgState && inFeature(pt, mgState)) inMG = true;
-  const key = (country ? country.__a2 : '-') + (inMG ? ':MG' : '') + ':' + areas.length + (alt < 0.05 ? ':z' : '');
+  const mgView = !!(country && country.__a2 === 'BR' && alt < 1.0 && mgState && inFeature(pt, mgState));
+  if (mgView && alt < (basinMode === 'bacia' ? 0.95 : 0.42)) inMG = true;
+  $('#mgmode').hidden = !mgView || current === 'area';
+  const key = (country ? country.__a2 : '-') + (inMG ? ':MG' + basinMode : '') + (mgView ? ':v' : '') + ':' + areas.length + (alt < 0.05 ? ':z' : '');
   if (key === lodKeyNow && !force) return;
   lodKeyNow = key;
   let data = world.filter(f => f !== country);
   if (country) {
     const states = adm1[country.__a2];
-    data = data.concat(inMG ? states.filter(s => s !== mgState).concat(mgMun) : states);
+    data = data.concat(inMG ? states.filter(s => s !== mgState).concat(basinMode === 'bacia' ? basins : mgMun) : states);
   }
   if (lake && country && country.__a2 === 'BR') data.push(lake);
   data = data.concat(areas);
-  current = alt < 0.05 ? 'area' : inMG ? 'municipio' : country ? 'estado' : 'pais';
+  current = alt < 0.05 ? 'area' : inMG ? (basinMode === 'bacia' ? 'bacia' : 'municipio') : country ? 'estado' : 'pais';
   // no zoom de área o satélite mostra a geografia: só as áreas do usuário e o lago ficam como polígonos
   // (centenas de polígonos transparentes sobrepostos travam o desenho)
   if (current === 'area') data = data.filter(f => f.__lvl === 'area' || f.__lvl === 'lago');
@@ -790,7 +809,12 @@ function isSel(d) {
   if (d === selected) return true;
   return selected.__lvl === 'pais' && d.__lvl === 'estado' && d.__country === selected.__name;
 }
+const UEG_RGB = { UEG1: [58, 150, 170], UEG2: [88, 160, 120], UEG3: [74, 120, 190], UEG4: [150, 140, 80], UEG5: [150, 100, 150], UEG6: [100, 150, 100], UEG7: [170, 110, 90] };
 function capColor(d) {
+  if (d.__lvl === 'bacia' && current !== 'area') {
+    const c = UEG_RGB[d.__ueg] || [90, 130, 150], k = isSel(d) ? 1.55 : d === hover ? 1.25 : 1;
+    return `rgba(${Math.min(255, Math.round(c[0] * k))},${Math.min(255, Math.round(c[1] * k))},${Math.min(255, Math.round(c[2] * k))},0.9)`;
+  }
   if (current === 'area') return d === hover ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0)';   // satélite por baixo
   const t = 0.5;   // nenhuma região tem valor estimado: cor neutra
   if (isSel(d)) return d.__lvl === 'pais' ? C.sel : rampColor(t + 0.3, mapVar, 1);
@@ -865,6 +889,7 @@ function flyAltFor(f) {
   if (f.__lvl === 'area') return clamp(sizeOf(f) * 111 * 4.5 / (0.93 * 6371), 0.006, 0.045);
   const s = sizeOf(f);
   if (f.__lvl === 'lago') return 0.22;
+  if (f.__lvl === 'bacia') return clamp(s / 10, 0.25, 0.7);
   if (f === mgState) return 0.4;   // Minas inteira na tela e com os municípios já desenhados (<0,42)
   // país: no máximo 1,0, para o próximo clique já cair nos estados e não ter de aproximar à mão
   return f.__lvl === 'municipio' ? 0.14 : f.__lvl === 'estado' ? clamp(s / 14, 0.3, 0.9) : clamp(s / 40, 0.5, 1.0);
@@ -887,6 +912,25 @@ function selectFeature(f, { fly = false, at = null } = {}) {
   if (at && f.__lvl !== 'area' && f.__lvl !== 'lago' && f !== mgState) c = at;
   if (fly) flyTo(c.lat, c.lng, alt);
   openPanel(ctxOf(f, null));
+}
+/* pinos que se sobrepõem na tela: o clique aproxima o grupo em vez de abrir o que estiver por cima */
+function screenOf(h) {
+  const c = globe.getCoords(h.lat, h.lng, pin.alt);
+  const v = new V3(c.x, c.y, c.z).applyQuaternion(gObj.quaternion).project(camera);
+  return { x: (v.x + 1) / 2 * el.clientWidth, y: (1 - v.y) / 2 * el.clientHeight };
+}
+const CLUSTER_PX = 38, CLUSTER_MIN_ALT = 0.3;
+function openHotspotSmart(h) {
+  if (altitude() > CLUSTER_MIN_ALT) {
+    const a = screenOf(h);
+    const group = HOTSPOTS.filter(o => o !== h && o.lat != null && Math.hypot(screenOf(o).x - a.x, screenOf(o).y - a.y) < CLUSTER_PX).concat([h]);
+    if (group.length > 1) {
+      const lat = group.reduce((t, o) => t + o.lat, 0) / group.length, lng = group.reduce((t, o) => t + o.lng, 0) / group.length;
+      flyTo(lat, lng, Math.max(altitude() * 0.3, CLUSTER_MIN_ALT - 0.02), 1100);
+      return;
+    }
+  }
+  openHotspot(h);
 }
 function openHotspot(h) {
   if (h.api) return openAnalysis(h);
@@ -914,10 +958,34 @@ function closePanel() {
 }
 function openPanel(ctx) { activeCtx = ctx; if (ctx.hot) setVar(ctx.hot.var); renderPanel(); panel.hidden = false; }
 
+/* ---- bacia hidrográfica de Minas: contorno oficial, catálogo ao vivo e estudos que já existem dentro dela ---- */
+function renderBasinPanel(ctx) {
+  clearOverlay(); clearInterval(live.poll); clearTimeout(live.timer); const token = ++live.token;
+  const f = ctx.f, P = f.properties, km2 = P.area_km2;
+  const inside = HOTSPOTS.filter(h => h.lat != null && inFeature([h.lng, h.lat], f));
+  const studies = inside.length ? `<ul class="studies">${inside.map((h, i) => `<li><button type="button" data-h="${i}">${esc(h.api ? (h.api.name || 'Área analisada') : 'Lago de Furnas')}<small>${h.api ? 'análise de radar concluída' : 'estudo completo validado com a ANA'}</small></button></li>`).join('')}</ul>`
+    : '<p class="note" style="margin:0">Nenhum estudo de radar dentro desta bacia ainda.</p>';
+  const head = panelHead(ctx, `${esc(P.uge || P.n)} · ${fmt(km2)} km² · ${esc(P.federal || '')}`);
+  setPanel(`${head}
+    <span class="example">Contorno oficial · IGAM / IDE-Sisema</span>
+    <dl class="bfacts"><dt>Sigla</dt><dd>${esc(P.sigla)} (${esc(P.ueg || '–')})</dd><dt>Comitê (CBH)</dt><dd>${esc(P.cbh === 'Sim' ? P.descr + ' · ' + P.situ_cbh : 'Sem comitê instalado')}</dd>${P.decreto ? `<dt>Decreto</dt><dd>${esc(P.decreto)}</dd>` : ''}</dl>
+    <div class="facts"><section class="fact detected"><h3>Estudos de radar nesta bacia <span class="chip">${inside.length}</span></h3>${studies}</section>
+      <section class="fact cause"><h3>Cenas do NISAR sobre a bacia <span class="chip">ao vivo</span></h3><p id="bsc">Consultando o catálogo…</p></section></div>
+    <button class="more" type="button" id="bDraw">Marcar um reservatório ou trecho nesta bacia <span aria-hidden="true">→</span></button>
+    <p class="note">Uma análise de água cobre até ${fmt(serverCfg.aoi_max_km2)} km² e esta bacia tem ${fmt(km2)} km². O estudo detalhado é feito por reservatório, rio ou várzea dentro da bacia: marque a área e o Arara mede a água ali.</p>`);
+  panel.querySelectorAll('.studies button').forEach(b => b.addEventListener('click', () => openHotspot(inside[+b.dataset.h])));
+  $('#bDraw').addEventListener('click', () => { const c = centerOf(f); startDraw(); flyTo(c.lat, c.lng, Math.min(altitude(), 0.12), 1400); });
+  api(`/scenes?bbox=${P.bbox.join(',')}&start=${period.start}&end=${period.end}`).then(r => {
+    if (token !== live.token || activeCtx !== ctx) return;
+    const g = (r.groups || [])[0];
+    $('#bsc').innerHTML = g ? `${fmt(r.count)} cenas no período (${isoBR(period.start)} a ${isoBR(period.end)}). A melhor geometria, trilha ${g.track} ${DIR[g.direction] || g.direction} frame ${g.frame}, cobre ${fmt(g.aoi_coverage * 100, 0)}% do retângulo da bacia, com ${g.n_dates} datas. Uma bacia grande é coberta por várias cenas lado a lado.` : 'Nenhuma cena NISAR GCOV sobre a bacia neste período.';
+  }).catch(e => { if (token === live.token && $('#bsc')) $('#bsc').textContent = 'Catálogo indisponível: ' + e.message; });
+}
+
 function crumbsOf(ctx) {
   const c = [];
   if (ctx.country && ctx.lvl !== 'pais') c.push(ctx.country);
-  if (ctx.lvl === 'municipio' || ctx.lvl === 'lago') c.push('Minas Gerais');
+  if (ctx.lvl === 'municipio' || ctx.lvl === 'lago' || ctx.lvl === 'bacia') c.push('Minas Gerais');
   if (ctx.lvl === 'area' && ctx.parent) c.push(ctx.parent);
   return c;
 }
@@ -969,6 +1037,7 @@ function renderPanel() {
   const ctx = activeCtx; if (!ctx) return;
   clearOverlay();
   if (ctx.hot && ctx.hot.id === 'furnas') return renderFurnasPanel(ctx);
+  if (ctx.lvl === 'bacia') return renderBasinPanel(ctx);
   clearInterval(live.poll); clearTimeout(live.timer); live.token++;
   const link = links[ctx.key] || {};
   if (ctx.analysisId || link.analysis) return loadAnalysisPanel(ctx, ctx.analysisId || link.analysis);
@@ -1574,6 +1643,11 @@ fetch('geo.json').then(r => r.json()).then(geo => {
     });
   });
   mgState = adm1.BR.find(f => f.properties.pc === 'MG' || f.properties.k === 'br-mg');
+  fetch('bacias_mg.json').then(r => r.json()).then(b => {
+    basins = b.features.map(f => tag(f, 'bacia', { __name: f.properties.n, __key: f.properties.k, __parent: 'Minas Gerais', __country: 'Brasil', __ueg: f.properties.ueg }));
+    basins.forEach(f => searchIndex.push({ n: norm(f.__name + ' ' + (f.properties.federal || '')), f, rank: 1 }));
+    updateLOD(true);
+  }).catch(() => {});
   mgMun = geo.mgmun.map(f => tag(f, 'municipio', { __name: f.properties.n, __key: f.properties.k, __parent: 'MG', __country: 'Brasil' }));
   world.forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 0 }));
   Object.values(adm1).flat().forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 1 }));

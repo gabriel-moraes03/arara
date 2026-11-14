@@ -1,0 +1,93 @@
+@import "tailwindcss" source(none);
+@source "../src";
+@import "tw-animate-css";
+
+@custom-variant dark (&:is(.dark *));
+
+@theme inline {
+  --font-display: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-sans: "Bricolage Grotesque", ui-sans-serif, system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-water: var(--water);
+  --color-dry: var(--dry);
+  --color-signal: var(--signal);
+}
+
+:root {
+  --radius: 0.5rem;
+  --background: oklch(0.16 0.025 220);
+  --foreground: oklch(0.95 0.01 200);
+  --card: oklch(0.2 0.028 220);
+  --card-foreground: oklch(0.95 0.01 200);
+  --popover: oklch(0.2 0.028 220);
+  --popover-foreground: oklch(0.95 0.01 200);
+  --primary: oklch(0.72 0.19 40);
+  --primary-foreground: oklch(0.16 0.025 220);
+  --secondary: oklch(0.25 0.03 220);
+  --secondary-foreground: oklch(0.95 0.01 200);
+  --muted: oklch(0.24 0.025 220);
+  --muted-foreground: oklch(0.68 0.03 210);
+  --accent: oklch(0.8 0.13 200);
+  --accent-foreground: oklch(0.16 0.025 220);
+  --destructive: oklch(0.62 0.22 27);
+  --destructive-foreground: oklch(0.98 0 0);
+  --border: oklch(0.95 0.01 200 / 12%);
+  --input: oklch(0.95 0.01 200 / 15%);
+  --ring: oklch(0.72 0.19 40);
+  --water: oklch(0.78 0.14 210);
+  --dry: oklch(0.72 0.19 40);
+  --signal: oklch(0.88 0.17 95);
+  --grid-line: oklch(0.95 0.01 200 / 5%);
+}
+
+@layer base {
+  * { border-color: var(--color-border); }
+  html { scroll-behavior: smooth; }
+  body {
+    background-color: var(--color-background);
+    color: var(--color-foreground);
+    font-family: var(--font-sans);
+    background-image:
+      linear-gradient(var(--grid-line) 1px, transparent 1px),
+      linear-gradient(90deg, var(--grid-line) 1px, transparent 1px);
+    background-size: 48px 48px;
+  }
+}
+
+@utility eyebrow {
+  font-family: var(--font-mono);
+  font-size: 0.72rem;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+@utility radar-sweep {
+  background: conic-gradient(from 0deg, color-mix(in oklab, var(--accent) 35%, transparent), transparent 25%);
+  animation: sweep 6s linear infinite;
+}
+
+@keyframes sweep { to { transform: rotate(360deg); } }
