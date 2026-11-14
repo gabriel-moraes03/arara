@@ -72,3 +72,23 @@ janelas brutas só existem em memória durante o job. Limites em `.env.example`.
 `pipeline/scripts/exportar_bacias.py` baixa as 43 Circunscrições Hidrográficas do GeoServer da IDE-Sisema/IGAM e
 grava `frontend/globe/bacias_mg.json` (contorno simplificado para exibir, não para medir). No globo, dentro de
 Minas, o botão **Bacias / Municípios** alterna a divisão.
+
+## Estudo automático (o estudo de Furnas, para qualquer área)
+
+Toda análise concluída tem uma página de estudo: `http://localhost:8080/estudo/index.html?id=<analysis_id>`
+(botão "Abrir estudo completo" no painel). As seções são as do estudo de Furnas, montadas só com o que a
+análise mediu: abertura com mapa e camadas, números principais, padrões (tendência em km²/semana, alerta
+da última passagem, permanência da água, os 3 trechos que mais secaram), linha do tempo com reprodução,
+antes × depois, série e validação com o Sentinel-2, medido × hipótese, limitações e fontes (cenas, CRID).
+
+Para gerar vários de uma vez, liste as áreas em um JSON (veja `data/estudos_mg.json`) e rode, com o
+servidor no ar e as credenciais Earthdata no `.env`:
+
+```
+.venv/bin/python pipeline/scripts/estudar_lote.py data/estudos_mg.json --inicio 2026-06-01 --fim 2026-11-14
+```
+
+Cada área vira um job (um por vez no servidor, de 5 a 10 min); o script imprime o link de cada estudo.
+`--refazer` apaga o resultado anterior e roda de novo; `--so ID ...` roda só algumas. Áreas acima de 2.500 km²
+ou sem cenas NISAR saem como `unavailable`, com o motivo. A conferência das coordenadas de cada área é sua:
+um reservatório mal enquadrado aparece como "experimental" no estudo.

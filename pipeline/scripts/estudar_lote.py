@@ -1,5 +1,5 @@
 """Gera estudos em lote: para cada área de um arquivo JSON, pede a análise ao backend, acompanha o job e
-imprime o link do estudo (/estudo/?id=...). É a versão automática do que foi feito à mão em Furnas.
+imprime o link do estudo (/estudo/index.html?id=...). É a versão automática do que foi feito à mão em Furnas.
 
     python pipeline/scripts/estudar_lote.py data/estudos_mg.json [--url http://localhost:8080]
                                             [--inicio AAAA-MM-DD] [--fim AAAA-MM-DD] [--refazer] [--so SIGLA ...]
@@ -63,9 +63,9 @@ def main():
             motivo = chamar(f"{a.url}/api/arara/jobs/{job}").get("reason") if job else None
             print(f"    {status}: {motivo}")
         else:
-            print(f"    pronto: {a.url}/estudo/?id={aid}")
+            print(f"    pronto: {a.url}/estudo/index.html?id={aid}")
         resultado.append({"id": x["id"], "analysis_id": aid, "status": status, "motivo": motivo,
-                          "estudo": f"/estudo/?id={aid}" if status == "completed" else None})
+                          "estudo": f"/estudo/index.html?id={aid}" if status == "completed" else None})
     print(json.dumps(resultado, ensure_ascii=False, indent=1))
 
 

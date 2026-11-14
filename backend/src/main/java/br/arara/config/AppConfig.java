@@ -51,7 +51,7 @@ public class AppConfig implements WebMvcConfigurer {
         registry.addViewController("/").setViewName("forward:/index.html");
         registry.addRedirectViewController("/furnas", "/furnas/index.html");
         registry.addRedirectViewController("/furnas/", "/furnas/index.html");
-        registry.addRedirectViewController("/estudo", "/estudo/index.html");
-        registry.addRedirectViewController("/estudo/", "/estudo/index.html");
+        registry.addViewController("/estudo").setViewName("forward:/estudo/index.html");   // forward: o redirect perderia o ?id=
+        registry.addViewController("/estudo/").setViewName("forward:/estudo/index.html");
     }
 }
