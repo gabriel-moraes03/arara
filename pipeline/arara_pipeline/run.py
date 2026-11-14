@@ -291,7 +291,7 @@ def etapas_opcionais(ctx):
     """Validação óptica, previsão e interpretação: entram quando os módulos existirem; uma falha
     aqui nunca derruba a análise de radar, só é registrada."""
     extras = {}
-    for nome in ("optical_stage", "forecast_stage", "insights_stage"):
+    for nome in ("optical_stage", "forecast", "insights"):
         try:
             modulo = __import__(f"arara_pipeline.{nome}", fromlist=["rodar"])
         except ImportError:

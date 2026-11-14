@@ -39,6 +39,8 @@ def test_ponta_a_ponta(analise, capsys):
     assert c["retraction_ha"] > 0 and c["net_change_ha"] == pytest.approx(
         (r["dates"][-1]["water_km2"] - r["dates"][0]["water_km2"]) * 100, abs=0.5)
     assert r["optical_validation"]["status"] == "not_optically_validated"
+    assert r["forecast"]["status"] == "ok" and r["forecast"]["experimental"] and len(r["forecast"]["points"]) == 3
+    assert r["insights"]["measured"] and r["insights"]["hypothesis"] and r["insights"]["confidence"] in ("baixa", "média")
     for sub in ("cog/water_20260627.tif", "cog/hh_db_20260802.tif", "cog/change.tif", "png/change.png",
                 "metrics.json", "metrics.csv", "sources.json"):
         assert (saida / sub).exists(), sub
