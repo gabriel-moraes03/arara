@@ -1,6 +1,7 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Arara</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
@@ -35,6 +36,47 @@ body { background: var(--space); color: var(--ink); font-family: var(--font-body
 #globe.drawing { cursor: crosshair; }
 button { font-family: var(--font-body); }
 
+/* ---------- layout: barra lateral fixa + mapa ---------- */
+#app { display: flex; }
+#side { flex: none; width: 400px; height: 100%; box-sizing: border-box; display: flex; flex-direction: column; background: rgba(8, 13, 22, 0.99); border-right: 1px solid var(--glass-line); z-index: 10; position: relative; }
+.sidehead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 16px 18px 10px; }
+.logo { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 28px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+.viewsw { padding: 3px; flex: none; }
+.viewsw button { border: 0; background: transparent; color: var(--ink-2); padding: 6px 12px; border-radius: 7px; font: 12.5px var(--font-body); cursor: pointer; }
+.viewsw button[aria-pressed="true"] { background: rgba(79, 182, 238, 0.16); color: var(--v-agua); }
+#side .search { width: auto; margin: 0 18px 8px; }
+#side .results { z-index: 30; }
+.sidebody { flex: 1; overflow-y: auto; min-height: 0; border-top: 1px solid var(--glass-line); }
+#home { padding: 16px 18px 28px; display: flex; flex-direction: column; gap: 18px; }
+#panel:not([hidden]) ~ #home { display: none; }
+#home h2 { margin: 6px 0 8px; font-family: var(--font-display); font-weight: 700; font-size: 26px; line-height: 1.1; letter-spacing: -0.015em; }
+#home h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+#home .lead { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
+#home .eyebrow { margin: 0; }
+.btn.big { height: 44px; justify-content: center; font-size: 14px; width: 100%; }
+.steps { margin: 0; padding-left: 18px; color: var(--ink-2); font-size: 13px; line-height: 1.7; }
+.steps b { color: var(--ink); }
+#homeBasin { width: 100%; height: 38px; background: #0c121c; color: var(--ink); border: 1px solid var(--glass-line); border-radius: 9px; padding: 0 10px; font: 13px var(--font-body); }
+.places { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.places button { text-align: left; border: 1px solid var(--glass-line); background: rgba(255,255,255,.04); color: var(--ink); border-radius: 9px; padding: 9px 11px; font: 600 13px var(--font-body); cursor: pointer; }
+.places button:hover, .studies button:hover { border-color: rgba(244, 182, 63, .5); }
+.places button small { display: block; color: var(--ink-3); font: 400 11px var(--font-mono); margin-top: 2px; }
+#home .foot { margin: 0; font-size: 12px; color: var(--ink-3); } #home .foot a { color: var(--v-agua); }
+#stage { position: relative; flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+#stage #stars, #stage #globe, #map2d { position: absolute; inset: 0; }
+#map2d { z-index: 1; background: #070b12; }
+#side #panel { position: static; width: auto; max-height: none; overflow: visible; background: none; border: 0; border-radius: 0; animation: none; padding: 16px 18px 28px; }
+#detail { z-index: 20; }
+.mode-map #globe, .mode-map #stars, .mode-map #loading, .mode-map .levels, .mode-map .hint, .mode-map #mgmode, .mode-map #spin, .mode-map #reset, .mode-map #attrib { display: none !important; }
+#map2d .leaflet-tooltip { background: rgba(8,13,22,.95); color: var(--ink); border: 1px solid var(--glass-line); font: 12px var(--font-body); }
+#map2d .leaflet-control-attribution { background: rgba(8,13,22,.7); color: var(--ink-3); } #map2d .leaflet-control-attribution a { color: var(--ink-2); }
+.drawbar { top: 16px; }
+@media (max-width: 900px) {
+  #app { flex-direction: column; }
+  #stage { order: 1; flex: 1 1 52%; height: auto; }
+  #side { order: 2; width: 100%; height: 48%; border-right: 0; border-top: 1px solid var(--glass-line); }
+  .sidehead { padding-top: 10px; } .logo { font-size: 22px; }
+}
 /* ---------- topo ---------- */
 .top {
   position: absolute; top: 0; left: 0; right: 0; z-index: 8;
@@ -335,22 +377,40 @@ a.btn { text-decoration: none; }
 </style>
 
 <div id="app">
-  <canvas id="stars" aria-hidden="true"></canvas>
-  <div id="globe" aria-label="Globo interativo: arraste para girar, role para aproximar, clique numa região"></div>
-  <div id="loading">Carregando o globo…</div>
-
-  <header class="top">
-    <div class="brand">
-      <h1><span class="feather" aria-hidden="true"><i style="background:var(--macaw-red)"></i><i style="background:var(--macaw-yellow)"></i><i style="background:var(--macaw-blue)"></i></span>Arara</h1>
-      <p>Onde a água avançou ou recuou: rios, represas, açudes e áreas alagadas, vistos pelo radar NISAR a cada 12 dias.</p>
+  <aside id="side">
+    <div class="sidehead">
+      <h1 class="logo"><span class="feather" aria-hidden="true"><i style="background:var(--macaw-red)"></i><i style="background:var(--macaw-yellow)"></i><i style="background:var(--macaw-blue)"></i></span>Arara</h1>
+      <div class="seg viewsw" id="viewsw" role="group" aria-label="Tipo de mapa"><button type="button" data-v="globe" aria-pressed="true">Globo</button><button type="button" data-v="map" aria-pressed="false">Mapa plano</button></div>
     </div>
     <div class="search" role="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
       <input id="q" type="search" placeholder="País, estado, cidade de MG ou coordenada" autocomplete="off" aria-label="Buscar lugar ou coordenada" aria-controls="results">
       <ul id="results" class="results" role="listbox" hidden></ul>
     </div>
-  </header>
 
+    <div class="sidebody">
+      <section id="panel" hidden aria-live="polite"></section>
+      <section id="home" aria-label="Início">
+        <div>
+          <p class="eyebrow">Mapa hídrico · radar NISAR</p>
+          <h2>Onde a água avançou ou recuou</h2>
+          <p class="lead">Escolha uma área, veja as passagens do radar da NASA sobre ela e meça a água. Os números são sempre medidos; quando não dá para medir, o Arara diz o motivo.</p>
+        </div>
+        <button class="btn primary big" id="homeSelect" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 4h16v16H4z" stroke-dasharray="3 3"/></svg>Selecionar área no mapa</button>
+        <ol class="steps"><li><b>Escolha</b> uma área, bacia ou lugar abaixo</li><li><b>Veja</b> as cenas do radar sobre ela</li><li><b>Analise</b> a água e compare as datas</li></ol>
+        <div><h3>Estudos concluídos</h3><ul id="homeStudies" class="studies"></ul></div>
+        <div><h3>Bacias de Minas</h3><select id="homeBasin" aria-label="Escolher bacia de Minas"><option value="">Escolher uma bacia…</option></select></div>
+        <div><h3>Lugares para explorar</h3><div class="places" id="homePlaces"></div></div>
+        <div id="homeAreasWrap" hidden><h3>Minhas áreas</h3><ul id="homeAreas" class="studies"></ul></div>
+        <p class="foot"><a href="/furnas/">Estudo completo de Furnas</a> · <a href="https://github.com/gabriel-moraes03/arara" target="_blank" rel="noopener">GitHub</a></p>
+      </section>
+    </div>
+  </aside>
+  <div id="stage">
+    <canvas id="stars" aria-hidden="true"></canvas>
+    <div id="globe" aria-label="Globo interativo: arraste para girar, role para aproximar, clique numa região"></div>
+    <div id="map2d" hidden aria-label="Mapa plano"></div>
+    <div id="loading">Carregando o globo…</div>
   <div class="seg mgmode" id="mgmode" role="group" aria-label="Divisão de Minas Gerais" hidden><button type="button" data-m="bacia" aria-pressed="true">Bacias</button><button type="button" data-m="municipio" aria-pressed="false">Municípios</button></div>
 
   <div class="hud">
@@ -366,7 +426,7 @@ a.btn { text-decoration: none; }
       <button class="btn" id="spin" type="button" hidden><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 1 1-3-6.7L21 8"/><path d="M21 3v5h-5"/></svg>Retomar giro</button>
       <button class="btn" id="reset" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Ver o planeta</button>
     </div>
-    <div class="hint">Arraste para girar em qualquer direção · role para aproximar · aproxime do Brasil para ver estados e, em Minas Gerais, os municípios</div>
+    <div class="hint">Arraste para girar · role para aproximar · em Minas, aproxime para ver as bacias</div>
   </div>
 
   <div class="areamenu" id="areaMenu" hidden>
@@ -390,10 +450,12 @@ a.btn { text-decoration: none; }
   </div>
 
   <div id="attrib" hidden>Imagens: Esri, Maxar, Earthstar Geographics</div>
-  <aside id="panel" hidden aria-live="polite"></aside>
+  </div>
+
   <section id="detail" hidden aria-label="Histórico detalhado"></section>
 </div>
 
+<script src="vendor/leaflet/leaflet.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/globe.gl@2.41.6/dist/globe.gl.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
 <script>
@@ -663,7 +725,7 @@ document.querySelectorAll('#mgmode button').forEach(b => b.addEventListener('cli
   closePanel(); updateLOD(true);
 }));
 document.querySelectorAll('#mgmode button').forEach(x => x.setAttribute('aria-pressed', String(x.dataset.m === basinMode)));
-$('#reset').addEventListener('click', () => { closePanel(); flyTo(-12, -38, 2.35); });
+$('#reset').addEventListener('click', () => { closePanel(); goTo(-12, -38, 2.35); });
 
 /* ---- voo animado ---- */
 let tween = null;
@@ -741,7 +803,7 @@ function updateCards() {
   const alt = altitude(), compact = alt < 0.9;
   const W = el.clientWidth, H = el.clientHeight;
   if (frameN % 10 === 0 || (panelRect === null) !== panel.hidden) panelRect = panel.hidden ? null : panel.getBoundingClientRect();
-  const pr = panel.hidden ? null : panelRect;
+  const pr = null;   // o painel agora fica na barra lateral, fora do mapa
   const vis = [];
   HOTSPOTS.forEach(h => {
     if (!h.__el) return;
@@ -844,14 +906,14 @@ function setBasemap(on) {
 /* ---- camadas de água do Arara sobre o mapa: PNG lat/lon da pipeline colado na esfera ---- */
 let overlay = null, THREE_NS = null, pendingOverlay = null;
 // mesma revisão do three embutido no globo.gl 2.41.6 (r176); versões diferentes quebram o renderizador
-import('https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.min.js').then(m => { THREE_NS = m; if (pendingOverlay) setOverlay(...pendingOverlay); }).catch(() => {});
-function clearOverlay() {
+import('https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.min.js').then(m => { THREE_NS = m; if (pendingOverlay) setOverlayGlobe(...pendingOverlay); }).catch(() => {});
+function clearOverlayGlobe() {
   if (!overlay) return;
   if (gObj) gObj.remove(overlay);
   overlay.geometry.dispose(); if (overlay.material.map) overlay.material.map.dispose(); overlay.material.dispose(); overlay = null;
 }
-function setOverlay(url, b) {
-  clearOverlay(); pendingOverlay = null; if (!url || !gObj) return;
+function setOverlayGlobe(url, b) {
+  clearOverlayGlobe(); pendingOverlay = null; if (!url || !gObj) return;
   if (!THREE_NS) { pendingOverlay = [url, b]; return; }
   const T = THREE_NS, N = 32, pos = [], uv = [], idx = [];
   for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
@@ -910,7 +972,7 @@ function selectFeature(f, { fly = false, at = null } = {}) {
   let c = centerOf(f);
   // pelo clique: centraliza onde o usuário clicou; áreas, lago e Minas Gerais (enquadra o estado todo) usam o centro
   if (at && f.__lvl !== 'area' && f.__lvl !== 'lago' && f !== mgState) c = at;
-  if (fly) flyTo(c.lat, c.lng, alt);
+  if (fly) { if (view === 'map') focusFeature(f); else flyTo(c.lat, c.lng, alt); }
   openPanel(ctxOf(f, null));
 }
 /* pinos que se sobrepõem na tela: o clique aproxima o grupo em vez de abrir o que estiver por cima */
@@ -942,21 +1004,22 @@ function openHotspot(h) {
   if (f) {
     const alt = f.__lvl === 'lago' ? 0.22 : f.__lvl === 'municipio' ? 0.14 : 0.38;
     if (f.__lvl === 'lago') updateLOD(true);
-    setSelected(f, alt); flyTo(h.lat, h.lng, alt);
+    setSelected(f, alt); goTo(h.lat, h.lng, alt);
     openPanel(ctxOf(f, h));
   } else {
     const d = 0.25, sq = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [[[h.lng - d, h.lat - d], [h.lng + d, h.lat - d], [h.lng + d, h.lat + d], [h.lng - d, h.lat + d], [h.lng - d, h.lat - d]]] } };
-    setSelected(null); flyTo(h.lat, h.lng, 0.5);
+    setSelected(null); goTo(h.lat, h.lng, 0.5);
     openPanel({ f: sq, key: h.id, name: h.place, lvl: 'estado', lvlLabel: 'Região', parent: '', lat: h.lat, lng: h.lng, hot: h });
   }
 }
 function closePanel() {
-  panel.hidden = true; setSelected(null); activeCtx = null;
+  panel.hidden = true; setSelected(null); activeCtx = null; if (mapReady) map2dHighlight(null);
   clearInterval(live.poll); clearTimeout(live.timer); live.token++;
   clearOverlay();
-  if (!drawMode) globe.pathsData([]);
+  if (!drawMode) showFootprints([]);
+  fillHome();
 }
-function openPanel(ctx) { activeCtx = ctx; if (ctx.hot) setVar(ctx.hot.var); renderPanel(); panel.hidden = false; }
+function openPanel(ctx) { activeCtx = ctx; if (ctx.hot) setVar(ctx.hot.var); renderPanel(); panel.hidden = false; if (mapReady) map2dHighlight(ctx.f); }
 
 /* ---- bacia hidrográfica de Minas: contorno oficial, catálogo ao vivo e estudos que já existem dentro dela ---- */
 function renderBasinPanel(ctx) {
@@ -974,7 +1037,7 @@ function renderBasinPanel(ctx) {
     <button class="more" type="button" id="bDraw">Marcar um reservatório ou trecho nesta bacia <span aria-hidden="true">→</span></button>
     <p class="note">Uma análise de água cobre até ${fmt(serverCfg.aoi_max_km2)} km² e esta bacia tem ${fmt(km2)} km². O estudo detalhado é feito por reservatório, rio ou várzea dentro da bacia: marque a área e o Arara mede a água ali.</p>`);
   panel.querySelectorAll('.studies button').forEach(b => b.addEventListener('click', () => openHotspot(inside[+b.dataset.h])));
-  $('#bDraw').addEventListener('click', () => { const c = centerOf(f); startDraw(); flyTo(c.lat, c.lng, Math.min(altitude(), 0.12), 1400); });
+  $('#bDraw').addEventListener('click', () => { const c = centerOf(f); goTo(c.lat, c.lng, 0.12, 1400); startDraw(); });
   api(`/scenes?bbox=${P.bbox.join(',')}&start=${period.start}&end=${period.end}`).then(r => {
     if (token !== live.token || activeCtx !== ctx) return;
     const g = (r.groups || [])[0];
@@ -1031,7 +1094,10 @@ function panelHead(ctx, sub) {
     </div>`;
 }
 function setPanel(html) { panel.innerHTML = html; panel.querySelector('.close').addEventListener('click', closePanel); }
-function showFootprints(list) { if (!drawMode) globe.pathsData(list); }
+function showFootprints(list) {
+  if (!drawMode) globe.pathsData(list);
+  if (mapReady) { L2.foot.clearLayers(); list.forEach(o => L.polygon(o.pts.map(([x, y]) => [y, x]), { color: o.color || '#4fb6ee', weight: 1.5, fill: false, interactive: false }).addTo(L2.foot)); }
+}
 
 function renderPanel() {
   const ctx = activeCtx; if (!ctx) return;
@@ -1322,10 +1388,10 @@ function fmtArea(ha) { return ha >= 100 ? `${fmt(ha / 100, ha >= 1e5 ? 0 : 1)} k
 function openDetail() {
   if (!activeCtx || !activeCtx.analysisId) return;
   detail.hidden = false; renderDetail(); detail.scrollTop = 0;
-  globe.pauseAnimation();
+  if (view === 'globe') globe.pauseAnimation();
   detail.querySelector('.back').focus();
 }
-function closeDetail() { detail.hidden = true; globe.resumeAnimation(); }
+function closeDetail() { detail.hidden = true; if (view === 'globe') globe.resumeAnimation(); }
 
 function renderDetail() {
   const ctx = activeCtx; if (!ctx || !ctx.analysisId) return;
@@ -1430,6 +1496,7 @@ function loadCards() {
     });
     if (!drawMode) globe.htmlElementsData(HOTSPOTS);
     if (pin.shown) globe.pointsData(HOTSPOTS).ringsData(reduceMotion ? [] : HOTSPOTS);
+    fillHome(); if (mapReady) map2dRefresh();
   }).catch(() => {});
 }
 function openAnalysis(h) {
@@ -1439,11 +1506,44 @@ function openAnalysis(h) {
     let f = areas.find(x => (links[x.__key] || {}).analysis === id);
     if (!f) f = tag({ type: 'Feature', properties: {}, geometry: a.aoi.geometry }, 'area', { __name: a.name || 'Área analisada', __key: 'an-' + id, __parent: '', __country: '', __ha: a.aoi.area_km2 * 100, __temp: true });
     const alt = flyAltFor(f), c = centerOf(f);
-    setSelected(f.__temp ? null : f, alt); flyTo(c.lat, c.lng, alt);
+    setSelected(f.__temp ? null : f, alt); if (view === 'map') focusFeature(f); else flyTo(c.lat, c.lng, alt);
     const ctx = ctxOf(f, h); ctx.analysisId = id; openPanel(ctx);
   }).catch(() => { loadCards(); });
 }
 loadCards();
+
+/* ================= início (barra lateral) ================= */
+// recortes de até ~1.500 km², dentro do limite de uma análise; o catálogo diz se há cenas NISAR ali
+const PLACES = [
+  { n: 'Rio Negro, Manaus', note: 'seca amazônica', b: [-60.3, -3.1, -59.9, -2.8] },
+  { n: 'Lago Chade', note: 'lago encolhendo', b: [14.0, 13.0, 14.4, 13.4] },
+  { n: 'Lake Mead, EUA', note: 'reservatório', b: [-114.8, 36.0, -114.4, 36.3] },
+  { n: 'Mar de Aral', note: 'lago encolhendo', b: [59.0, 45.0, 59.4, 45.3] },
+];
+function openPlace(name, b) {
+  const ring = [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]], [b[0], b[1]]];
+  const f = tag({ type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [ring] } }, 'area',
+    { __name: name, __key: 'place-' + name, __parent: '', __country: '', __ha: hectares(ring), __temp: true });
+  stopSpin(); setSelected(null); focusFeature(f, null); openPanel(ctxOf(f, null));
+}
+function fillHome() {
+  const st = HOTSPOTS.filter(h => h.api || h.id === 'furnas').sort((a, b) => (a.id === 'furnas' ? -1 : b.id === 'furnas' ? 1 : 0));
+  $('#homeStudies').innerHTML = st.length ? st.map((h, i) => `<li><button type="button" data-i="${i}">${esc(h.api ? (h.api.name || 'Área analisada') : 'Lago de Furnas')}<small>${h.api ? cardMetric(h.api) : 'estudo completo · validado com a ANA'}</small></button></li>`).join('') : '<li class="note" style="list-style:none">Nenhum estudo concluído ainda.</li>';
+  $('#homeStudies').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { stopSpin(); openHotspot(st[+b.dataset.i]); }));
+  const sel = $('#homeBasin');
+  if (basins.length && sel.options.length <= 1) {
+    sel.innerHTML = '<option value="">Escolher uma bacia…</option>' + [...basins].sort((a, b) => a.properties.sigla.localeCompare(b.properties.sigla, 'pt', { numeric: true }))
+      .map(f => `<option value="${esc(f.properties.k)}">${esc(f.properties.n)}</option>`).join('');
+    sel.addEventListener('change', () => { const f = basins.find(x => x.properties.k === sel.value); sel.value = ''; if (f) { stopSpin(); selectFeature(f, { fly: true }); } });
+  }
+  $('#homePlaces').innerHTML = PLACES.map((p, i) => `<button type="button" data-i="${i}">${esc(p.n)}<small>${esc(p.note)}</small></button>`).join('');
+  $('#homePlaces').querySelectorAll('button').forEach(b => b.addEventListener('click', () => openPlace(PLACES[+b.dataset.i].n, PLACES[+b.dataset.i].b)));
+  $('#homeAreasWrap').hidden = !areas.length;
+  $('#homeAreas').innerHTML = areas.map((a, i) => `<li><button type="button" data-i="${i}">${esc(a.__name)}<small>${fmt(a.__ha, a.__ha < 100 ? 1 : 0)} ha</small></button></li>`).join('');
+  $('#homeAreas').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { stopSpin(); selectFeature(areas[+b.dataset.i], { fly: true }); }));
+}
+$('#homeSelect').addEventListener('click', () => { stopSpin(); setView('map'); startDraw(); });
+fillHome();
 
 /* ================= minha área ================= */
 const areaMenu = $('#areaMenu'), areaBtn = $('#areaBtn');
@@ -1455,6 +1555,7 @@ $('#optCoord').addEventListener('click', () => { areaMenu.hidden = true; q.value
 $('#fileIn').addEventListener('change', importFile);
 
 function startDraw() {
+  if (view === 'map') return startRect();
   const from = selected;
   areaMenu.hidden = true; closePanel(); stopSpin();
   drawMode = true; drawPts = []; hover = null; refreshStyle();
@@ -1507,7 +1608,7 @@ function makeAreaFeature(rec) {
   const ha = hectares(rec.ring);
   return Object.assign(f, { __lvl: 'area', __lvlLabel: LVL_LABEL.area, __name: rec.name, __key: rec.id, __parent: pl.parent, __country: pl.country, __ha: ha, __rec: rec });
 }
-function saveAreas() { store.set('arara-areas-v3', areas.map(a => a.__rec)); }
+function saveAreas() { store.set('arara-areas-v3', areas.map(a => a.__rec)); fillHome(); if (mapReady) map2dRefresh(); }
 const MAX_AREA_DEG = 5;   // maior lado aceito (~550 km); acima disso o polígono cobre o globo e não dá para analisar
 const ringSpan = (ring) => Math.max(Math.max(...ring.map(p => p[0])) - Math.min(...ring.map(p => p[0])), Math.max(...ring.map(p => p[1])) - Math.min(...ring.map(p => p[1])));
 function addArea(ring, name, open) {
@@ -1576,6 +1677,102 @@ function restoreDrawbar() {
   $('#drawDone').addEventListener('click', () => { const ring = drawPts.concat([drawPts[0]]); stopDraw(); addArea(ring, null, true); });
 }
 
+/* ================= mapa plano (Leaflet): o modo de precisão ================= */
+let view = store.get('arara-view', 'globe') === 'map' ? 'map' : 'globe';
+let map2 = null, mapReady = false, ovlState = null, rectStop = null;
+const L2 = {};
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+function initMap2() {
+  if (map2) return;
+  map2 = L.map('map2d', { worldCopyJump: true, zoomControl: false, minZoom: 2, preferCanvas: true }).setView([-18.8, -45.0], 6);
+  L.control.zoom({ position: 'bottomright' }).addTo(map2);
+  L.tileLayer(ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri, Maxar, Earthstar Geographics' }).addTo(map2);
+  L.tileLayer(ESRI + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, opacity: 0.9 }).addTo(map2);
+  map2.createPane('ovl').style.zIndex = 380;
+  ['basins', 'areas', 'marks', 'foot', 'sel'].forEach(k => { L2[k] = L.layerGroup().addTo(map2); });
+  mapReady = true; map2dRefresh();
+}
+function map2dRefresh() {
+  if (!mapReady) return;
+  ['basins', 'areas', 'marks'].forEach(k => L2[k].clearLayers());
+  basins.forEach(f => {
+    const c = UEG_RGB[f.__ueg] || [90, 130, 150], col = `rgb(${c[0]},${c[1]},${c[2]})`;
+    L.geoJSON(f, { style: { color: col, weight: 1.4, fillColor: col, fillOpacity: 0.1 }, onEachFeature: (ft, ly) => {
+      ly.bindTooltip(f.properties.n, { sticky: true });
+      ly.on('mouseover', () => ly.setStyle({ fillOpacity: 0.28 })); ly.on('mouseout', () => ly.setStyle({ fillOpacity: 0.1 }));
+      ly.on('click', () => { if (!drawMode) { stopSpin(); selectFeature(f, { fly: true }); } });
+    } }).addTo(L2.basins);
+  });
+  areas.forEach(f => L.geoJSON(f, { style: { color: '#f4b63f', weight: 2, dashArray: '6 4', fillOpacity: 0.05 }, onEachFeature: (ft, ly) => { ly.bindTooltip(f.__name, { sticky: true }); ly.on('click', () => { if (!drawMode) selectFeature(f, { fly: true }); }); } }).addTo(L2.areas));
+  HOTSPOTS.filter(h => h.api || h.id === 'furnas').forEach(h => {
+    L.circleMarker([h.lat, h.lng], { radius: 9, color: '#04060c', weight: 2, fillColor: '#4fb6ee', fillOpacity: 1 })
+      .bindTooltip(h.api ? (h.api.name || 'Área analisada') : 'Lago de Furnas', { direction: 'top' }).on('click', () => { if (!drawMode) openHotspot(h); }).addTo(L2.marks);
+  });
+}
+function map2dHighlight(f) {
+  if (!mapReady) return; L2.sel.clearLayers();
+  if (f) L.geoJSON(f, { style: { color: '#f4b63f', weight: 3, fill: false, dashArray: f.__temp ? '7 5' : null }, interactive: false }).addTo(L2.sel);
+}
+const zoomFromAlt = (alt) => clamp(Math.round(8 - Math.log2(Math.max(alt, 0.005) / 0.2)), 3, 15);
+function goTo(lat, lng, alt, ms = 1500) {
+  if (view === 'map') { initMap2(); map2.flyTo([lat, lng], zoomFromAlt(alt), { duration: Math.min(ms, 1600) / 1000 }); }
+  else flyTo(lat, lng, alt, ms);
+}
+function focusFeature(f, at, alt) {
+  if (view === 'map') {
+    initMap2(); const b = f.__bb || (f.__bb = bbox(f));
+    map2.flyToBounds([[b[1], b[0]], [b[3], b[2]]], { padding: [48, 48], maxZoom: 13, duration: 0.9 });
+  } else { const c = at || centerOf(f); flyTo(c.lat, c.lng, alt != null ? alt : flyAltFor(f)); }
+}
+function clearOverlay() { ovlState = null; clearOverlayGlobe(); if (L2.ovl && map2) { map2.removeLayer(L2.ovl); L2.ovl = null; } }
+function setOverlay(url, b) { clearOverlay(); if (!url || !b) return; ovlState = { url, b }; renderOverlay(); }
+function renderOverlay() {
+  if (!ovlState) return;
+  if (view === 'map' && mapReady) L2.ovl = L.imageOverlay(ovlState.url, [[ovlState.b.south, ovlState.b.west], [ovlState.b.north, ovlState.b.east]], { opacity: 0.92, pane: 'ovl' }).addTo(map2);
+  else if (view === 'globe') setOverlayGlobe(ovlState.url, ovlState.b);
+}
+function setView(v) {
+  view = v; store.set('arara-view', v);
+  document.querySelectorAll('#viewsw button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  const stage = $('#stage'); stage.classList.toggle('mode-map', v === 'map');
+  $('#map2d').hidden = v !== 'map';
+  if (rectStop) rectStop();
+  if (drawMode) stopDraw();
+  clearOverlayGlobe(); if (L2.ovl && map2) { map2.removeLayer(L2.ovl); L2.ovl = null; }
+  if (v === 'map') {
+    initMap2(); try { globe.pauseAnimation(); } catch (e) { /* ok */ }
+    setTimeout(() => { map2.invalidateSize(); if (activeCtx) { focusFeature(activeCtx.f); map2dHighlight(activeCtx.f); } renderOverlay(); }, 60);
+  } else {
+    try { globe.resumeAnimation(); } catch (e) { /* ok */ }
+    setTimeout(() => { globe.width(el.clientWidth).height(el.clientHeight); buildSky(); renderOverlay(); if (activeCtx) { const c = centerOf(activeCtx.f); flyTo(c.lat, c.lng, flyAltFor(activeCtx.f)); } }, 60);
+  }
+}
+document.querySelectorAll('#viewsw button').forEach(b => b.addEventListener('click', () => { if (b.dataset.v !== view) { stopSpin(); setView(b.dataset.v); } }));
+/* seleção por retângulo: arrastar no mapa plano (mais preciso que clicar cantos no globo) */
+function startRect() {
+  areaMenu.hidden = true; closePanel(); drawMode = true; initMap2();
+  const bar = $('#drawbar'); bar.hidden = false; bar.innerHTML = '<p id="rectInfo">Arraste no mapa para desenhar a área</p><button class="btn" type="button" id="rectCancel">Cancelar</button>';
+  map2.dragging.disable(); map2.getContainer().style.cursor = 'crosshair';
+  let a = null, rect = null;
+  const bounds = (e) => L.latLngBounds(a, e.latlng);
+  const km2 = (b) => (b.getEast() - b.getWest()) * 111.32 * Math.cos(b.getCenter().lat * Math.PI / 180) * (b.getNorth() - b.getSouth()) * 110.57;
+  const down = (e) => { a = e.latlng; };
+  const move = (e) => { if (!a) return; const b = bounds(e); if (rect) rect.setBounds(b); else rect = L.rectangle(b, { color: '#f4b63f', weight: 2, fillOpacity: 0.1, interactive: false }).addTo(map2);
+    $('#rectInfo').textContent = `${fmt(km2(b), km2(b) < 100 ? 1 : 0)} km²${km2(b) > serverCfg.aoi_max_km2 ? ' · acima do limite de ' + fmt(serverCfg.aoi_max_km2) + ' km² por análise' : ''}`; };
+  const finish = (cancel, e) => {
+    map2.off('mousedown', down).off('mousemove', move).off('mouseup', up); map2.dragging.enable(); map2.getContainer().style.cursor = '';
+    if (rect) map2.removeLayer(rect); rectStop = null; drawMode = false; restoreDrawbar(); $('#drawbar').hidden = true;
+    if (cancel || !a) return;
+    const b = bounds(e);
+    if (km2(b) < 0.5) { flash('Área muito pequena: arraste um retângulo maior.'); return; }
+    addArea([[b.getWest(), b.getSouth()], [b.getEast(), b.getSouth()], [b.getEast(), b.getNorth()], [b.getWest(), b.getNorth()], [b.getWest(), b.getSouth()]], null, true);
+  };
+  const up = (e) => finish(false, e);
+  map2.on('mousedown', down).on('mousemove', move).on('mouseup', up);
+  rectStop = () => finish(true);
+  $('#rectCancel').addEventListener('click', () => finish(true));
+}
+
 /* ================= busca ================= */
 const q = $('#q'), results = $('#results');
 let hits = [], activeHit = -1;
@@ -1617,11 +1814,11 @@ function pickHit(h) {
   results.hidden = true; q.blur(); stopSpin();
   if (h.kind === 'f') {
     q.value = h.f.__name;
-    if (drawMode) { const c = centerOf(h.f); flyTo(c.lat, c.lng, 0.012, 1800); updateDraw(); return; }
+    if (drawMode) { const c = centerOf(h.f); goTo(c.lat, c.lng, 0.012, 1800); if (view !== 'map') updateDraw(); return; }
     selectFeature(h.f, { fly: true }); return;
   }
   q.value = '';
-  if (h.kind === 'coord' || drawMode) { closePanel(); flyTo(h.lat, h.lng, 0.012, 1800); return; }
+  if (h.kind === 'coord' || drawMode) { closePanel(); goTo(h.lat, h.lng, 0.012, 1800); return; }
   const dLat = 0.5 / 110.57, dLng = 0.5 / (111.32 * Math.cos(h.lat * Math.PI / 180));
   addArea([[h.lng - dLng, h.lat - dLat], [h.lng + dLng, h.lat - dLat], [h.lng + dLng, h.lat + dLat], [h.lng - dLng, h.lat + dLat], [h.lng - dLng, h.lat - dLat]], `Área em ${fmt(h.lat, 3)}, ${fmt(h.lng, 3)}`, true);
 }
@@ -1646,7 +1843,7 @@ fetch('geo.json').then(r => r.json()).then(geo => {
   fetch('bacias_mg.json').then(r => r.json()).then(b => {
     basins = b.features.map(f => tag(f, 'bacia', { __name: f.properties.n, __key: f.properties.k, __parent: 'Minas Gerais', __country: 'Brasil', __ueg: f.properties.ueg }));
     basins.forEach(f => searchIndex.push({ n: norm(f.__name + ' ' + (f.properties.federal || '')), f, rank: 1 }));
-    updateLOD(true);
+    updateLOD(true); fillHome(); if (mapReady) map2dRefresh();
   }).catch(() => {});
   mgMun = geo.mgmun.map(f => tag(f, 'municipio', { __name: f.properties.n, __key: f.properties.k, __parent: 'MG', __country: 'Brasil' }));
   world.forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 0 }));
@@ -1665,8 +1862,9 @@ fetch('geo.json').then(r => r.json()).then(geo => {
 }).catch(() => { $('#loading').textContent = 'Não foi possível carregar os mapas. Recarregue a página.'; });
 
 /* ================= tamanho e teclado ================= */
-function resize() { globe.width(el.clientWidth).height(el.clientHeight); buildSky(); }
+function resize() { if (view === 'map') return; globe.width(el.clientWidth).height(el.clientHeight); buildSky(); }
 window.addEventListener('resize', resize);
+try { new ResizeObserver(() => resize()).observe($('#stage')); } catch (e) { /* sem ResizeObserver: só a janela */ }
 document.addEventListener('keydown', (e) => {
   if (e.key !== 'Escape') return;
   if (!detail.hidden) closeDetail();
@@ -1676,6 +1874,7 @@ document.addEventListener('keydown', (e) => {
 
 setVar('agua');
 findGlobe();
+if (view === 'map') setView('map'); else document.querySelectorAll('#viewsw button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === 'globe')));
 })();
 </script>
 
