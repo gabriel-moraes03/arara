@@ -284,6 +284,22 @@ tr.sel td { background: rgba(255, 255, 255, 0.04); }
 #loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-2); font-size: 14px; z-index: 3; pointer-events: none; }
 .sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
 
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.example.down { background: rgba(240, 122, 106, 0.14); color: var(--down); font-weight: 600; }
+.example.warn { background: rgba(240, 180, 76, 0.16); color: #f0b44c; font-weight: 600; }
+.pform { display: flex; gap: 10px; flex-wrap: wrap; font-size: 12px; color: var(--ink-3); }
+.pform input { background: #0c121c; color: var(--ink); border: 1px solid var(--glass-line); border-radius: 7px; padding: 4px 6px; font: 12px var(--font-mono); color-scheme: dark; }
+.grp { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; }
+.grp li { padding: 8px 10px; border: 1px solid var(--glass-line); border-radius: 8px; }
+.grp li:first-child { border-color: color-mix(in srgb, var(--vc) 45%, transparent); }
+.grp b { font-weight: 600; display: block; }
+.grp small { color: var(--ink-3); font-family: var(--font-mono); font-size: 11px; }
+.bar { height: 6px; border-radius: 3px; background: rgba(255, 255, 255, 0.08); overflow: hidden; }
+.bar i { display: block; height: 100%; background: var(--vc); transition: width 0.4s; }
+.note a, .lead a { color: var(--vc); }
+.stack { position: relative; width: 100%; aspect-ratio: 1; border-radius: 10px; background: #070b12; overflow: hidden; }
+.stack img { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; }
+a.btn { text-decoration: none; }
 @media (min-width: 900px) { .dgrid.two { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); } }
 @media (max-width: 720px) {
   .brand h1 { font-size: 24px; }
@@ -328,7 +344,7 @@ tr.sel td { background: rgba(255, 255, 255, 0.04); }
     </div>
     <div class="legend" id="legend" hidden>
       <small id="lgLo">pouca</small><span class="ramp"></span><small id="lgHi">muita</small>
-      <span id="lgTxt">Água aberta, última passagem (ilustrativo)</span>
+      <span id="lgTxt"></span>
     </div>
     <div class="btns">
       <button class="btn primary" id="areaBtn" type="button" aria-expanded="false"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><path d="M4 18 9 5l6 6 5-4-2 12z"/></svg>Minha área</button>
@@ -471,90 +487,14 @@ function drawSky(t) {
 sky.offY = 0;
 buildSky();
 
-/* ================= exemplos de insights (cards) ================= */
+/* ================= cards: só casos reais (Furnas + análises concluídas vindas da API) ================= */
 const HOTSPOTS = [
   { id: 'furnas', real: true, lat: -20.85, lng: -45.95, place: 'Lago de Furnas, MG · caso validado', title: 'NISAR mede o lago de Furnas com 1% de erro', delta: -1.9, unit: '%', var: 'agua', select: { lake: true },
     detected: '', cause: '', check: '' },
-  { id: 'pantanal', lat: -18.2, lng: -57.0, place: 'Pantanal, MS', title: 'Área alagada abaixo do normal para a época', delta: -38, unit: '%', var: 'agua', select: { state: 'Mato Grosso do Sul' },
-    detected: 'Menos pixels com o padrão de água aberta (HH muito baixo) do que nas primeiras passagens da série.',
-    cause: 'Cheia fraca do rio Paraguai após um verão com pouca chuva na bacia alta.',
-    check: 'régua de Ladário (Marinha) e mapa de água OPERA DSWx.' },
-  { id: 'manaus', lat: -3.1, lng: -60.0, place: 'Rio Negro, Manaus, AM', title: 'Vazante expôs bancos de areia e margens', delta: -21, unit: '%', var: 'agua', select: { state: 'Amazonas' },
-    detected: 'A área classificada como água encolheu nas margens e surgiram faixas com retroespalhamento de solo exposto.',
-    cause: 'Vazante sazonal, possivelmente reforçada por seca regional.',
-    check: 'cota do porto de Manaus.' },
-  { id: 'cv', lat: 36.6, lng: -119.9, place: 'Vale Central, Califórnia', title: 'Reservatórios mais baixos depois do verão seco', delta: -12, unit: '%', var: 'agua', select: { state: 'California' },
-    detected: 'Espelhos d\u2019água dos reservatórios encolheram de forma contínua desde julho.',
-    cause: 'Uso intenso para irrigação no verão sem chuva para repor.',
-    check: 'níveis dos reservatórios no CDEC.' },
-  { id: 'punjab', lat: 30.9, lng: 75.5, place: 'Punjab, Índia', title: 'Arrozais drenados depois da colheita', delta: -45, unit: '%', var: 'agua', select: { state: 'Punjab' },
-    detected: 'Os talhões que apareciam alagados no radar durante a monção perderam a lâmina d\u2019água.',
-    cause: 'Drenagem dos arrozais para a colheita. O padrão segue os talhões, o que descarta seca natural.',
-    check: 'calendário agrícola do estado.' },
-  { id: 'chad', lat: 13.3, lng: 14.1, place: 'Lago Chade', title: 'Água aberta recua na margem norte', delta: -15, unit: '%', var: 'agua', select: { state: 'Lac' },
-    detected: 'A margem norte perdeu área com padrão de água aberta nas últimas quatro passagens.',
-    cause: 'Recuo após a estação chuvosa. Plantas aquáticas também podem esconder a água do radar.',
-    check: 'imagem óptica (Sentinel-2) sem nuvens.' },
-  { id: 'mekong', lat: 10.0, lng: 105.8, place: 'Delta do Mekong, Vietnã', title: 'Fim da cheia libera os arrozais', delta: -26, unit: '%', var: 'agua', select: { state: 'Cần Thơ' },
-    detected: 'A água que cobria as várzeas do delta está recuando passagem a passagem.',
-    cause: 'Fim do pulso de cheia anual do Mekong.',
-    check: 'níveis da Comissão do Rio Mekong.' },
-  { id: 'murray', lat: -34.6, lng: 143.6, place: 'Bacia Murray-Darling, Austrália', title: 'Planícies alagadas secando há 4 passagens', delta: -17, unit: '%', var: 'agua', select: { state: 'New South Wales' },
-    detected: 'Redução contínua da água aberta nas planícies de inundação.',
-    cause: 'Fim do pulso de cheia somado à evaporação de primavera.',
-    check: 'vazões da MDBA.' },
-  { id: 'po', lat: 45.05, lng: 10.2, place: 'Vale do Pó, Itália', title: 'Áreas alagadas depois das chuvas de outono', delta: +30, unit: '%', var: 'agua', select: { state: 'Emilia-Romagna' },
-    detected: 'Surgiram manchas de água aberta em várzeas que estavam secas no fim do verão.',
-    cause: 'Frentes de chuva de outono que encheram os afluentes do Pó.',
-    check: 'rede hidrométrica da ARPAE.' },
 ];
 
-/* ================= séries ilustrativas ================= */
-const PASS0 = Date.UTC(2026, 5, 29); // 29/06/2026: a 12ª passagem cai em 08/11/2026
-const DAY = 864e5, HIST_N = 12, FC_N = 3;
-const passDate = (i) => new Date(PASS0 + i * 12 * DAY);
-const dmy = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', timeZone: 'UTC' });
-const dmyy = (d) => d.toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit', year: 'numeric', timeZone: 'UTC' });
-function season(date, lat) {
-  const m = date.getUTCMonth() + date.getUTCDate() / 31;
-  if (lat < -8) return Math.cos((m - 0.5) / 12 * 2 * Math.PI);
-  if (lat > 8) return Math.cos((m - 7.5) / 12 * 2 * Math.PI);
-  return 0.3 * Math.cos((m - 3) / 6 * 2 * Math.PI);
-}
-const seriesCache = new Map();
-function makeSeries(key, lat, varKey, hot) {
-  const ck = key + '|' + varKey + '|' + (hot ? hot.id : '');
-  if (seriesCache.has(ck)) return seriesCache.get(ck);
-  const r = rng(hash(key + varKey));
-  const base = r(), amp = 0.6 + r() * 0.8, noise = 0.4 + r() * 0.6;
-  const pts = [];
-  for (let i = 0; i < HIST_N + FC_N; i++) {
-    const s = season(passDate(i), lat) * amp + (r() - 0.5) * noise * 0.5;
-    let v;
-    if (varKey === 'umidade') v = clamp(48 + base * 20 + s * 22, 4, 96);
-    else if (varKey === 'agua') v = clamp((2 + base * 10) * (1 + s * 0.35), 0.2, 60);
-    else v = clamp(-14 - base * 4 + s * 1.6, -23, -7);
-    pts.push(v);
-  }
-  if (hot && hot.var === varKey) {
-    const last = HIST_N - 1, first = last - 4;
-    const target = varKey === 'agua' ? pts[first] * (1 + hot.delta / 100) : pts[first] + hot.delta;
-    for (let i = first + 1; i <= last + FC_N; i++) {
-      const t = (i - first) / 4;
-      const want = pts[first] + (target - pts[first]) * Math.min(t, 1) + (i > last ? (target - pts[first]) * 0.18 * (i - last) : 0);
-      pts[i] = want * (1 + (r() - 0.5) * 0.03);
-    }
-  }
-  const out = pts.map(v => +v.toFixed(2));
-  seriesCache.set(ck, out);
-  return out;
-}
-function deltaOf(pts, varKey, a, b) { return varKey === 'agua' ? (pts[b] - pts[a]) / pts[a] * 100 : pts[b] - pts[a]; }
-function deltaTxt(diff, varKey) {
-  const u = varKey === 'umidade' ? ' pts' : varKey === 'agua' ? '%' : ' dB';
-  return `${diff >= 0 ? '+' : '−'}${fmt(Math.abs(diff), varKey === 'umidade' ? 0 : 1)}${u}`;
-}
-function normVal(v, k) { return k === 'umidade' ? (v - 22) / 62 : k === 'agua' ? v / 16 : (v + 21) / 12; }
+/* ================= datas ================= */
+const DAY = 864e5;
 
 /* ================= cores do mapa ================= */
 const C = {
@@ -598,7 +538,7 @@ const globe = Globe({ animateIn: false })(el)
   .htmlElement(d => d.kind === 'v' ? makeVertex(d) : makeCard(d))
   .htmlElementVisibilityModifier(() => {})
   .pathPoints(d => d.pts).pathPointLat(p => p[1]).pathPointLng(p => p[0]).pathPointAlt(() => capAlt() * 1.1)
-  .pathColor(() => '#f4b63f').pathStroke(2).pathTransitionDuration(0)
+  .pathColor(d => d.color || '#f4b63f').pathStroke(2).pathTransitionDuration(0)
   .pointsData(HOTSPOTS).pointLat(d => d.lat).pointLng(d => d.lng)
   .pointAltitude(() => pin.alt).pointRadius(() => pin.r).pointResolution(16).pointsMerge(false).pointsTransitionDuration(0)
   .pointColor(d => VARS[d.var].color).pointLabel(() => '')
@@ -747,15 +687,19 @@ function makeCard(d) {
   const up = d.delta > 0;
   w.innerHTML = `<span class="pin"></span>
     <button class="card" type="button">
-      <span class="tag">${d.real ? '<em class="real">Dado real</em> ' : 'Exemplo de insight · '}${esc(d.place)}</span>
+      <span class="tag"><em class="real">Dado real</em> ${esc(d.place)}</span>
       <span class="title">${esc(d.title)}</span>
-      ${d.real ? `<span class="metric"><i></i>1.020 km² de água · cota −0,87 m em 9 passagens</span>` : `<span class="metric"><i></i>${v.short} <b class="${up ? 'up' : 'down'}">${up ? '+' : '−'}${fmt(Math.abs(d.delta), d.unit === 'dB' ? 1 : 0)} ${d.unit}</b> em 4 passagens</span>`}
+      <span class="metric"><i></i>${d.api ? cardMetric(d.api) : '1.020 km² de água · cota −0,87 m em 9 passagens'}</span>
     </button>`;
   const open = (e) => { e.stopPropagation(); stopSpin(); openHotspot(d); };
   w.querySelector('.card').addEventListener('click', open);
   w.querySelector('.pin').addEventListener('click', open);
   w.addEventListener('pointerdown', (e) => e.stopPropagation());
   return w;
+}
+function cardMetric(a) {
+  const m = a.summary || {};
+  return `${m.n_dates} ${m.n_dates === 1 ? 'passagem' : 'passagens'}${m.net_change_ha != null ? ` · saldo ${signed(m.net_change_ha, 0)} ha` : ''}${m.experimental ? ' · experimental' : ''}`;
 }
 function makeVertex(d) { const v = document.createElement('div'); v.className = 'vtx' + (d.first ? ' first' : ''); return v; }
 function measure(h) { const c = h.__el.querySelector('.card'); return [c.offsetWidth || 210, c.offsetHeight || 90]; }
@@ -817,7 +761,7 @@ function updateLOD(force) {
   data = data.concat(areas);
   current = alt < 0.05 ? 'area' : inMG ? 'municipio' : country ? 'estado' : 'pais';
   document.querySelectorAll('.levels span').forEach(s => s.classList.toggle('on', s.dataset.l === current));
-  $('#legend').hidden = current === 'pais';
+  $('#legend').hidden = true;   // sem mapa de valores ilustrativos
   globe.polygonsData(data);
   refreshStyle();
 }
@@ -828,7 +772,7 @@ function isSel(d) {
   return selected.__lvl === 'pais' && d.__lvl === 'estado' && d.__country === selected.__name;
 }
 function capColor(d) {
-  const t = d.__vals ? normVal(d.__vals[mapVar], mapVar) : 0.5;
+  const t = 0.5;   // nenhuma região tem valor estimado: cor neutra
   if (isSel(d)) return d.__lvl === 'pais' ? C.sel : rampColor(t + 0.3, mapVar, 1);
   if (d.__lvl === 'lago') return d === hover ? 'rgba(120, 205, 250, 1)' : 'rgba(79, 182, 238, 0.92)';
   if (d.__lvl === 'area') return d === hover ? 'rgba(255, 205, 110, 0.95)' : C.area;
@@ -856,7 +800,6 @@ function setVar(k) {
   mapVar = k; activeVar = k;
   document.documentElement.style.setProperty('--vc', VARS[k].color);
   $('#lgLo').textContent = VARS[k].lgLo; $('#lgHi').textContent = VARS[k].lgHi;
-  $('#lgTxt').textContent = `${VARS[k].label}, última passagem (ilustrativo)`;
   refreshStyle();
   if (!panel.hidden) renderPanel();
   if (!detail.hidden) renderDetail();
@@ -879,7 +822,7 @@ function setSelected(f, targetAlt) {
 }
 function ctxOf(f, hot) {
   const c = centerOf(f);
-  if (!hot && f.__lvl === 'lago') hot = HOTSPOTS.find(h => h.real);
+  if (!hot && f.__lvl === 'lago') hot = HOTSPOTS.find(h => h.id === 'furnas');
   return { f, key: f.__key, name: f.__name, lvl: f.__lvl, lvlLabel: f.__lvlLabel, parent: f.__parent, country: f.__country, lat: c.lat, lng: c.lng, hot, ha: f.__ha };
 }
 function selectFeature(f, { fly = false } = {}) {
@@ -890,6 +833,7 @@ function selectFeature(f, { fly = false } = {}) {
   openPanel(ctxOf(f, null));
 }
 function openHotspot(h) {
+  if (h.api) return openAnalysis(h);
   let f = null;
   if (h.select.lake) f = lake;
   else if (h.select.mun) f = mgMun.find(m => m.__name === h.select.mun);
@@ -906,7 +850,11 @@ function openHotspot(h) {
     openPanel({ f: sq, key: h.id, name: h.place, lvl: 'estado', lvlLabel: 'Região', parent: '', lat: h.lat, lng: h.lng, hot: h });
   }
 }
-function closePanel() { panel.hidden = true; setSelected(null); activeCtx = null; }
+function closePanel() {
+  panel.hidden = true; setSelected(null); activeCtx = null;
+  clearInterval(live.poll); clearTimeout(live.timer); live.token++;
+  if (!drawMode) globe.pathsData([]);
+}
 function openPanel(ctx) { activeCtx = ctx; if (ctx.hot) setVar(ctx.hot.var); renderPanel(); panel.hidden = false; }
 
 function crumbsOf(ctx) {
@@ -916,55 +864,243 @@ function crumbsOf(ctx) {
   if (ctx.lvl === 'area' && ctx.parent) c.push(ctx.parent);
   return c;
 }
-function analysis(ctx, k) {
-  const hot = ctx.hot, pts = makeSeries(ctx.key, ctx.lat, k, hot);
-  const lastI = HIST_N - 1, cmpI = lastI - 4;
-  const diff = deltaOf(pts, k, cmpI, lastI);
-  const useHot = hot && hot.var === k;
-  return {
-    pts, lastI, cmpI, diff,
-    detected: useHot ? hot.detected : genericDetected(k, diff, cmpI, lastI, ctx.lvl),
-    cause: useHot ? hot.cause : genericCause(k, diff, ctx.lat, ctx.lvl),
-    check: useHot ? hot.check : genericCheck(k),
-    conf: Math.abs(diff) > (k === 'vegetacao' ? 1.5 : 10) ? 'confiança média' : 'confiança baixa',
-  };
+/* ================= API do Arara: só dados reais ================= */
+const API = 'api/arara';
+function api(path, opt) {
+  return fetch(API + path, opt).then(async (r) => {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(j.reason || `erro ${r.status} no servidor do Arara`), { status: r.status });
+    return j;
+  }, () => { throw new Error('não foi possível falar com o servidor do Arara'); });
 }
+let serverCfg = { aoi_max_km2: 2500, on_demand_available: false, on_demand_reason: 'servidor do Arara não respondeu' };
+api('/config').then(c => { serverCfg = c; }).catch(() => {});
+const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+const isoBR = (s) => { const [y, m, d] = String(s).slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
+const period = { start: isoDay(Date.now() - 150 * DAY), end: isoDay(Date.now()) };
+const links = store.get('arara-links-v1', {});          // chave da região -> { id da análise, id do job }
+const saveLinks = () => store.set('arara-links-v1', links);
+const analysesById = new Map();
+const live = { token: 0, timer: null, poll: null };
+const CATALOG_MAX_KM2 = 60000;
+const STAGE = { queued: 'Na fila', discover: 'Consultando o catálogo NISAR', select: 'Escolhendo a geometria (trilha e frame)',
+  acquire: 'Lendo na NASA só a janela da área', process: 'Convertendo para dB e filtrando', classify: 'Classificando água',
+  compare: 'Comparando as datas', optical_s2: 'Buscando o Sentinel-2', validate_cross: 'Validando com o óptico',
+  forecast: 'Calculando a projeção', insights: 'Montando a leitura', publish: 'Gravando mapas e métricas' };
+const DIR = { A: 'ascendente', D: 'descendente' };
+const MAT = { PROVISIONAL: 'produto provisório', VALIDATED: 'produto validado', BETA: 'produto beta', LOCAL: 'cenas locais' };
+const signed = (v, d = 1) => `${v >= 0 ? '+' : '−'}${fmt(Math.abs(v), d)}`;
+function bboxKm2(b) { return (b[2] - b[0]) * 111.32 * Math.cos((b[1] + b[3]) / 2 * Math.PI / 180) * (b[3] - b[1]) * 110.57; }
+function geomOf(ctx) { return ctx.f.geometry; }
 
-function renderPanel() {
-  const ctx = activeCtx; if (!ctx) return;
-  if (ctx.hot && ctx.hot.real) return renderFurnasPanel(ctx);
-  const k = activeVar, v = VARS[k], A = analysis(ctx, k);
-  const val = A.pts[A.lastI], up = A.diff >= 0, fc = A.pts[HIST_N + FC_N - 1];
+function panelHead(ctx, sub) {
   const crumbs = crumbsOf(ctx);
-  const sub = ctx.lvl === 'area' ? `${fmt(ctx.ha, ctx.ha < 100 ? 1 : 0)} ha · cerca de ${fmt(Math.round(ctx.ha * 25))} pixels de radar por passagem` : 'Radar NISAR, banda L · passagem a cada 12 dias';
-  panel.innerHTML = `
-    <div class="ph">
+  return `<div class="ph">
       <div>
         <p class="crumb">${crumbs.map(esc).join(' › ')}${crumbs.length ? ' › ' : ''}${ctx.lvlLabel}</p>
         <h2>${esc(ctx.name)}</h2>
         <p class="sub">${sub}</p>
       </div>
       <button class="close" type="button" aria-label="Fechar painel">×</button>
-    </div>
-    <span class="example">Dados ilustrativos: o pipeline ainda vai preencher esta região</span>
+    </div>`;
+}
+function setPanel(html) { panel.innerHTML = html; panel.querySelector('.close').addEventListener('click', closePanel); }
+function showFootprints(list) { if (!drawMode) globe.pathsData(list); }
+
+function renderPanel() {
+  const ctx = activeCtx; if (!ctx) return;
+  if (ctx.hot && ctx.hot.id === 'furnas') return renderFurnasPanel(ctx);
+  clearInterval(live.poll); clearTimeout(live.timer); live.token++;
+  const link = links[ctx.key] || {};
+  if (ctx.analysisId || link.analysis) return loadAnalysisPanel(ctx, ctx.analysisId || link.analysis);
+  if (link.job) return renderJobPanel(ctx, link.job);
+  renderCatalogPanel(ctx);
+}
+
+/* ---- sem análise: o que o catálogo da NASA tem para esta área, agora ---- */
+function renderCatalogPanel(ctx) {
+  const b = ctx.f.__bb || (ctx.f.__bb = bbox(ctx.f));
+  const km2 = ctx.lvl === 'area' ? ctx.ha / 100 : bboxKm2(b);
+  const head = panelHead(ctx, 'Radar NISAR, banda L · catálogo consultado ao vivo (NASA / ASF DAAC)');
+  if (km2 > CATALOG_MAX_KM2) {
+    showFootprints([]);
+    setPanel(`${head}
+      <span class="example">Sem análise nesta escala</span>
+      <div class="facts"><section class="fact cause"><h3>Como medir a água aqui</h3>
+        <p>Esta região é grande demais para uma análise (o limite é ${fmt(serverCfg.aoi_max_km2)} km² por área). Aproxime e use <b>Minha área</b> para desenhar o trecho de rio, represa ou várzea que interessa: o Arara busca as cenas do NISAR e mede a água ali.</p></section></div>
+      <p class="note">O Arara só mostra números medidos. Regiões sem análise não têm valor estimado nem cor de mapa.</p>`);
+    return;
+  }
+  setPanel(`${head}${periodForm()}<span class="example">Consultando o catálogo NISAR…</span>`);
+  bindPeriod();
+  const token = ++live.token;
+  const where = ctx.lvl === 'area' ? `aoi=${encodeURIComponent(JSON.stringify(geomOf(ctx)))}` : `bbox=${b.map(v => v.toFixed(5)).join(',')}`;
+  live.timer = setTimeout(() => {          // debounce: mexer no período ou trocar de região não dispara uma consulta por tecla
+    api(`/scenes?${where}&start=${period.start}&end=${period.end}`)
+      .then(r => { if (token === live.token && activeCtx === ctx) showCatalog(ctx, r, km2); })
+      .catch(e => { if (token === live.token && activeCtx === ctx) showUnavailable(ctx, e.message); });
+  }, 600);
+}
+function periodForm() {
+  return `<div class="pform"><label>De <input type="date" id="pStart" value="${period.start}" max="${period.end}"></label><label>até <input type="date" id="pEnd" value="${period.end}"></label></div>`;
+}
+function bindPeriod() {
+  const on = () => { const s = $('#pStart').value, e = $('#pEnd').value; if (s && e && s <= e) { period.start = s; period.end = e; renderPanel(); } };
+  $('#pStart').addEventListener('change', on); $('#pEnd').addEventListener('change', on);
+}
+function showUnavailable(ctx, reason, retry) {
+  showFootprints([]);
+  setPanel(`${panelHead(ctx, 'Radar NISAR, banda L')}${retry ? '' : periodForm()}
+    <span class="example down">Indisponível</span>
+    <div class="facts"><section class="fact cause"><h3>Motivo</h3><p>${esc(reason || 'motivo não informado')}</p></section></div>
+    ${retry ? '<button class="more" type="button" id="retryBtn">Consultar o catálogo de novo <span aria-hidden="true">→</span></button>' : ''}
+    <p class="note">Quando o dado real não pode ser obtido, o Arara diz o motivo em vez de mostrar um valor substituto.</p>`);
+  if (retry) $('#retryBtn').addEventListener('click', () => { delete links[ctx.key]; saveLinks(); ctx.analysisId = null; renderPanel(); });
+  else bindPeriod();
+}
+function showCatalog(ctx, r, km2) {
+  const groups = r.groups || [], best = groups[0];
+  if (!best) return showUnavailable(ctx, `nenhuma cena NISAR GCOV intersecta esta área entre ${isoBR(period.start)} e ${isoBR(period.end)}`);
+  const seen = new Set();
+  showFootprints(r.scenes.filter(s => `${s.collection}|${s.track}|${s.direction}|${s.frame}` === best.id && s.footprint && !seen.has(s.frame) && seen.add(s.frame))
+    .map(s => ({ pts: s.footprint.coordinates[0], color: best.eligible ? '#4fb6ee' : '#f07a6a' })));
+  let block = '';
+  if (!best.eligible) block = `nenhuma geometria cobre 95% da área (a melhor cobre ${fmt(best.aoi_coverage * 100, 0)}%). Reduza ou desloque a área.`;
+  else if (km2 > serverCfg.aoi_max_km2) block = `área de ${fmt(km2, 0)} km², acima do limite de ${fmt(serverCfg.aoi_max_km2)} km² por análise. Use Minha área para desenhar um trecho menor.`;
+  else if (!serverCfg.on_demand_available) block = serverCfg.on_demand_reason || 'o servidor não está aceitando novas análises';
+  const row = (g) => `<li><b>Trilha ${g.track} ${DIR[g.direction] || g.direction}, frame ${g.frame}</b><small>${MAT[g.maturity] || g.maturity} · ${g.n_dates} ${g.n_dates === 1 ? 'data' : 'datas'} · cobre ${fmt(g.aoi_coverage * 100, 0)}% · ${g.dates_with_hv} com HV · ${g.crids.join(', ')}</small></li>`;
+  setPanel(`${panelHead(ctx, 'Radar NISAR, banda L · catálogo consultado ao vivo (NASA / ASF DAAC)')}${periodForm()}
+    <span class="example ${best.eligible ? 'real' : 'down'}">${best.eligible ? 'Disponível' : 'Indisponível'} · ${fmt(r.count)} cenas no catálogo</span>
     <div class="now">
       <div>
-        <div class="val">${fmt(val, v.d)}<small>${v.unit}</small></div>
-        <div class="lbl">${v.label} na passagem de ${dmy(passDate(A.lastI))}${ctx.f ? ` · ≈ ${fmtArea(val / 100 * areaHa(ctx.f))} de água` : ''}</div>
+        <div class="val">${best.n_dates}<small>${best.n_dates === 1 ? 'passagem' : 'passagens'}</small></div>
+        <div class="lbl">na melhor geometria, de ${isoBR(best.first_date)} a ${isoBR(best.last_date)} · ainda sem análise de água</div>
       </div>
-      <span class="delta ${up ? 'up' : 'down'}">${deltaTxt(A.diff, k)} desde ${dmy(passDate(A.cmpI))}</span>
+      <span class="delta ${best.eligible ? 'up' : 'down'}">cobre ${fmt(best.aoi_coverage * 100, 0)}%</span>
     </div>
-    <div class="chart">${chartSVG(A.pts, k, { W: 360, H: 180 })}
-      <div class="chart-key"><span><i></i>Histórico medido pelo radar</span><span><i class="fc"></i>Previsão das próximas 3 passagens</span></div>
+    <ul class="grp">${groups.slice(0, 4).map(row).join('')}</ul>
+    ${block ? `<div class="facts"><section class="fact cause"><h3>Análise indisponível <span class="chip">motivo</span></h3><p>${esc(block)}</p></section></div>`
+      : '<button class="more" type="button" id="runBtn">Analisar água nesta área <span aria-hidden="true">→</span></button>'}
+    <p class="note">Cada análise usa uma única coleção e uma única geometria (trilha, direção e frame): produtos provisórios e validados nunca são misturados. O contorno no globo é a cena da melhor geometria.</p>`);
+  bindPeriod();
+  if (!block) $('#runBtn').addEventListener('click', () => startAnalysis(ctx, best));
+}
+
+/* ---- pedido de análise e acompanhamento do job ---- */
+function startAnalysis(ctx, group) {
+  const body = { name: ctx.name, start: period.start, end: period.end, group_id: group.id };
+  if (ctx.lvl === 'area') body.aoi = geomOf(ctx); else body.bbox = (ctx.f.__bb || bbox(ctx.f)).join(',');
+  $('#runBtn').disabled = true;
+  api('/analysis', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) })
+    .then(r => {
+      links[ctx.key] = r.status === 'completed' ? { analysis: r.analysis_id } : { job: r.job_id };
+      saveLinks(); if (activeCtx === ctx) renderPanel();
+    })
+    .catch(e => { if (activeCtx === ctx) showUnavailable(ctx, e.message, true); });
+}
+function renderJobPanel(ctx, jobId) {
+  showFootprints([]);
+  const draw = (j) => setPanel(`${panelHead(ctx, 'Radar NISAR, banda L · análise sob demanda')}
+    <span class="example">Processando</span>
+    <div class="now"><div><div class="val">${fmt((j.progress || 0) * 100, 0)}<small>%</small></div><div class="lbl">${esc(STAGE[j.stage] || j.stage || 'Na fila')}</div></div></div>
+    <div class="bar" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round((j.progress || 0) * 100)}"><i style="width:${Math.round((j.progress || 0) * 100)}%"></i></div>
+    <p class="note">${esc(j.message || '')}</p>
+    <p class="note">O Arara lê por streaming só a janela da sua área em cada cena, classifica a água e apaga os dados brutos. Pode levar alguns minutos; dá para fechar o painel e voltar depois.</p>`);
+  draw({ stage: 'queued', progress: 0 });
+  const tick = () => api(`/jobs/${jobId}`).then(j => {
+    if (activeCtx !== ctx) return clearInterval(live.poll);
+    if (j.status === 'completed') { clearInterval(live.poll); links[ctx.key] = { analysis: j.analysis_id }; saveLinks(); loadCards(); renderPanel(); }
+    else if (j.status === 'unavailable' || j.status === 'failed') {
+      clearInterval(live.poll); delete links[ctx.key]; saveLinks();
+      showUnavailable(ctx, (j.status === 'failed' ? 'a análise falhou: ' : '') + (j.reason || 'motivo não informado'), true);
+    } else draw(j);
+  }).catch(e => { clearInterval(live.poll); delete links[ctx.key]; saveLinks(); if (activeCtx === ctx) showUnavailable(ctx, e.message, true); });
+  tick(); live.poll = setInterval(tick, 2000);
+}
+
+/* ---- análise pronta: tudo o que aparece veio de /analyses/{id} ---- */
+function loadAnalysisPanel(ctx, id) {
+  const use = (a) => {
+    if (activeCtx !== ctx) return;
+    if (a.status !== 'completed') return showUnavailable(ctx, a.reason || `análise ${a.status}`, true);
+    analysesById.set(id, a); ctx.analysisId = id; renderAnalysisPanel(ctx, a);
+  };
+  if (analysesById.has(id)) return use(analysesById.get(id));
+  setPanel(`${panelHead(ctx, 'Radar NISAR, banda L')}<span class="example">Carregando a análise…</span>`);
+  api(`/analyses/${id}`).then(use).catch(e => {
+    if (activeCtx !== ctx) return;
+    if (e.status === 404) { delete links[ctx.key]; saveLinks(); ctx.analysisId = null; return renderPanel(); }   // derivados expirados
+    showUnavailable(ctx, e.message, true);
+  });
+}
+function seriesChart(a, { W = 360, H = 190, big = false } = {}) {
+  const S = a.dates, F = a.forecast && a.forecast.status === 'ok' ? a.forecast.points : [];
+  const L = big ? 52 : 44, R = 12, T = 14, B = 26;
+  const t = (s) => Date.parse(s + 'T00:00:00Z');
+  const t0 = t(S[0].date), t1 = Math.max(t(S[S.length - 1].date), F.length ? t(F[F.length - 1].date) : 0, t0 + DAY);
+  const vals = S.map(p => p.water_km2).concat(F.flatMap(p => [p.p10, p.p90]));
+  let lo = Math.min(...vals), hi = Math.max(...vals); const pad = Math.max((hi - lo) * 0.15, hi * 0.01, 0.01); lo = Math.max(0, lo - pad); hi += pad;
+  const x = (s) => L + (t(s) - t0) / (t1 - t0) * (W - L - R), y = (v) => T + (hi - v) / (hi - lo) * (H - T - B);
+  const dec = hi - lo < 5 ? 2 : hi - lo < 50 ? 1 : 0;
+  const grid = [0, 1, 2, 3].map(i => lo + (hi - lo) * i / 3).map(v => `<line x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}" stroke="rgba(255,255,255,.07)"/><text class="axis" x="${L - 6}" y="${(y(v) + 3).toFixed(1)}" text-anchor="end">${fmt(v, dec)}</text>`).join('');
+  const line = S.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.water_km2).toFixed(1)}`).join('');
+  const dots = S.map(p => p.suspeita_vento
+    ? `<circle cx="${x(p.date).toFixed(1)}" cy="${y(p.water_km2).toFixed(1)}" r="4.5" fill="#05070d" stroke="#f0b44c" stroke-width="2"><title>${isoBR(p.date)}: ${fmt(p.water_km2, 2)} km² · suspeita de vento</title></circle>`
+    : `<circle cx="${x(p.date).toFixed(1)}" cy="${y(p.water_km2).toFixed(1)}" r="${big ? 4 : 3.2}" fill="var(--vc)"><title>${isoBR(p.date)}: ${fmt(p.water_km2, 2)} km²</title></circle>`).join('');
+  let fc = '';
+  if (F.length) {
+    const last = S[S.length - 1], pts = [{ date: last.date, water_km2: last.water_km2, p10: last.water_km2, p90: last.water_km2 }].concat(F);
+    const up = pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.p90).toFixed(1)}`).join('');
+    const dn = pts.slice().reverse().map(p => `L${x(p.date).toFixed(1)},${y(p.p10).toFixed(1)}`).join('');
+    fc = `<path d="${up}${dn}Z" fill="var(--vc)" fill-opacity="0.14"/><path d="${pts.map((p, i) => `${i ? 'L' : 'M'}${x(p.date).toFixed(1)},${y(p.water_km2).toFixed(1)}`).join('')}" fill="none" stroke="var(--vc)" stroke-opacity=".85" stroke-width="2" stroke-dasharray="5 4"/>`;
+  }
+  const lab = [S[0].date, S[S.length - 1].date].concat(F.length ? [F[F.length - 1].date] : []);
+  const xl = lab.map((d, i) => `<text class="axis" x="${x(d).toFixed(1)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === lab.length - 1 ? 'end' : 'middle'}">${isoBR(d).slice(0, 5)}</text>`).join('');
+  return `<svg viewBox="0 0 ${W} ${H}" width="100%" role="img" aria-label="Área de água medida pelo radar em cada passagem (km²)">${grid}${xl}${fc}
+    <path d="${line}" fill="none" stroke="var(--vc)" stroke-width="2"/>${dots}</svg>`;
+}
+function measuredText(a) {
+  const c = a.comparison;
+  if (!c) return 'Só há uma passagem válida: ainda não dá para medir mudança.';
+  return `Entre ${isoBR(c.before)} e ${isoBR(c.after)} o radar viu ${fmtArea(c.expansion_ha)} de água nova e ${fmtArea(c.retraction_ha)} que deixaram de ser água (saldo ${signed(c.net_change_ha, 1)} ha). Água nas duas datas: ${fmtArea(c.stable_water_ha)}.`
+    + (c.wind_caveat ? ' Uma das duas datas tem suspeita de vento, então parte dessa diferença pode não ser real.' : '');
+}
+function validationText(a) {
+  const v = a.optical_validation || {};
+  if (v.status !== 'validated') return `Sem validação óptica: ${esc(v.reason || 'não executada')}.`;
+  return `Comparado com a água vista pelo Sentinel-2 (MNDWI) em ${v.n_dates_validated} de ${v.n_dates} datas: IoU médio ${fmt(v.mean_iou, 2)}, F1 ${fmt(v.mean_f1, 2)}, precisão ${fmt(v.mean_precision, 2)}, recall ${fmt(v.mean_recall, 2)}. O óptico é uma referência independente, não a verdade de campo.`;
+}
+function stateChips(a) {
+  const g = a.group || {};
+  return `<span class="example real">Analisado · dados reais · ${esc(MAT[g.maturity] || g.maturity || 'NISAR')}</span>`
+    + (a.experimental ? `<span class="example warn" title="${esc((a.experimental_reasons || []).join('; '))}">Experimental</span>` : '');
+}
+function renderAnalysisPanel(ctx, a) {
+  const S = a.dates, last = S[S.length - 1], first = S[0], c = a.comparison, g = a.group || {}, ins = a.insights;
+  showFootprints(ctx.f.__temp ? ringsOf(a.aoi.geometry).map(p => ({ pts: p[0], color: '#4fb6ee' })) : []);
+  const wind = S.filter(p => p.suspeita_vento).map(p => isoBR(p.date).slice(0, 5));
+  setPanel(`${panelHead(ctx, `Radar NISAR, banda L (HH) · ${S.length} ${S.length === 1 ? 'passagem' : 'passagens'} de ${isoBR(first.date)} a ${isoBR(last.date)}`)}
+    <div class="chips">${stateChips(a)}</div>
+    <div class="now">
+      <div>
+        <div class="val">${fmt(last.water_km2, last.water_km2 < 100 ? 2 : 0)}<small>km² de água</small></div>
+        <div class="lbl">Medido pelo radar em ${isoBR(last.date)} · ${fmt(last.water_pct, 1)}% da área analisada</div>
+      </div>
+      ${c ? `<span class="delta ${c.net_change_ha >= 0 ? 'up' : 'down'}">${signed(c.net_change_ha, 0)} ha desde ${isoBR(c.before).slice(0, 5)}</span>` : ''}
     </div>
-    <button class="more" type="button" id="moreBtn">Ver histórico detalhado <span aria-hidden="true">→</span></button>
+    <div class="chart">${seriesChart(a)}
+      <div class="chart-key"><span><i></i>Água medida pelo NISAR</span>${a.forecast && a.forecast.status === 'ok' ? '<span><i class="fc"></i>Projeção experimental</span>' : ''}${wind.length ? '<span><i class="wind"></i>Suspeita de vento</span>' : ''}</div>
+    </div>
+    <button class="more" type="button" id="moreBtn">Ver histórico detalhado e mapas <span aria-hidden="true">→</span></button>
     <div class="facts">
-      <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>${A.detected}</p></section>
-      <section class="fact cause"><h3>Causa provável <span class="chip">hipótese · ${A.conf}</span></h3><p>${A.cause}</p><p class="check">Para confirmar: ${A.check}</p></section>
+      <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>${measuredText(a)}</p></section>
+      <section class="fact cause"><h3>Causa provável <span class="chip">hipótese${ins && ins.confidence ? ' · confiança ' + esc(ins.confidence) : ''}</span></h3>
+        <p>${ins && ins.hypothesis ? esc(ins.hypothesis) : 'O radar mede a mudança, não a causa. Nenhuma hipótese foi gerada para esta análise.'}</p>
+        ${ins && ins.check ? `<p class="check">Para conferir: ${esc(ins.check)}</p>` : ''}</section>
+      <section class="fact cause"><h3>Validação <span class="chip">Sentinel-2</span></h3><p>${validationText(a)}</p></section>
     </div>
-    <div class="passes"><span>Última passagem ${dmyy(passDate(A.lastI))}</span><span>Próxima ${dmyy(passDate(A.lastI + 1))}</span><span>Previsão até ${dmy(passDate(HIST_N + FC_N - 1))}: ${fmt(fc, v.d)} ${v.unit}</span></div>
-    <p class="note">No app final, cada valor vem dos arquivos que o pipeline gera a partir do NISAR L2 GCOV (polarizações HH e HV). A previsão é uma extrapolação estatística da série e não substitui a previsão do tempo.</p>`;
-  panel.querySelector('.close').addEventListener('click', closePanel);
+    <div class="passes"><span>Limiar ${fmt(a.params.threshold_db, 2)} dB</span><span>Trilha ${g.track ?? '–'} ${g.direction ?? ''} · frame ${g.frame ?? '–'}</span><span>${wind.length ? 'Vento: ' + wind.join(', ') : 'Sem suspeita de vento'}</span></div>
+    <p class="note">Fonte: NISAR L2 GCOV (NASA / ASF DAAC), canal HH, média 5×5 em dB, limiar no vale água/terra desta área. ${(a.warnings || []).map(esc).join(' ')} <a href="${API}/analyses/${a.analysis_id}/sources" target="_blank" rel="noopener">Cenas e proveniência</a> · <a href="${API}/analyses/${a.analysis_id}/metrics?format=csv">CSV</a></p>`);
   $('#moreBtn').addEventListener('click', openDetail);
 }
 
@@ -1028,86 +1164,9 @@ function renderFurnasPanel(ctx) {
 
 function areaHa(f) { if (f.__haAll == null) f.__haAll = ringsOf(f.geometry).reduce((t, poly) => t + hectares(poly[0]), 0); return f.__haAll; }
 function fmtArea(ha) { return ha >= 100 ? `${fmt(ha / 100, ha >= 1e5 ? 0 : 1)} km²` : `${fmt(ha, 1)} ha`; }
-function genericDetected(k, diff, a, b, lvl) {
-  const range = `entre ${dmy(passDate(a))} e ${dmy(passDate(b))}`;
-  const where = lvl === 'area' ? 'na sua área' : 'na maior parte da área';
-  if (k === 'umidade') return `O retroespalhamento HH ${diff >= 0 ? 'subiu' : 'caiu'} cerca de ${fmt(Math.abs(diff) * 0.12, 1)} dB ${range}, o que indica solo mais ${diff >= 0 ? 'úmido' : 'seco'} ${where}.`;
-  if (k === 'agua') return `A área com padrão de água aberta (HH muito baixo) ${diff >= 0 ? 'aumentou' : 'diminuiu'} ${fmt(Math.abs(diff), 0)}% ${range}.`;
-  return `O HV, canal sensível à estrutura da vegetação, ${diff >= 0 ? 'subiu' : 'caiu'} ${fmt(Math.abs(diff), 1)} dB ${range}.`;
-}
-function genericCause(k, diff, lat, lvl) {
-  const wetting = season(passDate(HIST_N - 1), lat) > season(passDate(HIST_N - 5), lat);
-  const farm = lvl === 'area';
-  if (k === 'umidade') return diff >= 0
-    ? (wetting ? 'Início ou reforço da estação chuvosa na região.' : (farm ? 'Irrigação ou chuva localizada. Se o padrão segue os talhões, é provável que seja irrigação.' : 'Chuva fora de época ou irrigação. Vale olhar se o padrão segue talhões.'))
-    : (wetting ? 'Veranico: dias seguidos sem chuva em plena estação úmida.' : 'Estiagem sazonal, com evaporação maior que a chuva.');
-  if (k === 'agua') return diff >= 0 ? (farm ? 'Represa ou açude enchendo, ou área alagada depois de chuva forte.' : 'Cheia sazonal, chuva forte recente ou aumento do nível de um reservatório.') : (farm ? 'Açude baixando por uso na irrigação ou evaporação.' : 'Vazante sazonal ou uso maior da água (irrigação, geração de energia).');
-  return diff >= 0 ? (farm ? 'Lavoura crescendo ou pasto rebrotando depois das chuvas.' : 'Rebrota após chuvas ou crescimento da safra.') : (farm ? 'Colheita, roçada ou queimada recente.' : 'Colheita, queimada ou desmatamento recente.');
-}
-function genericCheck(k) {
-  if (k === 'umidade') return 'chuva acumulada (INMET ou CHIRPS) no mesmo período.';
-  if (k === 'agua') return 'mapa de água OPERA DSWx e nível de reservatórios na ANA.';
-  return 'imagem óptica (Sentinel-2) e focos de fogo no FIRMS.';
-}
-function eventsOf(pts, k) {
-  const ev = [];
-  for (let i = 1; i < HIST_N; i++) {
-    const d = deltaOf(pts, k, i - 1, i);
-    const thr = k === 'agua' ? VARS.agua.ev * 100 : VARS[k].ev;
-    if (Math.abs(d) >= thr) ev.push({ i, d });
-  }
-  return ev;
-}
-
-/* ---- gráfico (painel e tela detalhada) ---- */
-function yDomain(pts, k) {
-  const v = VARS[k]; let lo = v.lo, hi = v.hi;
-  if (k === 'agua') { lo = 0; hi = Math.max(...pts) * 1.35; }
-  if (k === 'vegetacao') { lo = Math.floor(Math.min(...pts) - 2); hi = Math.ceil(Math.max(...pts) + 2); }
-  return [lo, hi];
-}
-function chartSVG(pts, k, { W, H, big = false, selA = null, selB = null }) {
-  const v = VARS[k], col = v.color;
-  const L = big ? 44 : 34, Rr = 12, T = big ? 22 : 12, B = 26;
-  const n = pts.length, [lo, hi] = yDomain(pts, k);
-  const x = (i) => L + i * (W - L - Rr) / (n - 1);
-  const y = (val) => T + (1 - (val - lo) / (hi - lo)) * (H - T - B);
-  const tv = [...Array(5)].map((_, i) => lo + (hi - lo) * i / 4);
-  const hist = pts.slice(0, HIST_N), lastI = HIST_N - 1;
-  const line = hist.map((p, i) => `${i ? 'L' : 'M'}${x(i).toFixed(1)},${y(p).toFixed(1)}`).join('');
-  const area = `${line}L${x(lastI).toFixed(1)},${H - B}L${x(0).toFixed(1)},${H - B}Z`;
-  const spread = (hi - lo) * 0.05;
-  const fcIdx = [lastI, ...Array.from({ length: FC_N }, (_, kk) => HIST_N + kk)];
-  const upper = fcIdx.map((i, kk) => `${kk ? 'L' : 'M'}${x(i).toFixed(1)},${y(Math.min(hi, pts[i] + spread * kk)).toFixed(1)}`).join('');
-  const lower = fcIdx.slice().reverse().map((i) => { const kk = fcIdx.indexOf(i); return `L${x(i).toFixed(1)},${y(Math.max(lo, pts[i] - spread * kk)).toFixed(1)}`; }).join('');
-  const fcLine = fcIdx.map((i, kk) => `${kk ? 'L' : 'M'}${x(i).toFixed(1)},${y(pts[i]).toFixed(1)}`).join('');
-  const labelsAt = big && W >= 1000 ? [...Array(n).keys()] : big ? [0, 3, 6, 9, lastI, n - 1].filter((v, i, a) => a.indexOf(v) === i && !(v === 9 && lastI - v < 3)) : [0, 4, 8, lastI, n - 1];
-  const gid = 'g' + k + (big ? 'b' : 's');
-  const ev = big ? eventsOf(pts, k) : [];
-  const fmtTick = (t) => fmt(t, k === 'agua' && hi < 8 ? 1 : 0);
-  return `<svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${v.label}: histórico de ${HIST_N} passagens e previsão de ${FC_N}">
-    <defs><linearGradient id="${gid}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="${col}" stop-opacity="0.35"/><stop offset="1" stop-color="${col}" stop-opacity="0"/></linearGradient></defs>
-    ${tv.map(t => `<line x1="${L}" x2="${W - Rr}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="rgba(160,196,214,0.1)"/><text class="axis" x="${L - 6}" y="${(y(t) + 3).toFixed(1)}" text-anchor="end">${fmtTick(t)}</text>`).join('')}
-    <rect x="${x(lastI).toFixed(1)}" y="${T}" width="${(x(n - 1) - x(lastI)).toFixed(1)}" height="${H - T - B}" fill="rgba(255,255,255,0.035)"/>
-    <line x1="${x(lastI).toFixed(1)}" x2="${x(lastI).toFixed(1)}" y1="${T}" y2="${H - B}" stroke="rgba(233,238,242,0.3)" stroke-dasharray="2 3"/>
-    <text class="axis" x="${(x(lastI) + 5).toFixed(1)}" y="${T + 10}">previsão</text>
-    ${big && selA != null && selB != null ? `<rect x="${x(Math.min(selA, selB)).toFixed(1)}" y="${T}" width="${Math.abs(x(selB) - x(selA)).toFixed(1)}" height="${H - T - B}" fill="${col}" fill-opacity="0.07"/>` : ''}
-    <path d="${area}" fill="url(#${gid})"/>
-    <path d="${upper}${lower}Z" fill="${col}" fill-opacity="0.16"/>
-    <path d="${line}" fill="none" stroke="${col}" stroke-width="${big ? 2.5 : 2}" stroke-linejoin="round"/>
-    <path d="${fcLine}" fill="none" stroke="${col}" stroke-opacity="0.85" stroke-width="2" stroke-dasharray="5 4"/>
-    ${ev.map(e => `<path d="M${(x(e.i) - 5).toFixed(1)},${T - 14}L${(x(e.i) + 5).toFixed(1)},${T - 14}L${x(e.i).toFixed(1)},${T - 6}Z" fill="${e.d >= 0 ? col : '#f07a6a'}"/>`).join('')}
-    ${hist.map((p, i) => { const s = i === lastI || i === selA || i === selB; return `<circle cx="${x(i).toFixed(1)}" cy="${y(p).toFixed(1)}" r="${s ? 4.5 : big ? 3 : 2.2}" fill="${s ? '#e9eef2' : col}" ${s ? `stroke="${col}" stroke-width="2"` : ''}/>`; }).join('')}
-    ${big ? `<line class="cross" x1="0" x2="0" y1="${T}" y2="${H - B}" stroke="rgba(233,238,242,0.5)" visibility="hidden"/>` : ''}
-    ${labelsAt.map(i => `<text class="axis" x="${x(i).toFixed(1)}" y="${H - 8}" text-anchor="${i === 0 ? 'start' : i === n - 1 ? 'end' : 'middle'}">${dmy(passDate(i))}</text>`).join('')}
-  </svg>`;
-}
-
-/* ================= histórico detalhado ================= */
-let cmpA = HIST_N - 5, cmpB = HIST_N - 1;
-const BW = () => (detail.clientWidth || window.innerWidth) < 640 ? 440 : 1000;
+/* ================= histórico detalhado (só para áreas analisadas) ================= */
 function openDetail() {
-  cmpA = HIST_N - 5; cmpB = HIST_N - 1;
+  if (!activeCtx || !activeCtx.analysisId) return;
   detail.hidden = false; renderDetail(); detail.scrollTop = 0;
   globe.pauseAnimation();
   detail.querySelector('.back').focus();
@@ -1115,163 +1174,122 @@ function openDetail() {
 function closeDetail() { detail.hidden = true; globe.resumeAnimation(); }
 
 function renderDetail() {
-  const ctx = activeCtx; if (!ctx) return;
-  const k = activeVar, v = VARS[k], A = analysis(ctx, k);
-  const all = Object.fromEntries(VKEYS.map(kk => [kk, makeSeries(ctx.key, ctx.lat, kk, ctx.hot)]));
-  const ev = eventsOf(A.pts, k);
-  const crumbs = crumbsOf(ctx);
-  const opts = (sel) => [...Array(HIST_N).keys()].map(i => `<option value="${i}" ${i === sel ? 'selected' : ''}>${dmy(passDate(i))}</option>`).join('');
-  const d = deltaOf(A.pts, k, cmpA, cmpB);
+  const ctx = activeCtx; if (!ctx || !ctx.analysisId) return;
+  const a = analysesById.get(ctx.analysisId); if (!a) return;
+  const S = a.dates, c = a.comparison, g = a.group || {}, v = a.optical_validation || {}, id = a.analysis_id;
+  const png = (layer) => `${API}/analyses/${id}/png/${layer}.png`;
+  const has = (layer) => (a.layers || []).some(l => l.id === layer);
+  const key = (d) => d.replaceAll('-', '');
+  const fig = (base, over, cap, legend) => `<figure><div class="stack">${has(base) ? `<img src="${png(base)}" alt="" loading="lazy">` : ''}${has(over) ? `<img src="${png(over)}" alt="${esc(cap)}" loading="lazy">` : ''}</div><figcaption>${cap}</figcaption>${legend}</figure>`;
+  const lgWater = '<div class="mlegend"><span>fundo: radar HH</span><span style="color:#4fb6ee">■ água</span></div>';
+  const first = S[0], last = S[S.length - 1];
+  const s2 = (a.layers || []).filter(l => l.type === 'optical_water').pop();
+  const vrow = (p) => p.status === 'validated'
+    ? `<tr><td>${isoBR(p.date)}${p.suspeita_vento ? ' · vento' : ''}</td><td>${isoBR(p.optical_date)} (${p.days_apart} d)</td><td class="hl">${fmt(p.iou, 2)}</td><td>${fmt(p.f1, 2)}</td><td>${fmt(p.precision, 2)}</td><td>${fmt(p.recall, 2)}</td><td>${fmt(p.sar_water_km2, 2)}</td><td>${fmt(p.optical_water_km2, 2)}</td><td>${p.disagreement_median_m != null ? fmt(p.disagreement_median_m, 0) + ' m' : '–'}</td></tr>`
+    : `<tr class="fc"><td>${isoBR(p.date)}</td><td colspan="8" style="text-align:left">não validada: ${esc(p.reason || '')}</td></tr>`;
+  const F = a.forecast && a.forecast.status === 'ok' ? a.forecast.points : [];
   detail.innerHTML = `<div class="dwrap">
     <div class="dhead">
       <div>
         <button class="back" type="button">← Voltar ao globo</button>
-        <p class="crumb">${crumbs.map(esc).join(' › ')}${crumbs.length ? ' › ' : ''}${ctx.lvlLabel}</p>
+        <p class="crumb">${ctx.lvlLabel} · análise ${esc(id)}</p>
         <h2>${esc(ctx.name)}</h2>
         <div class="dmeta">
-          <span>Passagens medidas <b>${HIST_N}</b></span>
-          <span>Período <b>${dmyy(passDate(0))} a ${dmyy(passDate(HIST_N - 1))}</b></span>
-          ${ctx.ha ? `<span>Área <b>${fmt(ctx.ha, ctx.ha < 100 ? 1 : 0)} ha</b></span>` : ''}
-          <span>Mudanças marcadas <b>${ev.length}</b></span>
+          <span>Passagens medidas <b>${S.length}</b></span>
+          <span>Período <b>${isoBR(first.date)} a ${isoBR(last.date)}</b></span>
+          <span>Área analisada <b>${fmt(a.aoi.area_km2, 1)} km²</b></span>
+          <span>Geometria <b>trilha ${g.track ?? '–'} ${g.direction ?? ''}, frame ${g.frame ?? '–'}</b></span>
+          <span>Coleção <b>${esc(g.collection || 'local')}</b></span>
         </div>
       </div>
     </div>
-    <span class="example">Dados ilustrativos: o pipeline ainda vai preencher esta região</span>
+    <div class="chips">${stateChips(a)}</div>
+    ${a.experimental ? `<p class="note">Experimental: ${(a.experimental_reasons || []).map(esc).join('; ')}.</p>` : ''}
 
     <div class="box">
-      <h3>${v.label} a cada passagem</h3>
-      <p class="lead">Passe o mouse para ver os valores. Clique num ponto para usá-lo como "depois" no comparativo. Os triângulos marcam saltos grandes entre passagens seguidas.</p>
-      <div class="bigchart" id="bigchart">${chartSVG(A.pts, k, { W: BW(), H: BW() < 1000 ? 280 : 300, big: true, selA: cmpA, selB: cmpB })}<div class="ctip" hidden></div></div>
-      <div class="chart-key"><span><i></i>Histórico medido</span><span><i class="fc"></i>Previsão (faixa = incerteza)</span><span><i class="ev"></i>Mudança detectada entre passagens</span></div>
+      <h3>Área de água a cada passagem (km²)</h3>
+      <p class="lead">Cada ponto é uma cena do NISAR classificada com o mesmo limiar (${fmt(a.params.threshold_db, 2)} dB). Pontos com contorno amarelo têm suspeita de vento: ficam no gráfico, marcados, sem correção.</p>
+      <div class="bigchart">${seriesChart(a, { W: 1000, H: 300, big: true })}</div>
+      <div class="chart-key"><span><i></i>Medido pelo radar</span>${F.length ? '<span><i class="fc"></i>Projeção experimental (faixa p10–p90)</span>' : ''}<span><i class="wind"></i>Suspeita de vento</span></div>
+      ${a.forecast ? `<p class="note">${F.length ? `Projeção (${esc(a.forecast.method)}): ${F.map(p => `${isoBR(p.date).slice(0, 5)} ${fmt(p.water_km2, 2)} km² (${fmt(p.p10, 2)}–${fmt(p.p90, 2)})`).join(' · ')}. ${esc(a.forecast.note || '')}` : `Sem projeção: ${esc(a.forecast.reason || '')}`}</p>` : ''}
     </div>
 
     <div class="dgrid two">
       <div class="box">
         <h3>Antes e depois</h3>
-        <p class="lead">Onde há água dentro da área em duas passagens, e onde ela avançou ou recuou.</p>
+        <p class="lead">Máscaras de água geradas pela pipeline sobre a imagem de radar${c ? `, e onde a água avançou ou recuou entre ${isoBR(c.before)} e ${isoBR(c.after)}` : ''}.</p>
         <div class="compare">
-          <figure><canvas id="cvA" width="260" height="260"></canvas><figcaption>Antes <select id="selA" aria-label="Passagem de antes">${opts(cmpA)}</select></figcaption>
-            <div class="mramp" style="background:linear-gradient(90deg, rgb(${LOW}), ${v.color})"></div><div class="mlegend"><span>${v.lgLo}</span><span>${v.lgHi}</span></div></figure>
-          <figure><canvas id="cvB" width="260" height="260"></canvas><figcaption>Depois <select id="selB" aria-label="Passagem de depois">${opts(cmpB)}</select></figcaption>
-            <div class="mramp" style="background:linear-gradient(90deg, rgb(${LOW}), ${v.color})"></div><div class="mlegend"><span>${v.lgLo}</span><span>${v.lgHi}</span></div></figure>
-          <figure><canvas id="cvD" width="260" height="260"></canvas><figcaption>Diferença <b style="font-family:var(--font-mono);font-weight:500;color:${d >= 0 ? v.color : 'var(--down)'}">${deltaTxt(d, k)}</b></figcaption>
-            <div class="mramp" style="background:linear-gradient(90deg, #f07a6a, #1a222b, ${v.color})"></div><div class="mlegend"><span>diminuiu</span><span>aumentou</span></div></figure>
+          ${fig('hh_' + key(first.date), 'water_' + key(first.date), `Água em ${isoBR(first.date)}`, lgWater)}
+          ${S.length > 1 ? fig('hh_' + key(last.date), 'water_' + key(last.date), `Água em ${isoBR(last.date)}`, lgWater) : ''}
+          ${c ? fig('hh_' + key(last.date), 'change', 'Mudança', '<div class="mlegend"><span style="color:#d93828">■ deixou de ser água</span><span style="color:#4f7dff">■ água nova</span></div>') : ''}
+          ${s2 ? fig('hh_' + key(last.date), s2.id, `Sentinel-2 em ${isoBR(s2.date)}`, '<div class="mlegend"><span>referência óptica</span><span style="color:#40c4a0">■ água (MNDWI)</span></div>') : ''}
         </div>
       </div>
       <div class="box">
         <h3>O que o radar viu</h3>
-        <p class="lead">Leitura da mudança entre ${dmy(passDate(cmpA))} e ${dmy(passDate(cmpB))}.</p>
-        <div class="facts" style="--vc:${v.color}">
-          <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>${genericDetected(k, d, cmpA, cmpB, ctx.lvl)}</p></section>
-          <section class="fact cause"><h3>Causa provável <span class="chip">hipótese · ${A.conf}</span></h3><p>${ctx.hot && ctx.hot.var === k && cmpB === HIST_N - 1 ? A.cause : genericCause(k, d, ctx.lat, ctx.lvl)}</p><p class="check">Para confirmar: ${A.check}</p></section>
+        <p class="lead">O que foi medido fica separado do que é hipótese.</p>
+        <div class="facts">
+          <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>${measuredText(a)}</p></section>
+          <section class="fact cause"><h3>Causa provável <span class="chip">hipótese${a.insights && a.insights.confidence ? ' · confiança ' + esc(a.insights.confidence) : ''}</span></h3>
+            <p>${a.insights && a.insights.hypothesis ? esc(a.insights.hypothesis) : 'O radar mede a mudança, não a causa. Nenhuma hipótese foi gerada para esta análise.'}</p>
+            ${a.insights && a.insights.check ? `<p class="check">Para conferir: ${esc(a.insights.check)}</p>` : ''}</section>
         </div>
       </div>
     </div>
 
     <div class="box">
+      <h3>Validação com o Sentinel-2</h3>
+      <p class="lead">${validationText(a)}</p>
+      ${v.per_date ? `<div class="tablewrap"><table>
+        <thead><tr><th>Radar</th><th>Óptico</th><th>IoU</th><th>F1</th><th>Precisão</th><th>Recall</th><th>Água radar (km²)</th><th>Água óptico (km²)</th><th>Discordância (mediana até a margem)</th></tr></thead>
+        <tbody>${v.per_date.map(vrow).join('')}</tbody></table></div>` : ''}
+      ${v.limitations ? `<p class="note">Limitações: ${v.limitations.map(esc).join('; ')}.</p>` : ''}
+    </div>
+
+    <div class="box">
       <div class="tabletools">
-        <div><h3>Todas as passagens</h3><p class="lead" style="margin:0">Valores médios da área. HH e HV são o retroespalhamento bruto do radar.</p></div>
-        <div style="display:flex;gap:10px;align-items:center"><span class="toast" id="toast" aria-live="polite"></span><button class="btn" type="button" id="copyCsv">Copiar como CSV</button></div>
+        <div><h3>Todas as passagens</h3><p class="lead" style="margin:0">Uma linha por cena usada. CRID é a versão de processamento do produto na NASA.</p></div>
+        <div style="display:flex;gap:10px;align-items:center"><a class="btn" href="${API}/analyses/${id}/metrics?format=csv" download>Baixar CSV</a></div>
       </div>
       <div class="tablewrap">
         <table>
-          <thead><tr><th>Passagem</th><th>HH (dB)</th><th>HV (dB)</th><th>Água aberta (%)</th><th>Área de água</th><th>Variação</th><th></th></tr></thead>
-          <tbody>${[...Array(HIST_N + FC_N).keys()].map(i => {
-            const fc = i >= HIST_N, hh = hhOf(all.agua[i]), hv = hvOf(all.agua[i]);
-            const dd = i ? deltaOf(all[k], k, i - 1, i) : null;
-            const e = ev.find(x => x.i === i);
-            return `<tr class="${fc ? 'fc' : ''} ${i === cmpA || i === cmpB ? 'sel' : ''}"><td>${dmyy(passDate(i))}${fc ? ' (previsão)' : ''}</td><td>${fc ? '–' : fmt(hh, 1)}</td><td>${fc ? '–' : fmt(hv, 1)}</td><td class="hl">${fmt(all.agua[i], 1)}</td><td>${ctx.f ? fmtArea(all.agua[i] / 100 * areaHa(ctx.f)) : '–'}</td><td>${dd == null ? '–' : deltaTxt(dd, k)}</td><td>${e ? `<span class="evchip ${e.d < 0 ? 'down' : ''}">mudança</span>` : ''}</td></tr>`;
-          }).join('')}</tbody>
+          <thead><tr><th>Passagem</th><th>Água (km²)</th><th>Água (% da área)</th><th>Variação</th><th>Brilho HH da água (dB)</th><th>Dado válido</th><th>CRID</th><th></th></tr></thead>
+          <tbody>${S.map((p, i) => `<tr><td>${isoBR(p.date)}</td><td class="hl">${fmt(p.water_km2, 2)}</td><td>${fmt(p.water_pct, 2)}</td><td>${i ? signed(p.water_km2 - S[i - 1].water_km2, 2) + ' km²' : '–'}</td><td>${p.hh_water_median_db == null ? '–' : fmt(p.hh_water_median_db, 2)}</td><td>${fmt(p.valid_fraction_aoi * 100, 0)}%</td><td>${esc(p.crid || '–')}</td><td>${p.suspeita_vento ? '<span class="evchip down">suspeita de vento</span>' : ''}</td></tr>`).join('')}</tbody>
         </table>
       </div>
+      ${(a.skipped_scenes || []).length ? `<p class="note">Cenas descartadas: ${a.skipped_scenes.map(s => `${isoBR(s.date)} (${esc(s.reason)})`).join('; ')}.</p>` : ''}
     </div>
-    <p class="note">Protótipo: os mapas de antes e depois são simulados a partir do limite da área. No app final eles vêm dos GeoTIFF/PNG recortados pelo pipeline para cada passagem.</p>
+    <p class="note">Sensor: ${esc(a.sensor)}. Método ${esc(a.method)}, versão ${esc(a.algorithm_version)}. ${(a.warnings || []).map(esc).join(' ')} <a href="${API}/analyses/${id}/sources" target="_blank" rel="noopener">Cenas, janelas lidas e proveniência (sources.json)</a></p>
   </div>`;
   detail.querySelector('.back').addEventListener('click', closeDetail);
-  $('#selA').addEventListener('change', (e) => { cmpA = +e.target.value; renderDetail(); });
-  $('#selB').addEventListener('change', (e) => { cmpB = +e.target.value; renderDetail(); });
-  $('#copyCsv').addEventListener('click', () => copyCsv(all));
-  wireBigChart(A.pts, k, all);
-  drawMaps(ctx, k, A.pts);
 }
 
-function wireBigChart(pts, k, all) {
-  const box = $('#bigchart'), svg = box.querySelector('svg'), tip = box.querySelector('.ctip'), cross = svg.querySelector('.cross');
-  const W = BW(), L = 44, Rr = 12, n = pts.length;
-  const idxAt = (cx) => { const r = svg.getBoundingClientRect(); const vx = (cx - r.left) / r.width * W; return clamp(Math.round((vx - L) / (W - L - Rr) * (n - 1)), 0, n - 1); };
-  const show = (e) => {
-    const i = idxAt(e.clientX), r = svg.getBoundingClientRect(), br = box.getBoundingClientRect();
-    const px = (L + i * (W - L - Rr) / (n - 1)) / W * r.width;
-    cross.setAttribute('x1', L + i * (W - L - Rr) / (n - 1)); cross.setAttribute('x2', L + i * (W - L - Rr) / (n - 1)); cross.setAttribute('visibility', 'visible');
-    const fc = i >= HIST_N;
-    tip.innerHTML = `<b>${dmyy(passDate(i))}${fc ? ' · previsão' : ''}</b><span>Água aberta <em style="color:${VARS.agua.color}">${fmt(all.agua[i], 1)}%</em></span>${fc ? '' : `<span>HH <em>${fmt(hhOf(all.agua[i]), 1)} dB</em></span><span>HV <em>${fmt(hvOf(all.agua[i]), 1)} dB</em></span>`}`;
-    tip.hidden = false;
-    tip.style.left = clamp(px + (r.left - br.left), 80, br.width - 80) + 'px';
-    tip.style.top = (e.clientY - br.top - 12) + 'px';
-  };
-  svg.addEventListener('pointermove', show);
-  svg.addEventListener('pointerleave', () => { tip.hidden = true; cross.setAttribute('visibility', 'hidden'); });
-  svg.addEventListener('click', (e) => { const i = idxAt(e.clientX); if (i < HIST_N && i !== cmpA) { cmpB = i; if (cmpA > cmpB) [cmpA, cmpB] = [cmpB, cmpA]; renderDetail(); } });
+/* ---- cards do globo: uma análise concluída = um card (dados de /analyses) ---- */
+function loadCards() {
+  api('/analyses?status=completed').then(r => {
+    for (let i = HOTSPOTS.length - 1; i >= 0; i--) if (HOTSPOTS[i].api) HOTSPOTS.splice(i, 1);
+    r.analyses.forEach(a => {
+      const s = a.summary || {};
+      HOTSPOTS.push({ id: 'an-' + a.analysis_id, api: a, real: true, lat: a.center[1], lng: a.center[0], var: 'agua', select: {},
+        place: a.name || 'Área analisada',
+        title: s.water_km2_last != null ? `${fmt(s.water_km2_last, s.water_km2_last < 100 ? 2 : 0)} km² de água em ${isoBR(s.last_date).slice(0, 5)}` : 'Análise concluída' });
+    });
+    if (!drawMode) globe.htmlElementsData(HOTSPOTS);
+    if (pin.shown) globe.pointsData(HOTSPOTS).ringsData(reduceMotion ? [] : HOTSPOTS);
+  }).catch(() => {});
 }
-
-/* ---- mapas simulados dentro do limite da área ---- */
-function noiseGrid(seed, n = 9) { const r = rng(seed); return Array.from({ length: n * n }, () => r() * 2 - 1); }
-function sampleGrid(g, u, v, n = 9) {
-  const x = u * (n - 1), y = v * (n - 1), i = Math.min(Math.floor(x), n - 2), j = Math.min(Math.floor(y), n - 2);
-  const fx = x - i, fy = y - j, sx = fx * fx * (3 - 2 * fx), sy = fy * fy * (3 - 2 * fy);
-  const a = g[j * n + i], b = g[j * n + i + 1], c = g[(j + 1) * n + i], d = g[(j + 1) * n + i + 1];
-  return a + (b - a) * sx + (c - a) * sy + (a - b - c + d) * sx * sy;
+function openAnalysis(h) {
+  const id = h.api.analysis_id;
+  api(`/analyses/${id}`).then(a => {
+    analysesById.set(id, a);
+    let f = areas.find(x => (links[x.__key] || {}).analysis === id);
+    if (!f) f = tag({ type: 'Feature', properties: {}, geometry: a.aoi.geometry }, 'area', { __name: a.name || 'Área analisada', __key: 'an-' + id, __parent: '', __country: '', __ha: a.aoi.area_km2 * 100, __temp: true });
+    const alt = flyAltFor(f), c = centerOf(f);
+    setSelected(f.__temp ? null : f, alt); flyTo(c.lat, c.lng, alt);
+    const ctx = ctxOf(f, h); ctx.analysisId = id; openPanel(ctx);
+  }).catch(() => { loadCards(); });
 }
-function drawMaps(ctx, k, pts) {
-  const f = ctx.f; if (!f) return;
-  const b = bbox(f), lat0 = (b[1] + b[3]) / 2, kx = Math.cos(lat0 * Math.PI / 180);
-  const spanX = (b[2] - b[0]) * kx, spanY = b[3] - b[1], span = Math.max(spanX, spanY) * 1.08;
-  const cx = (b[0] + b[2]) / 2, cy = lat0, S = 260;
-  const toPx = ([lng, lat]) => [S / 2 + (lng - cx) * kx / span * S, S / 2 - (lat - cy) / span * S];
-  const path = new Path2D();
-  ringsOf(f.geometry).forEach(poly => poly.forEach(ring => ring.forEach((p, i) => { const [x, y] = toPx(p); i ? path.lineTo(x, y) : path.moveTo(x, y); })));
-  const g1 = noiseGrid(hash(ctx.key + k + 'a')), g2 = noiseGrid(hash(ctx.key + k + 'b'));
-  const g3 = noiseGrid(hash(ctx.key + 'fine'), 17);
-  const amp = k === 'umidade' ? 14 : k === 'agua' ? Math.max(pts[cmpA], 2) * 0.9 : 2.2;
-  const w = (t) => (t - HIST_N / 2) / (HIST_N / 2);
-  const field = (t, u, v) => pts[t] + amp * (0.7 * sampleGrid(g1, u, v) + 0.25 * sampleGrid(g3, u, v, 17) + 0.9 * w(t) * sampleGrid(g2, u, v));
-  const N = 96;
-  const paint = (id, fn) => {
-    const cv = $(id), c2 = cv.getContext('2d');
-    const off = document.createElement('canvas'); off.width = N; off.height = N;
-    const oc = off.getContext('2d'), img = oc.createImageData(N, N);
-    for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) {
-      const [r, g, bb] = fn(i / (N - 1), j / (N - 1)); const o = (j * N + i) * 4;
-      img.data[o] = r; img.data[o + 1] = g; img.data[o + 2] = bb; img.data[o + 3] = 255;
-    }
-    oc.putImageData(img, 0, 0);
-    c2.clearRect(0, 0, S, S); c2.fillStyle = '#070b12'; c2.fillRect(0, 0, S, S);
-    c2.save(); c2.clip(path, 'evenodd'); c2.imageSmoothingEnabled = true; c2.drawImage(off, 0, 0, S, S); c2.restore();
-    c2.lineWidth = 1.5; c2.strokeStyle = 'rgba(233,238,242,0.7)'; c2.stroke(path);
-  };
-  const [lo, hi] = yDomain(pts, k);
-  const rgbAt = (t) => { const e = 0.12 + 0.88 * clamp(t, 0, 1); return LOW.map((v, i) => Math.round(v + (VARS[k].rgb[i] - v) * e)); };
-  paint('#cvA', (u, v) => rgbAt((field(cmpA, u, v) - lo) / (hi - lo)));
-  paint('#cvB', (u, v) => rgbAt((field(cmpB, u, v) - lo) / (hi - lo)));
-  const dmax = amp * 1.2 + Math.abs(pts[cmpB] - pts[cmpA]);
-  paint('#cvD', (u, v) => {
-    const dd = clamp((field(cmpB, u, v) - field(cmpA, u, v)) / dmax, -1, 1), mid = [26, 34, 43];
-    const to = dd >= 0 ? VARS[k].rgb : [240, 122, 106], a = Math.abs(dd);
-    return mid.map((m, i) => Math.round(m + (to[i] - m) * a));
-  });
-}
-
-// retroespalhamento médio ilustrativo: quanto mais água aberta, mais escuro o radar fica
-function hhOf(w) { return -8.5 - w * 0.22; }
-function hvOf(w) { return -15.5 - w * 0.12; }
-function copyCsv(all) {
-  const head = 'data,previsao,hh_db,hv_db,agua_pct';
-  const rows = [...Array(HIST_N + FC_N).keys()].map(i => [passDate(i).toISOString().slice(0, 10), i >= HIST_N ? 1 : 0, i >= HIST_N ? '' : hhOf(all.agua[i]).toFixed(2), i >= HIST_N ? '' : hvOf(all.agua[i]).toFixed(2), all.agua[i]].join(','));
-  const text = [head, ...rows].join('\n');
-  const t = $('#toast');
-  const fallback = () => { const ta = document.createElement('textarea'); ta.value = text; ta.style.cssText = 'position:fixed;opacity:0'; document.body.appendChild(ta); ta.select(); let ok = false; try { ok = document.execCommand('copy'); } catch (e) { ok = false; } ta.remove(); t.textContent = ok ? 'CSV copiado' : 'Não deu para copiar neste navegador'; };
-  try { navigator.clipboard.writeText(text).then(() => { t.textContent = 'CSV copiado'; }, fallback); } catch (e) { fallback(); }
-}
+loadCards();
 
 /* ================= minha área ================= */
 const areaMenu = $('#areaMenu'), areaBtn = $('#areaBtn');
@@ -1333,8 +1351,7 @@ function makeAreaFeature(rec) {
   const f = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [rec.ring] } };
   const c = centerOf(f), pl = placeOf(c.lat, c.lng);
   const ha = hectares(rec.ring);
-  const vals = Object.fromEntries(VKEYS.map(kk => [kk, makeSeries(rec.id, c.lat, kk)[HIST_N - 1]]));
-  return Object.assign(f, { __lvl: 'area', __lvlLabel: LVL_LABEL.area, __name: rec.name, __key: rec.id, __parent: pl.parent, __country: pl.country, __ha: ha, __vals: vals, __rec: rec });
+  return Object.assign(f, { __lvl: 'area', __lvlLabel: LVL_LABEL.area, __name: rec.name, __key: rec.id, __parent: pl.parent, __country: pl.country, __ha: ha, __rec: rec });
 }
 function saveAreas() { store.set('arara-areas-v3', areas.map(a => a.__rec)); }
 function addArea(ring, name, open) {
@@ -1352,7 +1369,7 @@ function renderSaved() {
   ul.querySelectorAll('.go').forEach(b => b.addEventListener('click', () => { areaMenu.hidden = true; selectFeature(areas[+b.dataset.i], { fly: true }); }));
   ul.querySelectorAll('.del').forEach(b => b.addEventListener('click', () => {
     const a = areas[+b.dataset.del]; if (selected === a) closePanel();
-    areas.splice(+b.dataset.del, 1); saveAreas(); updateLOD(true); renderSaved();
+    delete links[a.__key]; saveLinks(); areas.splice(+b.dataset.del, 1); saveAreas(); updateLOD(true); renderSaved();
   }));
 }
 function importFile(e) {
@@ -1454,7 +1471,6 @@ function pickHit(h) {
 
 /* ================= dados ================= */
 function tag(f, lvl, extra) { return Object.assign(f, extra, { __lvl: lvl, __lvlLabel: LVL_LABEL[lvl] }); }
-function valsFor(key, lat, hot) { return Object.fromEntries(VKEYS.map(kk => [kk, makeSeries(key, lat, kk, hot)[HIST_N - 1]])); }
 fetch('geo.json').then(r => r.json()).then(geo => {
   world = topojson.feature(geo.world, geo.world.objects.countries).features
     .filter(f => f.properties.n !== 'Antarctica')
@@ -1466,17 +1482,16 @@ fetch('geo.json').then(r => r.json()).then(geo => {
   const nameOfA2 = (a2) => (ptRegion && ptRegion.of(a2)) || a2;
   Object.entries(geo.adm1).forEach(([a2, feats]) => {
     adm1[a2] = feats.map(f => {
-      const c = centerOf(f);
-      return tag(f, 'estado', { __name: f.properties.n || f.properties.pc || f.properties.k, __key: f.properties.k, __parent: nameOfA2(a2), __country: nameOfA2(a2), __vals: valsFor(f.properties.k, c.lat) });
+      return tag(f, 'estado', { __name: f.properties.n || f.properties.pc || f.properties.k, __key: f.properties.k, __parent: nameOfA2(a2), __country: nameOfA2(a2) });
     });
   });
   mgState = adm1.BR.find(f => f.properties.pc === 'MG' || f.properties.k === 'br-mg');
-  mgMun = geo.mgmun.map(f => tag(f, 'municipio', { __name: f.properties.n, __key: f.properties.k, __parent: 'MG', __country: 'Brasil', __vals: valsFor(f.properties.k, +f.properties.lat, null) }));
+  mgMun = geo.mgmun.map(f => tag(f, 'municipio', { __name: f.properties.n, __key: f.properties.k, __parent: 'MG', __country: 'Brasil' }));
   world.forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 0 }));
   Object.values(adm1).flat().forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 1 }));
   mgMun.forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 2 }));
   fetch('furnas_globe.json').then(r => r.json()).then(g => {
-    lake = tag({ type: 'Feature', properties: {}, geometry: g }, 'lago', { __name: 'Lago de Furnas', __key: 'lago-furnas', __parent: 'Minas Gerais', __country: 'Brasil', __vals: { agua: 100 } });
+    lake = tag({ type: 'Feature', properties: {}, geometry: g }, 'lago', { __name: 'Lago de Furnas', __key: 'lago-furnas', __parent: 'Minas Gerais', __country: 'Brasil' });
     searchIndex.push({ n: norm('Lago de Furnas'), f: lake, rank: 0 }, { n: norm('Furnas'), f: lake, rank: 0 });
     updateLOD(true);
   }).catch(() => {});
