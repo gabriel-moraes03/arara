@@ -93,6 +93,11 @@ button { font-family: var(--font-body); }
 .legend .ramp { width: 110px; height: 8px; border-radius: 4px; background: linear-gradient(90deg, #26323a, var(--vc)); }
 .legend small { font-family: var(--font-mono); color: var(--ink-3); font-size: 11px; }
 .hint { font-size: 12px; color: var(--ink-3); }
+#attrib { position: absolute; right: 10px; bottom: 6px; z-index: 4; font-size: 10.5px; color: rgba(255,255,255,0.75); text-shadow: 0 1px 2px #000; pointer-events: none; }
+.lyr { display: flex; gap: 6px; flex-wrap: wrap; }
+.lyr button { border: 1px solid var(--glass-line); background: rgba(255,255,255,0.04); color: var(--ink-2); border-radius: 999px; padding: 5px 10px; font: 12px var(--font-body); cursor: pointer; }
+.lyr button[aria-pressed="true"] { background: color-mix(in srgb, var(--vc) 22%, transparent); color: var(--vc); border-color: color-mix(in srgb, var(--vc) 55%, transparent); }
+.lyrkey { font-size: 11.5px; color: var(--ink-3); margin: 0; }
 .btns { display: flex; gap: 8px; flex-wrap: wrap; }
 .btn {
   display: inline-flex; align-items: center; gap: 8px; height: 36px; padding: 0 14px;
@@ -374,6 +379,7 @@ a.btn { text-decoration: none; }
     <button class="btn primary" type="button" id="drawDone" disabled>Concluir área</button>
   </div>
 
+  <div id="attrib" hidden>Imagens: Esri, Maxar, Earthstar Geographics</div>
   <aside id="panel" hidden aria-live="polite"></aside>
   <section id="detail" hidden aria-label="Histórico detalhado"></section>
 </div>
@@ -760,6 +766,7 @@ function updateLOD(force) {
   if (lake && country && country.__a2 === 'BR') data.push(lake);
   data = data.concat(areas);
   current = alt < 0.05 ? 'area' : inMG ? 'municipio' : country ? 'estado' : 'pais';
+  setBasemap(current === 'area');
   document.querySelectorAll('.levels span').forEach(s => s.classList.toggle('on', s.dataset.l === current));
   $('#legend').hidden = true;   // sem mapa de valores ilustrativos
   globe.polygonsData(data);
@@ -772,6 +779,7 @@ function isSel(d) {
   return selected.__lvl === 'pais' && d.__lvl === 'estado' && d.__country === selected.__name;
 }
 function capColor(d) {
+  if (current === 'area') return d === hover ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0)';   // satélite por baixo
   const t = 0.5;   // nenhuma região tem valor estimado: cor neutra
   if (isSel(d)) return d.__lvl === 'pais' ? C.sel : rampColor(t + 0.3, mapVar, 1);
   if (d.__lvl === 'lago') return d === hover ? 'rgba(120, 205, 250, 1)' : 'rgba(79, 182, 238, 0.92)';
@@ -789,10 +797,42 @@ function altFor(d) {
   if (isSel(d)) return base + (current === 'area' ? Math.min(selElev, 0.0005) : selElev);
   return base;
 }
+/* ---- mapa de base (satélite) só no zoom de área; ao longe o globo estilizado continua ---- */
+let basemapOn = false;
+function setBasemap(on) {
+  if (on === basemapOn) return; basemapOn = on;
+  globe.globeTileEngineUrl(on ? (x, y, l) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${l}/${y}/${x}` : null);
+  $('#attrib').hidden = !on;
+  refreshStyle();
+}
+/* ---- camadas de água do Arara sobre o mapa: PNG lat/lon da pipeline colado na esfera ---- */
+let overlay = null, THREE_NS = null, pendingOverlay = null;
+// mesma revisão do three embutido no globo.gl 2.41.6 (r176); versões diferentes quebram o renderizador
+import('https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.min.js').then(m => { THREE_NS = m; if (pendingOverlay) setOverlay(...pendingOverlay); }).catch(() => {});
+function clearOverlay() {
+  if (!overlay) return;
+  if (gObj) gObj.remove(overlay);
+  overlay.geometry.dispose(); if (overlay.material.map) overlay.material.map.dispose(); overlay.material.dispose(); overlay = null;
+}
+function setOverlay(url, b) {
+  clearOverlay(); pendingOverlay = null; if (!url || !gObj) return;
+  if (!THREE_NS) { pendingOverlay = [url, b]; return; }
+  const T = THREE_NS, N = 32, pos = [], uv = [], idx = [];
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    const c = globe.getCoords(b.north - (b.north - b.south) * j / N, b.west + (b.east - b.west) * i / N, 0.0003);
+    pos.push(c.x, c.y, c.z); uv.push(i / N, 1 - j / N);
+  }
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * (N + 1) + i, d = a + N + 1; idx.push(a, d, a + 1, a + 1, d, d + 1); }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+  const tex = new T.TextureLoader().load(url); tex.colorSpace = T.SRGBColorSpace; tex.anisotropy = 4;
+  const m = new T.Mesh(g, new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+  m.renderOrder = 10; overlay = m; gObj.add(m);
+}
 function refreshStyle() {
   globe.polygonCapColor(capColor).polygonAltitude(altFor)
-    .polygonSideColor(d => isSel(d) ? C.selSide : C.side)
-    .polygonStrokeColor(d => isSel(d) ? C.selStroke : d.__lvl === 'area' ? '#fff' : d.__lvl === 'lago' ? '#bfe6ff' : C.stroke);
+    .polygonSideColor(d => current === 'area' ? 'rgba(0,0,0,0)' : isSel(d) ? C.selSide : C.side)
+    .polygonStrokeColor(d => current === 'area' ? (d.__lvl === 'area' || d.__lvl === 'lago' ? '#f4b63f' : 'rgba(255,255,255,0.4)') : isSel(d) ? C.selStroke : d.__lvl === 'area' ? '#fff' : d.__lvl === 'lago' ? '#bfe6ff' : C.stroke);
 }
 
 /* ---- variável do mapa ---- */
@@ -853,6 +893,7 @@ function openHotspot(h) {
 function closePanel() {
   panel.hidden = true; setSelected(null); activeCtx = null;
   clearInterval(live.poll); clearTimeout(live.timer); live.token++;
+  clearOverlay();
   if (!drawMode) globe.pathsData([]);
 }
 function openPanel(ctx) { activeCtx = ctx; if (ctx.hot) setVar(ctx.hot.var); renderPanel(); panel.hidden = false; }
@@ -910,6 +951,7 @@ function showFootprints(list) { if (!drawMode) globe.pathsData(list); }
 
 function renderPanel() {
   const ctx = activeCtx; if (!ctx) return;
+  clearOverlay();
   if (ctx.hot && ctx.hot.id === 'furnas') return renderFurnasPanel(ctx);
   clearInterval(live.poll); clearTimeout(live.timer); live.token++;
   const link = links[ctx.key] || {};
@@ -1092,6 +1134,7 @@ function renderAnalysisPanel(ctx, a) {
     <div class="chart">${seriesChart(a)}
       <div class="chart-key"><span><i></i>Água medida pelo NISAR</span>${a.forecast && a.forecast.status === 'ok' ? '<span><i class="fc"></i>Projeção experimental</span>' : ''}${wind.length ? '<span><i class="wind"></i>Suspeita de vento</span>' : ''}</div>
     </div>
+    ${layerPicker(a)}
     <button class="more" type="button" id="moreBtn">Ver histórico detalhado e mapas <span aria-hidden="true">→</span></button>
     <div class="facts">
       <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>${measuredText(a)}</p></section>
@@ -1103,6 +1146,31 @@ function renderAnalysisPanel(ctx, a) {
     <div class="passes"><span>Limiar ${fmt(a.params.threshold_db, 2)} dB</span><span>Trilha ${g.track ?? '–'} ${g.direction ?? ''} · frame ${g.frame ?? '–'}</span><span>${wind.length ? 'Vento: ' + wind.join(', ') : 'Sem suspeita de vento'}</span></div>
     <p class="note">Fonte: NISAR L2 GCOV (NASA / ASF DAAC), canal HH, média 5×5 em dB, limiar no vale água/terra desta área. ${(a.warnings || []).map(esc).join(' ')} <a href="${API}/analyses/${a.analysis_id}/sources" target="_blank" rel="noopener">Cenas e proveniência</a> · <a href="${API}/analyses/${a.analysis_id}/metrics?format=csv">CSV</a></p>`);
   $('#moreBtn').addEventListener('click', openDetail);
+  bindLayers(a);
+}
+const LKEY = { water: '<span style="color:#2e86de">■</span> água medida pelo radar', change: '<span style="color:#d93828">■</span> deixou de ser água · <span style="color:#1446d7">■</span> água nova · <span style="color:#7ab2eb">■</span> água nas duas datas', optical_water: '<span style="color:#40c4a0">■</span> água no Sentinel-2 (MNDWI)' };
+function layerOptions(a) {
+  const L = a.layers || [], w = L.filter(l => l.type === 'water'), out = [];
+  if (w.length) out.push({ l: w[w.length - 1], t: `Água ${isoBR(w[w.length - 1].date).slice(0, 5)}` });
+  if (w.length > 1) out.push({ l: w[0], t: `Água ${isoBR(w[0].date).slice(0, 5)}` });
+  const ch = L.find(l => l.type === 'change'); if (ch) out.push({ l: ch, t: 'Mudança' });
+  const op = L.filter(l => l.type === 'optical_water').pop(); if (op) out.push({ l: op, t: `Sentinel-2 ${isoBR(op.date).slice(0, 5)}` });
+  return out;
+}
+function layerPicker(a) {
+  const o = layerOptions(a); if (!o.length) return '';
+  return `<div class="lyr" role="group" aria-label="Camada no mapa">${o.map((x, i) => `<button type="button" data-lyr="${x.l.id}" aria-pressed="${i === 0}">${x.t}</button>`).join('')}<button type="button" data-lyr="" aria-pressed="false">Sem camada</button></div><p class="lyrkey" id="lyrKey"></p>`;
+}
+function bindLayers(a) {
+  const o = layerOptions(a); if (!o.length) return;
+  const apply = (id) => {
+    const l = (a.layers || []).find(x => x.id === id);
+    setOverlay(l ? `${API}/analyses/${a.analysis_id}/png/${l.id}.png` : null, l && l.bounds);
+    $('#lyrKey').innerHTML = l ? LKEY[l.type] || '' : '';
+    panel.querySelectorAll('.lyr button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lyr === id)));
+  };
+  panel.querySelectorAll('.lyr button').forEach(b => b.addEventListener('click', () => apply(b.dataset.lyr)));
+  apply(o[0].l.id);
 }
 
 /* ================= caso validado: Furnas (dados reais do TerraPulse) ================= */
