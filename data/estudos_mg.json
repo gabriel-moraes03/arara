@@ -1,8 +1,68 @@
 [
-  {"id": "tres-marias", "nome": "Represa de Três Marias, MG", "bacia": "SF4", "bbox": [-45.6, -19.0, -45.0, -18.2]},
-  {"id": "nova-ponte", "nome": "Reservatório de Nova Ponte, MG", "bacia": "PN2", "bbox": [-47.95, -19.4, -47.5, -18.95]},
-  {"id": "emborcacao", "nome": "Reservatório de Emborcação, MG", "bacia": "PN1", "bbox": [-48.1, -18.75, -47.6, -18.35]},
-  {"id": "camargos", "nome": "Reservatório de Camargos, MG", "bacia": "GD1", "bbox": [-44.75, -21.45, -44.4, -21.2]},
-  {"id": "marimbondo", "nome": "Reservatório de Marimbondo, MG/SP", "bacia": "GD8", "bbox": [-49.3, -20.4, -48.85, -19.95]},
-  {"id": "peixoto", "nome": "Reservatório de Mascarenhas de Moraes (Peixoto), MG", "bacia": "GD7", "bbox": [-47.2, -20.45, -46.85, -20.15]}
+ {
+  "id": "tres-marias",
+  "nome": "Represa de Três Marias, MG",
+  "bacia": "SF4",
+  "bbox": [
+   -45.35,
+   -18.75,
+   -45.05,
+   -18.45
+  ]
+ },
+ {
+  "id": "nova-ponte",
+  "nome": "Reservatório de Nova Ponte, MG",
+  "bacia": "PN2",
+  "bbox": [
+   -47.95,
+   -19.4,
+   -47.5,
+   -18.95
+  ]
+ },
+ {
+  "id": "emborcacao",
+  "nome": "Reservatório de Emborcação, MG",
+  "bacia": "PN1",
+  "bbox": [
+   -48.1,
+   -18.75,
+   -47.6,
+   -18.35
+  ]
+ },
+ {
+  "id": "camargos",
+  "nome": "Reservatório de Camargos, MG",
+  "bacia": "GD1",
+  "bbox": [
+   -44.75,
+   -21.45,
+   -44.4,
+   -21.2
+  ]
+ },
+ {
+  "id": "marimbondo",
+  "nome": "Reservatório de Marimbondo, MG/SP",
+  "bacia": "GD8",
+  "bbox": [
+   -49.3,
+   -20.4,
+   -48.85,
+   -19.95
+  ]
+ },
+ {
+  "id": "peixoto",
+  "nome": "Reservatório de Mascarenhas de Moraes (Peixoto), MG",
+  "bacia": "GD7",
+  "bbox": [
+   -47.2,
+   -20.45,
+   -46.85,
+   -20.15
+  ]
+ }
 ]
