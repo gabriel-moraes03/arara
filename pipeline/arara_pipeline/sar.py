@@ -156,3 +156,21 @@ def identificacao(caminho):
         return {k: ler(k) for k in ("granuleId", "zeroDopplerStartTime", "trackNumber", "frameNumber",
                                     "orbitPassDirection", "compositeReleaseId", "productVersion",
                                     "absoluteOrbitNumber", "processingCenter")}
+
+
+def db_filtrado(linear, valido, filtro="db", tamanho=5):
+    """Potência linear -> dB (uma única vez) com média 5x5. filtro="db" (padrão, método validado em
+    Furnas: não "come" margens finas), "linear" (média da potência, depois dB) ou None.
+    Pixels inválidos saem como NaN e não contaminam os vizinhos (entram com a mediana dos válidos)."""
+    if not valido.any():
+        return np.full(linear.shape, np.nan, "float32")
+    if filtro == "linear":
+        media = uniform_filter(np.where(valido, linear, np.nanmedian(linear[valido])).astype("float64"), size=tamanho)
+        db = 10 * np.log10(np.maximum(media, 1e-10))
+    else:
+        db = 10 * np.log10(np.where(valido, linear, 1e-10))
+        if filtro == "db":
+            db = uniform_filter(np.where(valido, db, np.nanmedian(db[valido])), size=tamanho)
+    db = db.astype("float32")
+    db[~valido] = np.nan
+    return db
