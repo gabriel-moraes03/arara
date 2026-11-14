@@ -20,7 +20,6 @@ limites em `docs/LIMITACOES.md`.
 - Não presumir que o maior componente conectado é o corpo d'água de interesse.
 - Credenciais Earthdata só no `.env`/ambiente do backend; nunca em log, resposta, navegador ou Git.
 - Mudança medida separada de causa provável. Datas com vento são marcadas, nunca escondidas.
-- `terrapulse/` é só fonte: não editar.
 
 ## Onde mexer
 

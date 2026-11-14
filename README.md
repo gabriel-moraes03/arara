@@ -23,7 +23,6 @@ globo (frontend/globe)  ──►  API Spring Boot (backend)  ──►  pipelin
 | `frontend/globe/` | globo, servido em `/` |
 | `frontend/furnas/` | estudo validado de Furnas, servido em `/furnas/` |
 | `data/ana/`, `regression/furnas/` | cota × área da ANA e números de referência de Furnas |
-| `terrapulse/` | projeto de origem, somente leitura |
 
 ## Rodar
 
