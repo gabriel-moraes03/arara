@@ -61,6 +61,8 @@ def _texto(v):
     v = v[()] if isinstance(v, h5py.Dataset) else v
     if isinstance(v, np.ndarray):
         v = v.item() if v.ndim == 0 else v.tolist()
+    if isinstance(v, np.generic):
+        v = v.item()
     return v.decode() if isinstance(v, bytes) else v
 
 
