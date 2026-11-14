@@ -1426,7 +1426,10 @@ function makeAreaFeature(rec) {
   return Object.assign(f, { __lvl: 'area', __lvlLabel: LVL_LABEL.area, __name: rec.name, __key: rec.id, __parent: pl.parent, __country: pl.country, __ha: ha, __rec: rec });
 }
 function saveAreas() { store.set('arara-areas-v3', areas.map(a => a.__rec)); }
+const MAX_AREA_DEG = 5;   // maior lado aceito (~550 km); acima disso o polígono cobre o globo e não dá para analisar
+const ringSpan = (ring) => Math.max(Math.max(...ring.map(p => p[0])) - Math.min(...ring.map(p => p[0])), Math.max(...ring.map(p => p[1])) - Math.min(...ring.map(p => p[1])));
 function addArea(ring, name, open) {
+  if (ringSpan(ring) > MAX_AREA_DEG) { flash('Essa área é grande demais (mais de 5° de lado). Aproxime do mapa e marque só o trecho de rio, represa ou várzea.'); return null; }
   const n = areas.length + 1;
   const rec = { id: 'area-' + Date.now().toString(36), name: name || `Minha área ${n}`, ring: ring.map(p => [+p[0].toFixed(6), +p[1].toFixed(6)]) };
   const f = makeAreaFeature(rec);
@@ -1567,7 +1570,9 @@ fetch('geo.json').then(r => r.json()).then(geo => {
     searchIndex.push({ n: norm('Lago de Furnas'), f: lake, rank: 0 }, { n: norm('Furnas'), f: lake, rank: 0 });
     updateLOD(true);
   }).catch(() => {});
-  areas = store.get('arara-areas-v3', []).filter(r => r && r.ring && r.ring.length >= 4).map(makeAreaFeature);
+  const savedAreas = store.get('arara-areas-v3', []).filter(r => r && r.ring && r.ring.length >= 4 && r.ring.every(p => Math.abs(p[0]) <= 180 && Math.abs(p[1]) <= 90) && ringSpan(r.ring) <= MAX_AREA_DEG);
+  areas = savedAreas.map(makeAreaFeature);
+  if (savedAreas.length !== store.get('arara-areas-v3', []).length) saveAreas();   // descarta áreas inválidas guardadas antes
   globe.polygonsData(world.concat(areas));
   $('#loading').hidden = true;
 }).catch(() => { $('#loading').textContent = 'Não foi possível carregar os mapas. Recarregue a página.'; });
