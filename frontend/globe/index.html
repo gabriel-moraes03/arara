@@ -766,6 +766,9 @@ function updateLOD(force) {
   if (lake && country && country.__a2 === 'BR') data.push(lake);
   data = data.concat(areas);
   current = alt < 0.05 ? 'area' : inMG ? 'municipio' : country ? 'estado' : 'pais';
+  // no zoom de área o satélite mostra a geografia: só as áreas do usuário e o lago ficam como polígonos
+  // (centenas de polígonos transparentes sobrepostos travam o desenho)
+  if (current === 'area') data = data.filter(f => f.__lvl === 'area' || f.__lvl === 'lago');
   setBasemap(current === 'area');
   document.querySelectorAll('.levels span').forEach(s => s.classList.toggle('on', s.dataset.l === current));
   $('#legend').hidden = true;   // sem mapa de valores ilustrativos
@@ -831,8 +834,8 @@ function setOverlay(url, b) {
 }
 function refreshStyle() {
   globe.polygonCapColor(capColor).polygonAltitude(altFor)
-    .polygonSideColor(d => current === 'area' ? 'rgba(0,0,0,0)' : isSel(d) ? C.selSide : C.side)
-    .polygonStrokeColor(d => current === 'area' ? (d.__lvl === 'area' || d.__lvl === 'lago' ? '#f4b63f' : 'rgba(255,255,255,0.4)') : isSel(d) ? C.selStroke : d.__lvl === 'area' ? '#fff' : d.__lvl === 'lago' ? '#bfe6ff' : C.stroke);
+    .polygonSideColor(d => isSel(d) ? C.selSide : C.side)
+    .polygonStrokeColor(d => current === 'area' ? '#f4b63f' : isSel(d) ? C.selStroke : d.__lvl === 'area' ? '#fff' : d.__lvl === 'lago' ? '#bfe6ff' : C.stroke);
 }
 
 /* ---- variável do mapa ---- */
