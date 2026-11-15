@@ -104,6 +104,8 @@ button { color: inherit; }
 .btn:disabled { opacity: .45; cursor: not-allowed; }
 .row { display: flex; gap: 8px; flex-wrap: wrap; }
 .row .btn { flex: 1; }
+.topacts { margin-top: 2px; }
+.topacts .btn.primary { flex: 2; }
 .foot { margin: 0; font-size: 12px; color: var(--ink-3); line-height: 1.7; }
 .foot a, .note a, .lead a { color: var(--flood); }
 .others { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
@@ -1084,6 +1086,11 @@ function resumoEN(a) {
   return out.join(' ');
 }
 
+/* ações no topo do painel: estudo completo em destaque e o CSV da análise */
+function topActions(a) {
+  return `<div class="row topacts"><a class="btn primary" href="${I18N.comLang(`estudo/index.html?id=${a.analysis_id}`)}" target="_blank" rel="noopener">${tr('Estudo completo', 'Full study')} <span aria-hidden="true">→</span></a><a class="btn" href="${files(a.analysis_id).csv}" download>CSV</a></div>`;
+}
+
 /* barra lateral da análise */
 function qualityChips(a) {
   const v = a.optical_validation || {}, dv = v.divergence;
@@ -1099,7 +1106,7 @@ function renderSide() {
   const a = A, S = a.dates, g = a.group || {};
   const sub = tr(`${S.length} ${S.length === 1 ? 'passagem' : 'passagens'} do radar NISAR · ${dm(S[0].date)} a ${isoBR(S[S.length - 1].date)}`, `${plural(S.length, 'NISAR radar pass', 'NISAR radar passes')} · ${dm(S[0].date)} to ${isoBR(S[S.length - 1].date)}`);
   if (a.quality === NO_WATER) {
-    setPanel(`${head(sub)}<div class="chips">${qualityChips(a)}</div>
+    setPanel(`${head(sub)}<div class="chips">${qualityChips(a)}</div>${topActions(a)}
       <div class="card"><header><b>${tr('O radar não separou água de terra aqui', 'The radar did not separate water from land here')}</b></header>
         <p class="lead">${tr('Sem contraste nítido entre água e terra nesta área, o Arara não publica área de água nem de cheia.', 'Without a sharp contrast between water and land in this area, Arara publishes no water or flood area.')}</p>
         <ul class="reasons">${(a.quality_reasons || []).map(r => `<li>${esc(dados(r))}</li>`).join('')}</ul>
@@ -1111,6 +1118,7 @@ function renderSide() {
   const st = EN ? (resumoEN(a) || (a.summary_text && a.summary_text.text)) : a.summary_text && a.summary_text.text;
   setPanel(`${head(sub)}
     <div class="chips">${qualityChips(a)}</div>
+    ${topActions(a)}
     ${st ? `<div class="story"><p class="h3">${tr('O que o radar viu', 'What the radar saw')} <span>${tr('gerado dos números, sem IA', 'generated from the numbers, no AI')}</span></p><p>${esc(st)}</p></div>` : ''}
     ${!hasFlood(a) ? `<p class="note warn">${tr('Esta análise é anterior ao modo cheia: mostra só a área de água. A próxima análise do servidor traz cheia, chuva e municípios.', 'This analysis is from before flood mode: it shows only the water area. The next server analysis brings flood, rain and municipalities.')}</p>` : ''}
     <div class="card" id="dateCard"></div>
@@ -1174,7 +1182,7 @@ function techBox(a) {
     <div class="tablewrap"><table><thead><tr><th>${tr('Passagem', 'Pass')}</th><th>${tr('Água km²', 'Water km²')}</th>${hasFlood(a) ? `<th>${tr('Cheia km²', 'Flood km²')}</th><th>${tr('Veg. km²', 'Veg. km²')}</th>` : ''}<th>${tr('Chuva 7d', 'Rain 7d')}</th><th>${tr('Válido', 'Valid')}</th><th>${tr('Confiança', 'Confidence')}</th><th>CRID</th></tr></thead>
       <tbody>${a.dates.map(d => `<tr><td>${isoBR(d.date)}${d.suspeita_vento ? tr(' · vento', ' · wind') : ''}</td><td>${d.water_km2 == null ? '–' : fmt(d.water_km2, 2)}</td>${hasFlood(a) ? `<td>${fmt(d.flood_km2 || 0, 2)}</td><td>${fmt(d.flooded_vegetation_km2 || 0, 2)}</td>` : ''}<td>${d.rain_7d_mm == null ? '–' : fmt(d.rain_7d_mm, 0)}</td><td>${fmt((d.valid_fraction_aoi || 0) * 100, 0)}%</td><td>${esc(confOf(d).level ? lvl(confOf(d).level) : '–')}</td><td>${esc(d.crid || '–')}</td></tr>`).join('')}</tbody></table></div>
     ${(a.skipped_scenes || []).length ? `<p class="note">${tr('Passagens descartadas:', 'Discarded passes:')} ${a.skipped_scenes.map(s => `${isoBR(s.date)} (${esc(dados(s.reason))})`).join('; ')}.</p>` : ''}
-    <div class="row"><a class="btn" href="${f.csv}" download>${tr('CSV desta análise', 'CSV of this analysis')}</a>${ctx.kind === 'region' && !STATIC ? `<a class="btn" href="${API}/regions/${ctx.id}/history?format=csv" download title="${tr('Todas as passagens já medidas nesta região, guardadas no banco', 'All passes measured in this region, stored in the database')}">${tr('Histórico completo (CSV)', 'Full history (CSV)')}</a>` : ''}<a class="btn" href="${I18N.comLang(`estudo/index.html?id=${a.analysis_id}`)}" target="_blank" rel="noopener">${tr('Estudo completo', 'Full study')}</a><a class="btn" href="${f.sources}" target="_blank" rel="noopener">${tr('Proveniência', 'Provenance')}</a></div>
+    <div class="row"><a class="btn" href="${f.csv}" download>${tr('CSV desta análise', 'CSV of this analysis')}</a>${ctx.kind === 'region' && !STATIC ? `<a class="btn" href="${API}/regions/${ctx.id}/history?format=csv" download title="${tr('Todas as passagens já medidas nesta região, guardadas no banco', 'All passes measured in this region, stored in the database')}">${tr('Histórico completo (CSV)', 'Full history (CSV)')}</a>` : ''}<a class="btn" href="${f.sources}" target="_blank" rel="noopener">${tr('Proveniência', 'Provenance')}</a></div>
   </div></details>`;
 }
 /* ================= avisos curtos sobre o mapa ================= */

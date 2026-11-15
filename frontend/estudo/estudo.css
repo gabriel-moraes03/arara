@@ -46,3 +46,17 @@
 .seg.lang button { border: 0; background: transparent; color: var(--ink-2); padding: 5px 8px; border-radius: 6px; font: 600 12px var(--sans); cursor: pointer; }
 .seg.lang button[aria-pressed="true"] { background: rgba(79, 182, 238, .16); color: var(--accent); }
 @media (max-width: 560px) { .bar .instrument, .bar #csv { display: none; } .bar-actions { gap: 6px; } }
+/* topo: a página começa abaixo da barra fixa; o hero cresce com o texto e o texto aparece direto
+   (o hero de furnas/ é de tela cheia com abertura animada; aqui o texto subia por baixo da barra) */
+main#top { padding-top: var(--bar-h); }
+.hero.auto { height: auto; min-height: calc(78vh - var(--bar-h)); display: flex; flex-direction: column; justify-content: flex-end; }
+.hero.auto .hero-text { position: relative; left: auto; bottom: auto; max-width: min(760px, 100%); padding: 72px var(--gutter) clamp(36px, 7vh, 80px); }
+.hero.auto .hero-text > * { opacity: 1; transform: none; animation: none; }
+.hero.auto h1 { font-size: clamp(30px, 4vw, 52px); max-width: 22ch; }
+.superseded { margin: 0; padding: 10px var(--gutter); }
+@media (max-width: 900px) {
+  /* furnas/ já desloca o hero pela barra no celular; aqui o main já faz isso */
+  .hero.auto { padding-top: 0; min-height: 0; }
+  .hero.auto::after { inset: 0 0 auto 0; }
+  .hero.auto .hero-text { padding: 8px var(--gutter) 0; }
+}
