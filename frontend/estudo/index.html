@@ -1,9 +1,10 @@
 <!doctype html>
-<html lang="pt-BR">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Estudo · Arara</title>
+<script src="../arara-i18n.js"></script>
 <meta name="theme-color" content="#04060c">
 <link rel="icon" href="../favicon.ico" sizes="any">
 <link rel="stylesheet" href="../furnas/vendor/leaflet/leaflet.css">
@@ -15,14 +16,15 @@
 </head>
 <body>
 <header class="bar">
-  <a class="brand" href="../index.html" aria-label="Arara"><img class="mark" src="../img/arara-marca.png" alt="" width="32" height="31">Arara</a>
-  <span class="instrument" id="bar-info">Estudo automático</span>
+  <a class="brand" href="../index.html" aria-label="Arara" data-lang-link><img class="mark" src="../img/arara-marca.png" alt="" width="32" height="31">Arara</a>
+  <span class="instrument" id="bar-info" data-en="Automatic study">Estudo automático</span>
   <div class="bar-actions">
-    <a class="btn back-globe" href="../index.html">← Globo</a>
-    <a class="btn btn-accent" id="csv" href="#" hidden>Baixar CSV</a>
+    <a class="btn back-globe" href="../index.html" data-lang-link data-en="← Globe">← Globo</a>
+    <div class="seg lang" id="langsw" role="group"></div>
+    <a class="btn btn-accent" id="csv" href="#" hidden data-en="Download CSV">Baixar CSV</a>
   </div>
 </header>
-<main id="top"><p class="state" id="state">Carregando o estudo…</p></main>
+<main id="top"><p class="state" id="state" data-en="Loading the study…">Carregando o estudo…</p></main>
 <script src="../furnas/vendor/leaflet/leaflet.js"></script>
 <script src="estudo.js"></script>
 </body>

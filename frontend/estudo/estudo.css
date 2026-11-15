@@ -40,3 +40,9 @@
 /* estudo superado por uma análise mais recente da mesma área */
 .superseded { margin: 0; padding: 10px 16px; background: #fff4d6; color: #5a4300; font-size: 14px; text-align: center; }
 .superseded a { color: inherit; font-weight: 600; }
+
+/* seletor de idioma EN | PT */
+.seg.lang { display: flex; flex-wrap: nowrap; align-items: center; margin: 0; gap: 2px; padding: 3px; border: 1px solid rgba(160, 196, 214, .16); border-radius: 9px; }
+.seg.lang button { border: 0; background: transparent; color: var(--ink-2); padding: 5px 8px; border-radius: 6px; font: 600 12px var(--sans); cursor: pointer; }
+.seg.lang button[aria-pressed="true"] { background: rgba(79, 182, 238, .16); color: var(--accent); }
+@media (max-width: 560px) { .bar .instrument, .bar #csv { display: none; } .bar-actions { gap: 6px; } }

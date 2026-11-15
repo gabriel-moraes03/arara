@@ -6,6 +6,7 @@
 <title>Arara · Cheias no Sul</title>
 <meta name="description" content="Onde a água saiu do leito no Sul do Brasil, medido pelo radar NISAR da NASA, com chuva, municípios e confiança de cada número.">
 <link rel="icon" href="favicon.ico" sizes="any">
+<script src="arara-i18n.js"></script>
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -62,6 +63,8 @@ button { color: inherit; }
 .seg { display: flex; gap: 2px; padding: 3px; background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 10px; }
 .seg button { border: 0; background: transparent; color: var(--ink-2); padding: 6px 11px; border-radius: 7px; font-size: 12.5px; cursor: pointer; }
 .seg button[aria-pressed="true"] { background: rgba(34, 211, 238, 0.15); color: var(--flood); }
+.hdctl { display: flex; gap: 6px; align-items: center; }
+.seg.lang button { padding: 6px 8px; font-weight: 600; }
 .search { position: relative; margin: 0 18px 10px; }
 .search input { width: 100%; height: 42px; padding: 0 14px 0 38px; background: #0c121c; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; font-size: 14px; }
 .search input::placeholder { color: var(--ink-3); }
@@ -270,57 +273,57 @@ td { font-family: var(--font-mono); color: var(--ink-2); }
 <div id="app">
   <aside id="side">
     <div class="sidehead">
-      <h1 class="logo"><img class="mark" src="img/arara-marca.png" alt="" width="36" height="35">Arara <small>cheias · NISAR</small></h1>
-      <div class="seg" id="viewsw" role="group" aria-label="Tipo de mapa"><button type="button" data-v="globe" aria-pressed="true">Globo</button><button type="button" data-v="map" aria-pressed="false">Mapa</button></div>
+      <h1 class="logo"><img class="mark" src="img/arara-marca.png" alt="" width="36" height="35">Arara <small data-en="floods · NISAR">cheias · NISAR</small></h1>
+      <div class="hdctl"><div class="seg" id="viewsw" role="group" aria-label="Tipo de mapa" data-en-aria="Map type"><button type="button" data-v="globe" aria-pressed="true" data-en="Globe">Globo</button><button type="button" data-v="map" aria-pressed="false" data-en="Map">Mapa</button></div><div class="seg lang" id="langsw" role="group"></div></div>
     </div>
     <div class="search" role="search">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
-      <input id="q" type="search" placeholder="Cidade do Sul, região ou coordenada" autocomplete="off" aria-label="Buscar cidade, região ou coordenada" aria-controls="results">
+      <input id="q" type="search" placeholder="Cidade do Sul, região ou coordenada" data-en-placeholder="Southern city, region or coordinate" autocomplete="off" aria-label="Buscar cidade, região ou coordenada" data-en-aria="Search a city, region or coordinate" aria-controls="results">
       <ul id="results" class="results" role="listbox" hidden></ul>
     </div>
     <div class="sidebody" id="sidebody">
       <section id="panel" hidden aria-live="polite"></section>
-      <section id="home" aria-label="Início">
+      <section id="home" aria-label="Início" data-en-aria="Home">
         <div>
-          <p class="eyebrow">Sul do Brasil · radar NISAR (NASA/ISRO)</p>
-          <h2>Onde a água saiu do leito</h2>
-          <p class="lead">A cada passagem do satélite, o radar enxerga a água através de nuvem e chuva. O Arara compara cada passagem com a mais seca do período e mostra onde alagou, quanto choveu antes e em quais municípios.</p>
+          <p class="eyebrow" data-en="Southern Brazil · NISAR radar (NASA/ISRO)">Sul do Brasil · radar NISAR (NASA/ISRO)</p>
+          <h2 data-en="Where water left the riverbed">Onde a água saiu do leito</h2>
+          <p class="lead" data-en="On every satellite pass, the radar measures water day or night, regardless of clouds and rain. Arara compares each pass with the driest one of the period and shows where it flooded, how much it rained before and in which municipalities.">A cada passagem do satélite, o radar enxerga a água através de nuvem e chuva. O Arara compara cada passagem com a mais seca do período e mostra onde alagou, quanto choveu antes e em quais municípios.</p>
         </div>
         <div>
-          <p class="h3">Regiões monitoradas <span id="lastPass"></span></p>
+          <p class="h3"><span data-en="Monitored regions">Regiões monitoradas</span> <span id="lastPass"></span></p>
           <ul class="regions" id="regionList"></ul>
-          <p class="note" style="margin-top:8px">Ordenadas pela maior área de cheia medida. Cinza: aguardando a primeira análise do servidor, que confere as passagens novas do NISAR sozinho.</p>
+          <p class="note" style="margin-top:8px" data-en="Sorted by the largest flood area measured. Grey: waiting for the first analysis by the server, which checks new NISAR passes on its own.">Ordenadas pela maior área de cheia medida. Cinza: aguardando a primeira análise do servidor, que confere as passagens novas do NISAR sozinho.</p>
         </div>
-        <p class="note">Busque uma cidade do Sul para ir até ela; se ela estiver numa região monitorada, a região abre.</p>
-        <details class="fold" id="othersWrap" hidden><summary class="h3" style="display:block">Outras análises</summary><ul class="others" id="others" style="margin-top:8px"></ul></details>
+        <p class="note" data-en="Search a southern city to go there; if it lies in a monitored region, the region opens.">Busque uma cidade do Sul para ir até ela; se ela estiver numa região monitorada, a região abre.</p>
+        <details class="fold" id="othersWrap" hidden><summary class="h3" style="display:block" data-en="Other analyses">Outras análises</summary><ul class="others" id="others" style="margin-top:8px"></ul></details>
         <details class="fold">
-          <summary class="h3" style="display:block">Como ler o Arara</summary>
+          <summary class="h3" style="display:block" data-en="How to read Arara">Como ler o Arara</summary>
           <div class="lead" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;font-size:13px">
-            <p style="margin:0"><b style="color:var(--flood)">Água de cheia</b> é água que o radar viu numa passagem e que não estava lá na passagem mais seca do período. É medida, não estimada.</p>
-            <p style="margin:0"><b style="color:var(--veg)">Possível vegetação alagada</b>: na banda L a água embaixo de mata ou banhado faz a vegetação brilhar mais. Solo encharcado também brilha, por isso é sempre "possível".</p>
-            <p style="margin:0"><b style="color:var(--rain)">Chuva</b> vem do satélite GPM (NASA) e é contexto: ajuda a entender, não prova a causa.</p>
-            <p style="margin:0"><b>Confiança</b> de cada passagem: <span class="conf alta">alta</span> <span class="conf média">média</span> <span class="conf baixa">baixa</span>, com o motivo (vento, cena parcial, divergência do Sentinel-2).</p>
+            <p style="margin:0" data-en="<b style='color:var(--flood)'>Flood water</b> is water the radar saw on a pass that was not there on the driest pass of the period. It is measured, not estimated."><b style="color:var(--flood)">Água de cheia</b> é água que o radar viu numa passagem e que não estava lá na passagem mais seca do período. É medida, não estimada.</p>
+            <p style="margin:0" data-en="<b style='color:var(--veg)'>Possible flooded vegetation</b>: in L-band, water under forest or marsh makes the vegetation brighter. Wet soil also brightens, so it is always &quot;possible&quot;."><b style="color:var(--veg)">Possível vegetação alagada</b>: na banda L a água embaixo de mata ou banhado faz a vegetação brilhar mais. Solo encharcado também brilha, por isso é sempre "possível".</p>
+            <p style="margin:0" data-en="<b style='color:var(--rain)'>Rainfall</b> comes from the GPM satellite (NASA) and is context: it helps explain, it does not prove the cause."><b style="color:var(--rain)">Chuva</b> vem do satélite GPM (NASA) e é contexto: ajuda a entender, não prova a causa.</p>
+            <p style="margin:0" data-en="<b>Confidence</b> of each pass: <span class='conf alta'>high</span> <span class='conf média'>medium</span> <span class='conf baixa'>low</span>, with the reason (wind, partial scene, disagreement with Sentinel-2)."><b>Confiança</b> de cada passagem: <span class="conf alta">alta</span> <span class="conf média">média</span> <span class="conf baixa">baixa</span>, com o motivo (vento, cena parcial, divergência do Sentinel-2).</p>
           </div>
         </details>
-        <p class="foot">Caso validado: <a href="furnas/index.html">lago de Furnas (MG), 1% de erro contra a ANA</a><br>Estudo experimental: <a href="uruguai/index.html">Barra Grande e Machadinho (RS/SC)</a><br><a href="https://github.com/gabriel-moraes03/arara" target="_blank" rel="noopener">Código no GitHub</a> · dados NISAR L2 GCOV (NASA/ASF), GPM IMERG, IBGE, Sentinel-2<br>Feito com apoio de IA (Claude, da Anthropic), revisado e testado pela equipe; todos os resultados vêm de dados reais do NISAR.</p>
+        <p class="foot" data-en="Validated case: <a href='furnas/index.html' data-lang-link>Furnas reservoir (MG), 1% error against ANA</a><br>Experimental study: <a href='uruguai/index.html' data-lang-link>Barra Grande and Machadinho (RS/SC)</a><br><a href='https://github.com/gabriel-moraes03/arara' target='_blank' rel='noopener'>Code on GitHub</a> · data: NISAR L2 GCOV (NASA/ASF), GPM IMERG, IBGE, Sentinel-2<br>Built with AI assistance (Anthropic&#39;s Claude), reviewed and tested by the team; all results come from real NISAR data.">Caso validado: <a href="furnas/index.html" data-lang-link>lago de Furnas (MG), 1% de erro contra a ANA</a><br>Estudo experimental: <a href="uruguai/index.html" data-lang-link>Barra Grande e Machadinho (RS/SC)</a><br><a href="https://github.com/gabriel-moraes03/arara" target="_blank" rel="noopener">Código no GitHub</a> · dados NISAR L2 GCOV (NASA/ASF), GPM IMERG, IBGE, Sentinel-2<br>Feito com apoio de IA (Claude, da Anthropic), revisado e testado pela equipe; todos os resultados vêm de dados reais do NISAR.</p>
       </section>
     </div>
   </aside>
 
   <main id="stage">
     <canvas id="stars" aria-hidden="true"></canvas>
-    <div id="globe" aria-label="Globo: arraste para girar, role para aproximar, clique numa região"></div>
-    <div id="map2d" hidden aria-label="Mapa de satélite"></div>
-    <div id="loading">Carregando o globo…</div>
+    <div id="globe" aria-label="Globo: arraste para girar, role para aproximar, clique numa região" data-en-aria="Globe: drag to rotate, scroll to zoom, click a region"></div>
+    <div id="map2d" hidden aria-label="Mapa de satélite" data-en-aria="Satellite map"></div>
+    <div id="loading" data-en="Loading the globe…">Carregando o globo…</div>
     <div class="topbar">
-      <button class="btn" type="button" id="goSouth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Ver o Sul</button>
+      <button class="btn" type="button" id="goSouth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg><span data-en="Southern Brazil">Ver o Sul</span></button>
     </div>
     <div class="maplegend" id="legend" hidden></div>
-    <div id="swipe" hidden><div class="ln"></div><span class="lab l" id="swL"></span><span class="lab r" id="swR"></span><div class="hd" id="swHandle" role="slider" aria-label="Comparar com a passagem mais seca" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">⇔</div></div>
-    <section id="tl" hidden aria-label="Linha do tempo das passagens do radar"></section>
-    <div class="hint" id="hint">Arraste para girar · role para aproximar · clique numa região</div>
+    <div id="swipe" hidden><div class="ln"></div><span class="lab l" id="swL"></span><span class="lab r" id="swR"></span><div class="hd" id="swHandle" role="slider" aria-label="Comparar com a passagem mais seca" data-en-aria="Compare with the driest pass" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">⇔</div></div>
+    <section id="tl" hidden aria-label="Linha do tempo das passagens do radar" data-en-aria="Timeline of radar passes"></section>
+    <div class="hint" id="hint" data-en="Drag to rotate · scroll to zoom · click a region">Arraste para girar · role para aproximar · clique numa região</div>
     <div class="drawbar" id="drawbar" hidden></div>
-    <div id="attrib" hidden>Imagens: Esri, Maxar, Earthstar Geographics</div>
+    <div id="attrib" hidden data-en="Imagery: Esri, Maxar, Earthstar Geographics">Imagens: Esri, Maxar, Earthstar Geographics</div>
   </main>
 </div>
 
@@ -334,17 +337,22 @@ td { font-family: var(--font-mono); color: var(--ink-2); }
 const $ = (s) => document.querySelector(s);
 const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
 const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+/* idioma: arara-i18n.js (inglês por padrão; PT com ?lang=pt ou o seletor EN | PT) */
+const I18N = window.ARARA_I18N, EN = I18N.en, tr = I18N.tr, dados = I18N.dados;
+const LVL = { alta: tr('alta', 'high'), 'média': tr('média', 'medium'), baixa: tr('baixa', 'low') };
+const lvl = (l) => LVL[l] || l;
+const plural = (n, um, varios) => `${n} ${n === 1 ? um : varios}`;
 
 /* ================= utilidades ================= */
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
-const fmt = (v, d = 0) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const fmt = (v, d = 0) => Number(v).toLocaleString(I18N.locale, { minimumFractionDigits: d, maximumFractionDigits: d });
 const km2Fmt = (v) => fmt(v, v < 10 ? 2 : v < 100 ? 1 : 0);
-const ptRegion = (() => { try { return new Intl.DisplayNames(['pt-BR'], { type: 'region' }); } catch (e) { return null; } })();
+const ptRegion = (() => { try { return new Intl.DisplayNames([EN ? 'en' : 'pt-BR'], { type: 'region' }); } catch (e) { return null; } })();
 const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
 const DAY = 864e5;
 const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
-const isoBR = (s) => { const [y, m, d] = String(s).slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
-const dm = (s) => isoBR(s).slice(0, 5);
+const isoBR = (s) => I18N.data(s);
+const dm = (s) => I18N.dataCurta(s);
 const key8 = (d) => d.replaceAll('-', '');
 // abrir a página com ?reset=1 apaga o que o Arara guardou neste navegador
 try { if (/[?&]reset(=|&|$)/.test(location.search)) { ['arara-links-v1', 'arara-view'].forEach(k => localStorage.removeItem(k)); history.replaceState(null, '', location.pathname); } } catch (e) { /* sem armazenamento */ }
@@ -398,7 +406,8 @@ let NISAR_START = '2026-06-01';
 const API = 'api/arara';
 // modo vitrine: build estático (scripts/exportar_vitrine.py) ou ?static=1; análises vêm de data/, sem servidor
 const STATIC = !!window.ARARA_STATIC || new URLSearchParams(location.search).has('static');
-const LIVE_MSG = 'Esta vitrine não tem servidor: mostra só análises já concluídas e não consulta o catálogo da NASA. Para analisar uma área nova, rode o Arara com o backend (instruções no GitHub).';
+const LIVE_MSG = tr('Esta vitrine não tem servidor: mostra só análises já concluídas e não consulta o catálogo da NASA. Para analisar uma área nova, rode o Arara com o backend (instruções no GitHub).',
+  'This showcase has no server: it shows only finished analyses and does not query the NASA catalog. To analyse a new area, run Arara with its backend (instructions on GitHub).');
 // sem servidor nada é consultado ao vivo; o cabeçalho do painel diz o que a página realmente mostra
 const CATALOG_HEAD = STATIC ? 'Radar NISAR, banda L · vitrine com análises já concluídas' : 'Radar NISAR, banda L · catálogo consultado ao vivo (NASA / ASF DAAC)';
 const REPO = 'https://github.com/gabriel-moraes03/arara';
@@ -406,7 +415,7 @@ const files = (id) => STATIC
   ? { png: (l) => `data/analyses/${id}/png/${l}.png`, sources: `data/analyses/${id}/sources.json`, csv: `data/analyses/${id}/metrics.csv` }
   : { png: (l) => `${API}/analyses/${id}/png/${l}.png`, sources: `${API}/analyses/${id}/sources`, csv: `${API}/analyses/${id}/metrics?format=csv` };
 function staticApi(path) {
-  const json = (u) => fetch(u).then(r => { if (!r.ok) throw Object.assign(new Error('análise não incluída nesta vitrine'), { status: r.status }); return r.json(); });
+  const json = (u) => fetch(u).then(r => { if (!r.ok) throw Object.assign(new Error(tr('análise não incluída nesta vitrine', 'analysis not included in this showcase')), { status: r.status }); return r.json(); });
   if (path === '/config') return Promise.resolve({ aoi_max_km2: 2500, on_demand_available: false, on_demand_reason: LIVE_MSG, static: true });
   if (path.startsWith('/analyses?') || path === '/analyses') return json('data/analyses.json');
   const m = path.match(/^\/analyses\/([0-9a-f]{8,64})$/);
@@ -418,23 +427,23 @@ function api(path, opt) {
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60000);   // consulta nunca fica pendente para sempre
   return fetch(API + path, Object.assign({ signal: ctl.signal }, opt)).finally(() => clearTimeout(timer)).then(async (r) => {
     const j = await r.json().catch(() => ({}));
-    if (!r.ok) throw Object.assign(new Error(j.reason || `erro ${r.status} no servidor do Arara`), { status: r.status });
+    if (!r.ok) throw Object.assign(new Error(dados(j.reason) || tr(`erro ${r.status} no servidor do Arara`, `error ${r.status} from the Arara server`)), { status: r.status });
     return j;
-  }, (e) => { throw new Error(e && e.name === 'AbortError' ? 'o servidor do Arara demorou mais de 60 s para responder' : 'não foi possível falar com o servidor do Arara (abra a página pelo endereço do servidor do Arara)'); });
+  }, (e) => { throw new Error(e && e.name === 'AbortError' ? tr('o servidor do Arara demorou mais de 60 s para responder', 'the Arara server took more than 60 s to answer') : tr('não foi possível falar com o servidor do Arara (abra a página pelo endereço do servidor do Arara)', 'could not reach the Arara server (open the page from the Arara server address)')); });
 }
-let serverCfg = { aoi_max_km2: 2500, on_demand_available: false, on_demand_reason: 'servidor do Arara não respondeu' };
+let serverCfg = { aoi_max_km2: 2500, on_demand_available: false, on_demand_reason: tr('servidor do Arara não respondeu', 'the Arara server did not answer') };
 api('/config').then(c => { serverCfg = c; }).catch(() => {});
 const STAGES = [
-  ['discover', 'Consultando o catálogo do NISAR'], ['select', 'Escolhendo a órbita que cobre a área'],
-  ['acquire', 'Lendo na NASA só o pedaço da área em cada passagem'], ['process', 'Preparando as imagens de radar'],
-  ['classify', 'Separando água de terra'], ['compare', 'Comparando as datas'], ['optical_s2', 'Conferindo com o Sentinel-2'],
-  ['flood', 'Procurando água de cheia'], ['rain', 'Somando a chuva do GPM'], ['exposure', 'Cruzando com os municípios'],
-  ['publish', 'Gravando mapas e números'],
+  ['discover', tr('Consultando o catálogo do NISAR', 'Querying the NISAR catalog')], ['select', tr('Escolhendo a órbita que cobre a área', 'Choosing the orbit that covers the area')],
+  ['acquire', tr('Lendo na NASA só o pedaço da área em cada passagem', 'Reading only the area window of each pass from NASA')], ['process', tr('Preparando as imagens de radar', 'Preparing the radar images')],
+  ['classify', tr('Separando água de terra', 'Separating water from land')], ['compare', tr('Comparando as datas', 'Comparing the dates')], ['optical_s2', tr('Conferindo com o Sentinel-2', 'Checking against Sentinel-2')],
+  ['flood', tr('Procurando água de cheia', 'Looking for flood water')], ['rain', tr('Somando a chuva do GPM', 'Adding up GPM rainfall')], ['exposure', tr('Cruzando com os municípios', 'Crossing with municipalities')],
+  ['publish', tr('Gravando mapas e números', 'Saving maps and numbers')],
 ];
 const STAGE_ORDER = Object.fromEntries(STAGES.map(([k], i) => [k, i]));
 Object.assign(STAGE_ORDER, { queued: -1, validate_cross: STAGE_ORDER.optical_s2, forecast: STAGE_ORDER.compare, insights: STAGE_ORDER.compare });
-const DIR = { A: 'ascendente', D: 'descendente' };
-const MAT = { PROVISIONAL: 'produto provisório', VALIDATED: 'produto validado', BETA: 'produto beta', LOCAL: 'cenas locais' };
+const DIR = { A: tr('ascendente', 'ascending'), D: tr('descendente', 'descending') };
+const MAT = { PROVISIONAL: tr('produto provisório', 'provisional product'), VALIDATED: tr('produto validado', 'validated product'), BETA: tr('produto beta', 'beta product'), LOCAL: tr('cenas locais', 'local scenes') };
 const NO_WATER = 'no_reliable_water';
 const links = store.get('arara-links-v1', {});          // chave do lugar -> { analysis } ou { job }
 const saveLinks = () => store.set('arara-links-v1', links);
@@ -609,7 +618,7 @@ function refreshPins() {
     const a = regionAnalysis(p), pk = peakOf(a), c = centerOfBox(p.b);
     if (!p.__pin) p.__pin = makePin(p);
     p.__pin.style.setProperty('--c', statusColor(a));
-    p.__pin.querySelector('.t').innerHTML = `${esc(p.n)}${pk != null ? `<b>${km2Fmt(pk)} km²</b>` : a ? '' : `<b style="color:var(--ink-3)">${busyNames.has(p.n) ? 'em análise' : 'aguardando'}</b>`}`;
+    p.__pin.querySelector('.t').innerHTML = `${esc(p.n)}${pk != null ? `<b>${km2Fmt(pk)} km²</b>` : a ? '' : `<b style="color:var(--ink-3)">${busyNames.has(p.n) ? tr('em análise', 'analysing') : tr('aguardando', 'waiting')}</b>`}`;
     PINS.push({ lat: c.lat, lng: c.lng, el: p.__pin, p });
   });
   globe.htmlElementsData(PINS.slice());
@@ -689,7 +698,7 @@ function map2dRefresh() {
   REGIONS.forEach(p => {
     const a = regionAnalysis(p), col = statusColor(a), pk = peakOf(a);
     L.rectangle([[p.b[1], p.b[0]], [p.b[3], p.b[2]]], { color: col, weight: 2, fillColor: col, fillOpacity: ctx && ctx.key === p.key ? 0 : 0.12, dashArray: a ? null : '6 5' })
-      .bindTooltip(`<b>${esc(p.n)}</b><br>${pk != null ? `pico de ${km2Fmt(pk)} km² de cheia` : a ? 'análise anterior ao modo cheia' : 'ainda sem análise'}`, { sticky: true })
+      .bindTooltip(`<b>${esc(p.n)}</b><br>${pk != null ? tr(`pico de ${km2Fmt(pk)} km² de cheia`, `flood peak of ${km2Fmt(pk)} km²`) : a ? tr('análise anterior ao modo cheia', 'analysis from before flood mode') : tr('ainda sem análise', 'no analysis yet')}`, { sticky: true })
       .on('click', () => openPlace(p)).addTo(L2.regions);
   });
 }
@@ -809,13 +818,13 @@ function sparkSvg(series, W = 92, H = 34) {
   }).join('')}</svg>`;
 }
 function regionLine(p, a) {
-  if (!a) return busyNames.has(p.n) ? 'em análise agora no servidor' : 'aguardando a primeira análise';
+  if (!a) return busyNames.has(p.n) ? tr('em análise agora no servidor', 'being analysed on the server now') : tr('aguardando a primeira análise', 'waiting for the first analysis');
   const s = a.summary || {};
-  if (s.quality === NO_WATER) return 'o radar não separou água de terra aqui';
+  if (s.quality === NO_WATER) return tr('o radar não separou água de terra aqui', 'the radar did not separate water from land here');
   const pk = peakOf(a);
-  if (pk == null) return `análise anterior ao modo cheia · ${s.n_dates || '?'} passagens`;
-  if (pk < RELEVANT_KM2) return `sem cheia relevante em ${s.n_dates} passagens`;
-  return `pico de <b>${km2Fmt(pk)} km²</b> em ${dm(s.flood_peak_date)}`;
+  if (pk == null) return tr(`análise anterior ao modo cheia · ${s.n_dates || '?'} passagens`, `analysis from before flood mode · ${s.n_dates || '?'} passes`);
+  if (pk < RELEVANT_KM2) return tr(`sem cheia relevante em ${s.n_dates} passagens`, `no relevant flooding in ${s.n_dates} passes`);
+  return tr(`pico de <b>${km2Fmt(pk)} km²</b> em ${dm(s.flood_peak_date)}`, `peak of <b>${km2Fmt(pk)} km²</b> on ${dm(s.flood_peak_date)}`);
 }
 function fillHome() {
   const rows = REGIONS.map(p => ({ p, a: regionAnalysis(p) }));
@@ -831,11 +840,11 @@ function fillHome() {
   }).join('');
   $('#regionList').querySelectorAll('button').forEach(b => b.addEventListener('click', () => openPlace(REGIONS[+b.dataset.i])));
   const lastDates = analysesList.map(a => (a.summary || {}).last_date).filter(Boolean).sort();
-  $('#lastPass').textContent = lastDates.length ? `última passagem ${dm(lastDates[lastDates.length - 1])}` : '';
+  $('#lastPass').textContent = lastDates.length ? tr(`última passagem ${dm(lastDates[lastDates.length - 1])}`, `last pass ${dm(lastDates[lastDates.length - 1])}`) : '';
   const regionNames = new Set(REGIONS.map(r => r.n));
   const others = analysesList.filter(a => a.status === 'completed' && !regionNames.has(a.name));
   $('#othersWrap').hidden = !others.length;
-  $('#others').innerHTML = others.map((a, i) => `<li><button type="button" data-i="${i}">${esc(a.name || 'Área analisada')}<small>${a.summary ? `${a.summary.n_dates} passagens` : ''}</small></button></li>`).join('');
+  $('#others').innerHTML = others.map((a, i) => `<li><button type="button" data-i="${i}">${esc(a.name || tr('Área analisada', 'Analysed area'))}<small>${a.summary ? tr(`${a.summary.n_dates} passagens`, `${a.summary.n_dates} passes`) : ''}</small></button></li>`).join('');
   $('#others').querySelectorAll('button').forEach(b => b.addEventListener('click', () => openAnalysisPlace(others[+b.dataset.i])));
 }
 let busyNames = new Set();
@@ -856,7 +865,7 @@ setInterval(() => { if (!document.hidden && !A) loadAnalyses(); }, 30000);
 /* ================= lugares: região, município, área do usuário, análise avulsa ================= */
 function openAnalysisPlace(a) {
   const b = a.bbox;
-  openPlace({ kind: 'analysis', key: 'an-' + a.analysis_id, n: a.name || 'Área analisada', uf: '', who: '', geometry: boxGeom(b), __bb: b, km2: a.area_km2, analysisId: a.analysis_id });
+  openPlace({ kind: 'analysis', key: 'an-' + a.analysis_id, n: a.name || tr('Área analisada', 'Analysed area'), uf: '', who: '', geometry: boxGeom(b), __bb: b, km2: a.area_km2, analysisId: a.analysis_id });
 }
 let returnTo = null;
 function openPlace(p) {
@@ -878,9 +887,9 @@ function closePanel() {
   if (returnTo === 'globe' && view === 'map') setView('globe'); returnTo = null;
 }
 function head(sub) {
-  const where = ctx.kind === 'region' ? `Sul do Brasil › ${ctx.uf}` : 'Análise';
+  const where = ctx.kind === 'region' ? tr(`Sul do Brasil › ${ctx.uf}`, `Southern Brazil › ${ctx.uf}`) : tr('Análise', 'Analysis');
   return `<div class="ph"><div>
-      <button class="back" type="button" id="backBtn">← Regiões</button>
+      <button class="back" type="button" id="backBtn">${tr('← Regiões', '← Regions')}</button>
       <p class="crumb" style="margin-top:8px">${esc(where)}</p>
       <h2>${esc(ctx.n)}</h2>
       ${sub ? `<p class="sub">${sub}</p>` : ''}
@@ -900,57 +909,58 @@ function renderPanel() {
 function renderStart(token) {
   const busy = busyNames.has(ctx.n);
   setPanel(`${head(ctx.who ? esc(ctx.who) : '')}
-    <div class="card"><header><b>${busy ? 'Em análise agora no servidor' : 'Ainda sem análise aqui'}</b><span class="chip">${fmt(ctx.km2, 0)} km²</span></header>
-      <p class="lead" id="catTxt">${STATIC ? esc(LIVE_MSG) : 'Consultando o catálogo do NISAR…'}</p>
-      <p class="note">${busy ? 'O resultado aparece aqui sozinho quando terminar (leva alguns minutos).'
-        : 'O servidor confere o catálogo do NISAR a cada poucas horas e analisa as regiões monitoradas quando há passagem nova.'}</p>
+    <div class="card"><header><b>${busy ? tr('Em análise agora no servidor', 'Being analysed on the server now') : tr('Ainda sem análise aqui', 'No analysis here yet')}</b><span class="chip">${fmt(ctx.km2, 0)} km²</span></header>
+      <p class="lead" id="catTxt">${STATIC ? esc(LIVE_MSG) : tr('Consultando o catálogo do NISAR…', 'Querying the NISAR catalog…')}</p>
+      <p class="note">${busy ? tr('O resultado aparece aqui sozinho quando terminar (leva alguns minutos).', 'The result shows up here on its own when it finishes (a few minutes).')
+        : tr('O servidor confere o catálogo do NISAR a cada poucas horas e analisa as regiões monitoradas quando há passagem nova.', 'The server checks the NISAR catalog every few hours and analyses the monitored regions when there is a new pass.')}</p>
     </div>
-    <p class="note">O Arara lê na NASA só o pedaço desta região em cada passagem do radar desde ${isoBR(NISAR_START)}, separa água de terra, compara cada passagem com a mais seca e soma a chuva do GPM.</p>`);
+    <p class="note">${tr(`O Arara lê na NASA só o pedaço desta região em cada passagem do radar desde ${isoBR(NISAR_START)}, separa água de terra, compara cada passagem com a mais seca e soma a chuva do GPM.`, `Arara reads from NASA only this region's window on every radar pass since ${isoBR(NISAR_START)}, separates water from land, compares each pass with the driest one and adds up GPM rainfall.`)}</p>`);
   if (STATIC) return;
   api(`/scenes?aoi=${encodeURIComponent(JSON.stringify(ctx.geometry))}&start=${NISAR_START}&end=${isoDay(Date.now())}`).then(r => {
     if (token !== live.token) return;
     const g = (r.groups || [])[0];
-    $('#catTxt').innerHTML = !g ? `Nenhuma passagem do NISAR sobre esta região desde ${isoBR(NISAR_START)}.`
-      : !g.eligible ? `Nenhuma órbita do NISAR cobre a região inteira (a melhor cobre ${fmt(g.aoi_coverage * 100, 0)}%).`
-      : `O radar passou <b>${g.n_dates} vezes</b> sobre esta região entre ${isoBR(g.first_date)} e ${isoBR(g.last_date)} (órbita ${g.track} ${DIR[g.direction] || g.direction}, ${esc(MAT[g.maturity] || g.maturity)}).`;
-  }).catch(e => { if (token === live.token) $('#catTxt').textContent = 'Catálogo indisponível: ' + e.message; });
+    $('#catTxt').innerHTML = !g ? tr(`Nenhuma passagem do NISAR sobre esta região desde ${isoBR(NISAR_START)}.`, `No NISAR pass over this region since ${isoBR(NISAR_START)}.`)
+      : !g.eligible ? tr(`Nenhuma órbita do NISAR cobre a região inteira (a melhor cobre ${fmt(g.aoi_coverage * 100, 0)}%).`, `No NISAR orbit covers the whole region (the best covers ${fmt(g.aoi_coverage * 100, 0)}%).`)
+      : tr(`O radar passou <b>${g.n_dates} vezes</b> sobre esta região entre ${isoBR(g.first_date)} e ${isoBR(g.last_date)} (órbita ${g.track} ${DIR[g.direction] || g.direction}, ${esc(MAT[g.maturity] || g.maturity)}).`,
+        `The radar passed <b>${g.n_dates} times</b> over this region between ${isoBR(g.first_date)} and ${isoBR(g.last_date)} (orbit ${g.track} ${DIR[g.direction] || g.direction}, ${esc(MAT[g.maturity] || g.maturity)}).`);
+  }).catch(e => { if (token === live.token) $('#catTxt').textContent = tr('Catálogo indisponível: ', 'Catalog unavailable: ') + e.message; });
   if (busy) live.poll = setInterval(() => { if (token === live.token) loadAnalyses(); }, 15000);
 }
 function renderJob(jobId, token) {
   const draw = (j) => {
     const k = STAGE_ORDER[j.stage] ?? -1;
-    setPanel(`${head('Analisando agora')}
-      <div class="card"><header><b>${esc((STAGES.find(s => s[0] === j.stage) || [, 'Na fila'])[1])}</b><span class="chip">${fmt((j.progress || 0) * 100, 0)}%</span></header>
+    setPanel(`${head(tr('Analisando agora', 'Analysing now'))}
+      <div class="card"><header><b>${esc((STAGES.find(s => s[0] === j.stage) || [, tr('Na fila', 'Queued')])[1])}</b><span class="chip">${fmt((j.progress || 0) * 100, 0)}%</span></header>
         <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round((j.progress || 0) * 100)}"><i style="width:${Math.round((j.progress || 0) * 100)}%"></i></div>
-        <p class="note">${esc(j.message || '')}</p>
+        <p class="note">${esc(EN ? '' : (j.message || ''))}</p>
         <ul class="steps">${STAGES.map(([s, t], i) => `<li class="${i < k ? 'done' : i === k ? 'now' : ''}">${esc(t)}</li>`).join('')}</ul>
       </div>
-      <p class="note">Os dados brutos não ficam guardados: o Arara lê só a janela da área e apaga depois. Dá para fechar e voltar; o progresso continua no servidor.</p>`);
+      <p class="note">${tr('Os dados brutos não ficam guardados: o Arara lê só a janela da área e apaga depois. Dá para fechar e voltar; o progresso continua no servidor.', 'Raw data is not kept: Arara reads only the area window and deletes it afterwards. You can close and come back; progress continues on the server.')}</p>`);
   };
   draw({ stage: 'queued', progress: 0 });
   const tick = () => api(`/jobs/${jobId}`).then(j => {
     if (token !== live.token) return clearInterval(live.poll);
     if (j.status === 'completed') { clearInterval(live.poll); links[ctx.key] = { analysis: j.analysis_id }; saveLinks(); loadAnalyses(); renderPanel(); }
-    else if (j.status === 'unavailable' || j.status === 'failed') { clearInterval(live.poll); delete links[ctx.key]; saveLinks(); showUnavailable((j.status === 'failed' ? 'a análise falhou: ' : '') + (j.reason || 'motivo não informado')); }
+    else if (j.status === 'unavailable' || j.status === 'failed') { clearInterval(live.poll); delete links[ctx.key]; saveLinks(); showUnavailable((j.status === 'failed' ? tr('a análise falhou: ', 'the analysis failed: ') : '') + (dados(j.reason) || tr('motivo não informado', 'no reason given'))); }
     else draw(j);
   }).catch(e => { clearInterval(live.poll); delete links[ctx.key]; saveLinks(); if (token === live.token) showUnavailable(e.message); });
   tick(); live.poll = setInterval(tick, 2000);
 }
 function showUnavailable(reason) {
   setPanel(`${head('')}
-    <div class="card"><header><b>Indisponível</b><span class="chip bad">sem dado</span></header><p class="lead">${esc(reason || 'motivo não informado')}</p>
-    <button class="btn" type="button" id="retryBtn">Tentar de novo</button></div>
-    <p class="note">Quando o dado real não pode ser obtido, o Arara diz o motivo em vez de mostrar um valor substituto.</p>`);
+    <div class="card"><header><b>${tr('Indisponível', 'Unavailable')}</b><span class="chip bad">${tr('sem dado', 'no data')}</span></header><p class="lead">${esc(reason || tr('motivo não informado', 'no reason given'))}</p>
+    <button class="btn" type="button" id="retryBtn">${tr('Tentar de novo', 'Try again')}</button></div>
+    <p class="note">${tr('Quando o dado real não pode ser obtido, o Arara diz o motivo em vez de mostrar um valor substituto.', 'When real data cannot be obtained, Arara gives the reason instead of showing a substitute value.')}</p>`);
   $('#retryBtn').addEventListener('click', () => { delete links[ctx.key]; saveLinks(); ctx.analysisId = null; renderPanel(); });
 }
 function loadAnalysis(id, token) {
   const use = (a) => {
     if (token !== live.token) return;
-    if (a.status !== 'completed') return showUnavailable(a.reason || `análise ${a.status}`);
+    if (a.status !== 'completed') return showUnavailable(dados(a.reason) || tr(`análise ${a.status}`, `analysis ${a.status}`));
     analysesById.set(id, a); showAnalysis(a);
   };
   if (analysesById.has(id)) return use(analysesById.get(id));
-  setPanel(`${head('')}<p class="note">Carregando a análise…</p>`);
+  setPanel(`${head('')}<p class="note">${tr('Carregando a análise…', 'Loading the analysis…')}</p>`);
   api(`/analyses/${id}`).then(use).catch(e => {
     if (token !== live.token) return;
     if (e.status === 404) { delete links[ctx.key]; saveLinks(); ctx.analysisId = null; return renderStart(token); }   // derivados expirados
@@ -993,19 +1003,19 @@ function renderTimeline() {
       : fl ? (f + v < 0.01 ? '<i class="zero"></i>' : `${hV > 0 ? `<i class="veg" style="height:${hV}%"></i>` : ''}<i class="fl" style="height:${hF}%"></i>`)
       : `<i class="wa" style="height:${Math.max(hF, 2)}%"></i>`;
     const tip = a.quality === NO_WATER ? `${isoBR(d.date)}` : fl
-      ? `${isoBR(d.date)}: ${km2Fmt(f)} km² de cheia${v ? ` + ${km2Fmt(v)} km² possível vegetação alagada` : ''}${r != null ? ` · chuva 7 dias ${fmt(r, 0)} mm` : ''}${c.level ? ` · confiança ${c.level}` : ''}`
-      : `${isoBR(d.date)}: ${km2Fmt(d.water_km2)} km² de água`;
+      ? `${isoBR(d.date)}: ${km2Fmt(f)} ${tr('km² de cheia', 'km² of flood')}${v ? ` + ${km2Fmt(v)} ${tr('km² possível vegetação alagada', 'km² possible flooded vegetation')}` : ''}${r != null ? ` · ${tr('chuva 7 dias', '7-day rain')} ${fmt(r, 0)} mm` : ''}${c.level ? ` · ${tr('confiança', 'confidence')} ${lvl(c.level)}` : ''}`
+      : `${isoBR(d.date)}: ${km2Fmt(d.water_km2)} ${tr('km² de água', 'km² of water')}`;
     return `<button class="tlcol${i === ref ? ' ref' : ''}" type="button" role="option" aria-selected="${i === sel}" data-i="${i}" title="${esc(tip)}">
-      ${d.suspeita_vento ? '<span class="w" aria-label="suspeita de vento"></span>' : ''}
+      ${d.suspeita_vento ? `<span class="w" aria-label="${tr('suspeita de vento', 'suspected wind')}"></span>` : ''}
       <span class="up">${bars}</span>
       <span class="dn">${r != null ? `<i style="height:${clamp(r / rhi * 100, 4, 100)}%"></i>` : ''}</span>
       <span class="lb">${c.level ? `<span class="dot" style="background:var(--c-${c.level === 'média' ? 'media' : c.level})"></span>` : ''}${dm(d.date)}</span></button>`;
   }).join('');
   const rainOk = a.rain && a.rain.status === 'ok';
   tl.innerHTML = `<div class="tlhead" id="tlHead"></div>
-    <div class="tlbars" role="listbox" aria-label="Passagens do radar">${cols}</div>
-    <div class="tlkey">${fl ? '<span><i style="background:var(--flood)"></i>água de cheia</span><span><i style="background:var(--veg)"></i>possível vegetação alagada</span>' : a.quality === NO_WATER ? '<span>sem água confiável: só o radar para inspeção</span>' : '<span><i style="background:var(--water)"></i>área de água (análise anterior ao modo cheia)</span>'}
-      ${rainOk ? '<span><i style="background:var(--rain)"></i>chuva nos 7 dias antes (GPM)</span>' : ''}<span><i class="w"></i>suspeita de vento</span><span><span class="dot" style="background:var(--c-alta)"></span><span class="dot" style="background:var(--c-media)"></span><span class="dot" style="background:var(--c-baixa)"></span>confiança</span></div>`;
+    <div class="tlbars" role="listbox" aria-label="${tr('Passagens do radar', 'Radar passes')}">${cols}</div>
+    <div class="tlkey">${fl ? `<span><i style="background:var(--flood)"></i>${tr('água de cheia', 'flood water')}</span><span><i style="background:var(--veg)"></i>${tr('possível vegetação alagada', 'possible flooded vegetation')}</span>` : a.quality === NO_WATER ? `<span>${tr('sem água confiável: só o radar para inspeção', 'no reliable water: radar only, for inspection')}</span>` : `<span><i style="background:var(--water)"></i>${tr('área de água (análise anterior ao modo cheia)', 'water area (analysis from before flood mode)')}</span>`}
+      ${rainOk ? `<span><i style="background:var(--rain)"></i>${tr('chuva nos 7 dias antes (GPM)', 'rain in the 7 days before (GPM)')}</span>` : ''}<span><i class="w"></i>${tr('suspeita de vento', 'suspected wind')}</span><span><span class="dot" style="background:var(--c-alta)"></span><span class="dot" style="background:var(--c-media)"></span><span class="dot" style="background:var(--c-baixa)"></span>${tr('confiança', 'confidence')}</span></div>`;
   tl.querySelectorAll('.tlcol').forEach(b => b.addEventListener('click', () => { stopPlay(); select(+b.dataset.i); }));
   renderTimelineHead();
 }
@@ -1013,17 +1023,17 @@ function renderTimelineHead() {
   const h = $('#tlHead'); if (!h || !A) return;
   const d = A.dates[sel], c = confOf(d), ref = refIndex(A);
   const can = { flood: !!layerFor(A, sel, 'flood'), water: !!layerFor(A, sel, 'water'), radar: !!layerFor(A, sel, 'radar'), s2: !!layerFor(A, sel, 's2') };
-  const lbl = { flood: 'Cheia', water: 'Água', radar: 'Radar', s2: 'Sentinel-2' };
-  h.innerHTML = `<button class="play" type="button" id="playBtn" aria-label="${playing ? 'Pausar' : 'Passar as datas'}">${playing
+  const lbl = { flood: tr('Cheia', 'Flood'), water: tr('Água', 'Water'), radar: 'Radar', s2: 'Sentinel-2' };
+  h.innerHTML = `<button class="play" type="button" id="playBtn" aria-label="${playing ? tr('Pausar', 'Pause') : tr('Passar as datas', 'Play the dates')}">${playing
       ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>'
       : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>'}</button>
-    <div class="when"><b>${isoBR(d.date)}${c.level ? ` <span class="conf ${c.level}">confiança ${c.level}</span>` : ''}</b><span>passagem ${sel + 1} de ${A.dates.length}${sel === ref ? ' · a mais seca do período (referência)' : ''} · ← → para navegar</span></div>
-    <div class="seg" role="group" aria-label="Camada no mapa">${Object.keys(lbl).filter(k => k !== 'flood' || hasFlood(A)).map(k => `<button type="button" data-m="${k}" aria-pressed="${mode === k}" ${can[k] ? '' : 'disabled title="sem esta camada nesta passagem"'}>${lbl[k]}</button>`).join('')}</div>
-    ${ref != null ? `<button class="btn cmp" type="button" id="cmpBtn" aria-pressed="${compare}">${compare ? 'Fechar comparação' : 'Comparar com a mais seca'}</button>` : ''}`;
+    <div class="when"><b>${isoBR(d.date)}${c.level ? ` <span class="conf ${c.level}">${tr('confiança', 'confidence')} ${lvl(c.level)}</span>` : ''}</b><span>${tr(`passagem ${sel + 1} de ${A.dates.length}`, `pass ${sel + 1} of ${A.dates.length}`)}${sel === ref ? tr(' · a mais seca do período (referência)', ' · driest of the period (reference)') : ''} · ${tr('← → para navegar', '← → to navigate')}</span></div>
+    <div class="seg" role="group" aria-label="${tr('Camada no mapa', 'Map layer')}">${Object.keys(lbl).filter(k => k !== 'flood' || hasFlood(A)).map(k => `<button type="button" data-m="${k}" aria-pressed="${mode === k}" ${can[k] ? '' : `disabled title="${tr('sem esta camada nesta passagem', 'no such layer on this pass')}"`}>${lbl[k]}</button>`).join('')}</div>
+    ${ref != null ? `<button class="btn cmp" type="button" id="cmpBtn" aria-pressed="${compare}">${compare ? tr('Fechar comparação', 'Close comparison') : tr('Comparar com a mais seca', 'Compare with the driest')}</button>` : ''}`;
   $('#playBtn').addEventListener('click', () => (playing ? stopPlay() : startPlay()));
   h.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { mode = b.dataset.m; renderOverlay(); renderLegend(); renderTimelineHead(); }));
   if ($('#cmpBtn')) $('#cmpBtn').addEventListener('click', () => (compare ? stopCompare() : startCompare()));
-  if (compare) { $('#swL').textContent = `${dm(A.dates[ref].date)} · mais seca`; $('#swR').textContent = `${dm(d.date)} · selecionada`; }
+  if (compare) { $('#swL').textContent = `${dm(A.dates[ref].date)} · ${tr('mais seca', 'driest')}`; $('#swR').textContent = `${dm(d.date)} · ${tr('selecionada', 'selected')}`; }
 }
 function startPlay() {
   if (!A || A.dates.length < 2) return;
@@ -1038,51 +1048,82 @@ function renderLegend() {
   const d = A.dates[sel], ref = refIndex(A);
   const it = (c, t) => `<span><i style="background:${c}"></i>${t}</span>`;
   let html = '';
-  if (mode === 'flood') html = `<b>Cheia em ${isoBR(d.date)}</b>${it('var(--ref)', `água na passagem mais seca (${dm(A.dates[ref].date)})`)}${it('var(--flood)', 'água de cheia: além da mais seca')}${it('var(--veg)', 'possível vegetação alagada')}`;
-  else if (mode === 'water') html = `<b>Água em ${isoBR(d.date)}</b>${it('var(--water)', 'água medida pelo radar')}`;
-  else if (mode === 'radar') html = `<b>Radar HH em ${isoBR(d.date)}</b><span>escuro = água calma; claro = vegetação, cidade ou água agitada</span>`;
-  else if (mode === 's2') { const p = s2For(A, sel); html = `<b>Sentinel-2 em ${isoBR(p.optical_date)}</b>${it('var(--s2)', 'água vista pelo satélite óptico (MNDWI)')}<span>referência independente; não vê através de nuvem</span>`; }
-  if (compare) html += `<span style="color:var(--macaw-yellow)">Esquerda: ${dm(A.dates[ref].date)} (mais seca) · direita: ${dm(d.date)}</span>`;
+  if (mode === 'flood') html = `<b>${tr('Cheia em', 'Flood on')} ${isoBR(d.date)}</b>${it('var(--ref)', tr(`água na passagem mais seca (${dm(A.dates[ref].date)})`, `water on the driest pass (${dm(A.dates[ref].date)})`))}${it('var(--flood)', tr('água de cheia: além da mais seca', 'flood water: beyond the driest'))}${it('var(--veg)', tr('possível vegetação alagada', 'possible flooded vegetation'))}`;
+  else if (mode === 'water') html = `<b>${tr('Água em', 'Water on')} ${isoBR(d.date)}</b>${it('var(--water)', tr('água medida pelo radar', 'water measured by the radar'))}`;
+  else if (mode === 'radar') html = `<b>${tr('Radar HH em', 'HH radar on')} ${isoBR(d.date)}</b><span>${tr('escuro = água calma; claro = vegetação, cidade ou água agitada', 'dark = calm water; bright = vegetation, city or rough water')}</span>`;
+  else if (mode === 's2') { const p = s2For(A, sel); html = `<b>${tr('Sentinel-2 em', 'Sentinel-2 on')} ${isoBR(p.optical_date)}</b>${it('var(--s2)', tr('água vista pelo satélite óptico (MNDWI)', 'water seen by the optical satellite (MNDWI)'))}<span>${tr('referência independente; não vê através de nuvem', 'independent reference; cannot see through clouds')}</span>`; }
+  if (compare) html += `<span style="color:var(--macaw-yellow)">${tr(`Esquerda: ${dm(A.dates[ref].date)} (mais seca) · direita: ${dm(d.date)}`, `Left: ${dm(A.dates[ref].date)} (driest) · right: ${dm(d.date)}`)}</span>`;
   lg.innerHTML = html; lg.hidden = false;
+}
+
+/* "What the radar saw" em inglês, montado dos campos medidos com as regras de leitura.resumo (sem traduzir
+   o texto pronto). Sem os campos do modo cheia, devolve null e fica o texto original. */
+function resumoEN(a) {
+  const f = a.flood; if (!f || f.status !== 'ok' || !(f.per_date || []).length) return null;
+  const n1 = (v, d = 1) => fmt(v, d), out = [];
+  const pk = f.per_date.find(p => p.date === f.peak_date); if (!pk) return null;
+  const total = pk.flood_km2 + pk.flooded_vegetation_km2, ref = isoBR(f.reference_date);
+  if (total < Math.max(1, 0.005 * (a.area_km2 || 0))) {
+    out.push(`The radar saw no relevant flooding in the period: the largest difference from the driest pass (${ref}) was ${n1(total, 2)} km².`);
+  } else {
+    const veg = pk.flooded_vegetation_km2 >= 0.1 ? `, plus ${n1(pk.flooded_vegetation_km2)} km² of possible flooded vegetation` : '';
+    out.push(`On ${isoBR(pk.date)} the radar saw ${n1(pk.flood_km2)} km² of water beyond the driest pass (${ref})${veg}.`);
+    const ms = ((a.municipalities || {}).municipalities || []).filter(m => m.flood_km2 + m.flooded_vegetation_km2 >= 0.1);
+    if (ms.length) {
+      const nm = ms.slice(0, 3).map(m => `${m.name} (${m.uf})`);
+      out.push((ms.length > 1 ? 'Most of it is in ' : 'All of it is in ') + (nm.length > 1 ? nm.slice(0, -1).join(', ') + ' and ' + nm[nm.length - 1] : nm[0]) + '.');
+    }
+    const r = a.rain;
+    if (r && r.status === 'ok') {
+      const c = (r.per_date || []).find(p => p.date === pk.date);
+      if (c && c.rain_7d_mm != null) out.push(`In the 7 days before that pass it rained ${n1(c.rain_7d_mm, 0)} mm on average over the area (GPM IMERG).`);
+    }
+  }
+  const vento = a.dates.filter(d => d.suspeita_vento).map(d => dm(d.date));
+  if (vento.length) out.push(`${vento.length === 1 ? 'One windy date' : vento.length + ' windy dates'} (${vento.join(', ')}) may underestimate the water.`);
+  return out.join(' ');
 }
 
 /* barra lateral da análise */
 function qualityChips(a) {
   const v = a.optical_validation || {}, dv = v.divergence;
   const out = [`<span class="chip">${esc(MAT[(a.group || {}).maturity] || 'NISAR')}</span>`];
-  if (a.quality === NO_WATER) out.unshift('<span class="chip bad">sem água confiável</span>');
-  else if (a.quality === 'experimental') out.unshift(`<span class="chip warn" title="${esc((a.quality_reasons || []).join('; '))}">experimental</span>`);
-  else out.unshift('<span class="chip ok">análise confiável</span>');
-  if (dv && dv.level && dv.level !== 'none') out.push(`<span class="chip warn">diverge do Sentinel-2 em ${dv.n_strong + dv.n_moderate} de ${dv.n_dates} datas</span>`);
-  else if (v.status === 'validated') out.push(`<span class="chip ok">conferido com Sentinel-2</span>`);
+  if (a.quality === NO_WATER) out.unshift(`<span class="chip bad">${tr('sem água confiável', 'no reliable water')}</span>`);
+  else if (a.quality === 'experimental') out.unshift(`<span class="chip warn" title="${esc((a.quality_reasons || []).map(dados).join('; '))}">experimental</span>`);
+  else out.unshift(`<span class="chip ok">${tr('análise confiável', 'reliable analysis')}</span>`);
+  if (dv && dv.level && dv.level !== 'none') out.push(`<span class="chip warn">${tr(`diverge do Sentinel-2 em ${dv.n_strong + dv.n_moderate} de ${dv.n_dates} datas`, `disagrees with Sentinel-2 on ${dv.n_strong + dv.n_moderate} of ${dv.n_dates} dates`)}</span>`);
+  else if (v.status === 'validated') out.push(`<span class="chip ok">${tr('conferido com Sentinel-2', 'checked against Sentinel-2')}</span>`);
   return out.join('');
 }
 function renderSide() {
   const a = A, S = a.dates, g = a.group || {};
-  const sub = `${S.length} ${S.length === 1 ? 'passagem' : 'passagens'} do radar NISAR · ${dm(S[0].date)} a ${isoBR(S[S.length - 1].date)}`;
+  const sub = tr(`${S.length} ${S.length === 1 ? 'passagem' : 'passagens'} do radar NISAR · ${dm(S[0].date)} a ${isoBR(S[S.length - 1].date)}`, `${plural(S.length, 'NISAR radar pass', 'NISAR radar passes')} · ${dm(S[0].date)} to ${isoBR(S[S.length - 1].date)}`);
   if (a.quality === NO_WATER) {
     setPanel(`${head(sub)}<div class="chips">${qualityChips(a)}</div>
-      <div class="card"><header><b>O radar não separou água de terra aqui</b></header>
-        <p class="lead">Sem contraste nítido entre água e terra nesta área, o Arara não publica área de água nem de cheia.</p>
-        <ul class="reasons">${(a.quality_reasons || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul>
-        <p class="note">${esc(a.what_to_try || 'desenhe uma área com um rio ou lago largo e terra dos dois lados')}.</p></div>
+      <div class="card"><header><b>${tr('O radar não separou água de terra aqui', 'The radar did not separate water from land here')}</b></header>
+        <p class="lead">${tr('Sem contraste nítido entre água e terra nesta área, o Arara não publica área de água nem de cheia.', 'Without a sharp contrast between water and land in this area, Arara publishes no water or flood area.')}</p>
+        <ul class="reasons">${(a.quality_reasons || []).map(r => `<li>${esc(dados(r))}</li>`).join('')}</ul>
+        <p class="note">${esc(dados(a.what_to_try || 'desenhe uma área com um rio ou lago largo e terra dos dois lados'))}.</p></div>
       ${techBox(a)}`);
     return;
   }
-  const st = a.summary_text && a.summary_text.text;
+  const st = EN ? (resumoEN(a) || (a.summary_text && a.summary_text.text)) : a.summary_text && a.summary_text.text;
   setPanel(`${head(sub)}
     <div class="chips">${qualityChips(a)}</div>
-    ${st ? `<div class="story"><p class="h3">O que o radar viu <span>gerado dos números, sem IA</span></p><p>${esc(st)}</p></div>` : ''}
-    ${!hasFlood(a) ? `<p class="note warn">Esta análise é anterior ao modo cheia: mostra só a área de água. A próxima análise do servidor traz cheia, chuva e municípios.</p>` : ''}
+    ${st ? `<div class="story"><p class="h3">${tr('O que o radar viu', 'What the radar saw')} <span>${tr('gerado dos números, sem IA', 'generated from the numbers, no AI')}</span></p><p>${esc(st)}</p></div>` : ''}
+    ${!hasFlood(a) ? `<p class="note warn">${tr('Esta análise é anterior ao modo cheia: mostra só a área de água. A próxima análise do servidor traz cheia, chuva e municípios.', 'This analysis is from before flood mode: it shows only the water area. The next server analysis brings flood, rain and municipalities.')}</p>` : ''}
     <div class="card" id="dateCard"></div>
     ${munBox(a)}
     ${rainNote(a)}
-    <details class="box"><summary>Como o Arara mede</summary><div>
-      <p>O radar NISAR (banda L) manda micro-ondas e mede o que volta. Água calma espelha o sinal para longe e aparece escura; é assim que o Arara separa água de terra, com um limiar calculado para esta área (${fmt(a.params.threshold_db, 2)} dB).</p>
-      ${hasFlood(a) ? `<p><b style="color:var(--flood)">Água de cheia</b> = água de cada passagem que não estava lá na passagem mais seca do período (${isoBR(a.flood.reference_date)}), só em terreno baixo (até ${a.flood.params.hand_max_m ?? '–'} m acima do rio mais próximo, modelo HAND). Manchas menores que ${fmt(a.flood.params.min_patch_km2, 1)} km² são descartadas.</p>
-      <p><b style="color:var(--veg)">Possível vegetação alagada</b> = pontos que ficaram ${fmt(a.flood.params.vegetation_delta_db, 0)} dB mais claros que o normal da série em terreno baixo. Na banda L, água embaixo da mata faz o sinal bater duas vezes e voltar mais forte.</p>
-      <ul class="reasons">${(a.flood.limitations || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
-      <p>Vento encrespa a água e ela some do radar: datas com vento ficam marcadas (círculo amarelo), nunca escondidas nem corrigidas.</p>
+    <details class="box"><summary>${tr('Como o Arara mede', 'How Arara measures')}</summary><div>
+      <p>${tr(`O radar NISAR (banda L) manda micro-ondas e mede o que volta. Água calma espelha o sinal para longe e aparece escura; é assim que o Arara separa água de terra, com um limiar calculado para esta área (${fmt(a.params.threshold_db, 2)} dB).`,
+        `The NISAR radar (L-band) sends microwaves and measures what comes back. Calm water mirrors the signal away and looks dark; that is how Arara separates water from land, with a threshold computed for this area (${fmt(a.params.threshold_db, 2)} dB).`)}</p>
+      ${hasFlood(a) ? `<p>${tr(`<b style="color:var(--flood)">Água de cheia</b> = água de cada passagem que não estava lá na passagem mais seca do período (${isoBR(a.flood.reference_date)}), só em terreno baixo (até ${a.flood.params.hand_max_m ?? '–'} m acima do rio mais próximo, modelo HAND). Manchas menores que ${fmt(a.flood.params.min_patch_km2, 1)} km² são descartadas.`,
+        `<b style="color:var(--flood)">Flood water</b> = water on each pass that was not there on the driest pass of the period (${isoBR(a.flood.reference_date)}), only on low terrain (up to ${a.flood.params.hand_max_m ?? '–'} m above the nearest river, HAND model). Patches smaller than ${fmt(a.flood.params.min_patch_km2, 1)} km² are discarded.`)}</p>
+      <p>${tr(`<b style="color:var(--veg)">Possível vegetação alagada</b> = pontos que ficaram ${fmt(a.flood.params.vegetation_delta_db, 0)} dB mais claros que o normal da série em terreno baixo. Na banda L, água embaixo da mata faz o sinal bater duas vezes e voltar mais forte.`,
+        `<b style="color:var(--veg)">Possible flooded vegetation</b> = points that became ${fmt(a.flood.params.vegetation_delta_db, 0)} dB brighter than the series normal on low terrain. In L-band, water under forest makes the signal bounce twice and come back stronger.`)}</p>
+      <ul class="reasons">${(a.flood.limitations || []).map(x => `<li>${esc(dados(x))}</li>`).join('')}</ul>` : ''}
+      <p>${tr('Vento encrespa a água e ela some do radar: datas com vento ficam marcadas (círculo amarelo), nunca escondidas nem corrigidas.', 'Wind roughens the water and it disappears from the radar: windy dates are flagged (yellow circle), never hidden or corrected.')}</p>
     </div></details>
     ${techBox(a)}`);
   renderDateCard();
@@ -1092,46 +1133,47 @@ function renderDateCard() {
   const a = A, d = a.dates[sel], c = confOf(d), fl = hasFlood(a), ref = refIndex(a);
   const rainOk = a.rain && a.rain.status === 'ok';
   const kpi = (cls, v, unit, label, color) => `<div class="kpi ${cls}${v == null ? ' na' : ''}"><div class="v">${v == null ? '—' : v}${v == null ? '' : `<small>${unit}</small>`}</div><div class="l"><i style="background:${color}"></i>${label}</div></div>`;
-  box.innerHTML = `<header><b>Passagem de ${isoBR(d.date)}</b>${c.level ? `<span class="conf ${c.level}">confiança ${c.level}</span>` : ''}</header>
+  box.innerHTML = `<header><b>${tr('Passagem de', 'Pass of')} ${isoBR(d.date)}</b>${c.level ? `<span class="conf ${c.level}">${tr('confiança', 'confidence')} ${lvl(c.level)}</span>` : ''}</header>
     <div class="kpis">${fl
-      ? kpi('flood', km2Fmt(d.flood_km2 || 0), 'km²', 'água de cheia', 'var(--flood)') + kpi('veg', km2Fmt(d.flooded_vegetation_km2 || 0), 'km²', 'possível vegetação alagada', 'var(--veg)')
-      : kpi('flood', km2Fmt(d.water_km2), 'km²', 'água total', 'var(--water)') + kpi('veg', null, '', 'cheia: na próxima análise', 'var(--veg)')}
-      ${kpi('rain', rainOk && d.rain_7d_mm != null ? fmt(d.rain_7d_mm, 0) : null, 'mm', 'chuva nos 7 dias antes', 'var(--rain)')}</div>
-    ${sel === ref ? '<p class="note">Esta é a passagem mais seca do período: a referência contra a qual a cheia das outras datas é medida.</p>' : ''}
-    ${c.reasons && c.reasons.length ? `<ul class="reasons">${c.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
-    <p class="note">Água total nesta passagem: ${km2Fmt(d.water_km2)} km² (${fmt(d.water_pct, 1)}% da área)${d.rain_3d_mm != null ? ` · chuva nos 3 dias antes: ${fmt(d.rain_3d_mm, 0)} mm` : ''}.</p>`;
+      ? kpi('flood', km2Fmt(d.flood_km2 || 0), 'km²', tr('água de cheia', 'flood water'), 'var(--flood)') + kpi('veg', km2Fmt(d.flooded_vegetation_km2 || 0), 'km²', tr('possível vegetação alagada', 'possible flooded vegetation'), 'var(--veg)')
+      : kpi('flood', km2Fmt(d.water_km2), 'km²', tr('água total', 'total water'), 'var(--water)') + kpi('veg', null, '', tr('cheia: na próxima análise', 'flood: in the next analysis'), 'var(--veg)')}
+      ${kpi('rain', rainOk && d.rain_7d_mm != null ? fmt(d.rain_7d_mm, 0) : null, 'mm', tr('chuva nos 7 dias antes', 'rain in the 7 days before'), 'var(--rain)')}</div>
+    ${sel === ref ? `<p class="note">${tr('Esta é a passagem mais seca do período: a referência contra a qual a cheia das outras datas é medida.', 'This is the driest pass of the period: the reference against which flooding on the other dates is measured.')}</p>` : ''}
+    ${c.reasons && c.reasons.length ? `<ul class="reasons">${c.reasons.map(r => `<li>${esc(dados(r))}</li>`).join('')}</ul>` : ''}
+    <p class="note">${tr('Água total nesta passagem:', 'Total water on this pass:')} ${km2Fmt(d.water_km2)} km² (${fmt(d.water_pct, 1)}% ${tr('da área', 'of the area')})${d.rain_3d_mm != null ? ` · ${tr('chuva nos 3 dias antes:', 'rain in the 3 days before:')} ${fmt(d.rain_3d_mm, 0)} mm` : ''}.</p>`;
 }
 function munBox(a) {
   const m = a.municipalities;
   if (!hasFlood(a) || !m) return '';
-  if (m.status !== 'ok') return `<p class="note">Municípios: ${esc(m.reason || 'indisponível')}.</p>`;
+  if (m.status !== 'ok') return `<p class="note">${tr('Municípios:', 'Municipalities:')} ${esc(dados(m.reason) || tr('indisponível', 'unavailable'))}.</p>`;
   const rows = m.municipalities.filter(x => x.flood_km2 + x.flooded_vegetation_km2 >= 0.01);
-  if (!rows.length) return `<div class="card"><header><b>Municípios</b></header><p class="note">Nenhum município com água de cheia na passagem de pico (${isoBR(m.date)}).</p></div>`;
+  if (!rows.length) return `<div class="card"><header><b>${tr('Municípios', 'Municipalities')}</b></header><p class="note">${tr(`Nenhum município com água de cheia na passagem de pico (${isoBR(m.date)}).`, `No municipality with flood water on the peak pass (${isoBR(m.date)}).`)}</p></div>`;
   const hi = Math.max(...rows.map(x => x.flood_km2 + x.flooded_vegetation_km2));
-  return `<div class="card"><header><b>Onde alagou no pico (${dm(m.date)})</b><span class="chip">${rows.length} ${rows.length === 1 ? 'município' : 'municípios'}</span></header>
-    <ul class="munis">${rows.slice(0, 8).map(x => `<li><b>${esc(x.name)} <small>${esc(x.uf)}</small></b><small>${km2Fmt(x.flood_km2 + x.flooded_vegetation_km2)} km²${x.population_2022 ? ` · ${fmt(x.population_2022)} hab.` : ''}</small>
+  return `<div class="card"><header><b>${tr(`Onde alagou no pico (${dm(m.date)})`, `Where it flooded at the peak (${dm(m.date)})`)}</b><span class="chip">${tr(`${rows.length} ${rows.length === 1 ? 'município' : 'municípios'}`, plural(rows.length, 'municipality', 'municipalities'))}</span></header>
+    <ul class="munis">${rows.slice(0, 8).map(x => `<li><b>${esc(x.name)} <small>${esc(x.uf)}</small></b><small>${km2Fmt(x.flood_km2 + x.flooded_vegetation_km2)} km²${x.population_2022 ? ` · ${fmt(x.population_2022)} ${tr('hab.', 'inhab.')}` : ''}</small>
       <span class="bar"><i style="width:${x.flood_km2 / hi * 100}%;background:var(--flood)"></i><i style="width:${x.flooded_vegetation_km2 / hi * 100}%;background:var(--veg)"></i></span></li>`).join('')}</ul>
-    <p class="note">${esc(m.note)}. Exposição não é dano confirmado.</p></div>`;
+    <p class="note">${esc(dados(m.note))}. ${tr('Exposição não é dano confirmado.', 'Exposure is not confirmed damage.')}</p></div>`;
 }
 function rainNote(a) {
   const r = a.rain;
   if (!r || !hasFlood(a)) return '';
-  if (r.status !== 'ok') return `<p class="note">Chuva indisponível: ${esc(r.reason || '')}.</p>`;
-  return `<p class="note">Chuva: ${esc(r.product)}, ${esc(r.spatial)}. Total no período: ${fmt(r.total_mm, 0)} mm. ${esc((r.limitations || []).join('; '))}.</p>`;
+  if (r.status !== 'ok') return `<p class="note">${tr('Chuva indisponível:', 'Rainfall unavailable:')} ${esc(dados(r.reason || ''))}.</p>`;
+  return `<p class="note">${tr('Chuva:', 'Rainfall:')} ${esc(dados(r.product))}, ${esc(dados(r.spatial))}. ${tr('Total no período:', 'Total in the period:')} ${fmt(r.total_mm, 0)} mm. ${esc((r.limitations || []).map(dados).join('; '))}.</p>`;
 }
 function techBox(a) {
   const g = a.group || {}, v = a.optical_validation || {}, f = files(a.analysis_id);
   const val = v.status === 'validated'
-    ? `Comparado com a água vista pelo Sentinel-2 em ${v.n_dates_validated} de ${v.n_dates} datas: IoU médio ${fmt(v.mean_iou, 2)}, precisão ${fmt(v.mean_precision, 2)}, recall ${fmt(v.mean_recall, 2)}. O óptico é uma referência independente, não a verdade de campo.`
-    : `Sem validação óptica: ${esc(v.reason || 'não executada')}.`;
-  return `<details class="box"><summary>Validação e dados técnicos</summary><div>
+    ? tr(`Comparado com a água vista pelo Sentinel-2 em ${v.n_dates_validated} de ${v.n_dates} datas: IoU médio ${fmt(v.mean_iou, 2)}, precisão ${fmt(v.mean_precision, 2)}, recall ${fmt(v.mean_recall, 2)}. O óptico é uma referência independente, não a verdade de campo.`,
+      `Compared with the water seen by Sentinel-2 on ${v.n_dates_validated} of ${v.n_dates} dates: mean IoU ${fmt(v.mean_iou, 2)}, precision ${fmt(v.mean_precision, 2)}, recall ${fmt(v.mean_recall, 2)}. Optical data is an independent reference, not ground truth.`)
+    : `${tr('Sem validação óptica:', 'No optical validation:')} ${esc(dados(v.reason || 'não executada'))}.`;
+  return `<details class="box"><summary>${tr('Validação e dados técnicos', 'Validation and technical data')}</summary><div>
     <p>${val}</p>
-    <p>Órbita ${g.track ?? '–'} ${esc(DIR[g.direction] || g.direction || '')}, frame ${g.frame ?? '–'} · ${esc(g.collection || 'local')} · limiar ${fmt(a.params.threshold_db, 2)} dB · versão ${esc(a.algorithm_version)}</p>
-    ${(a.warnings || []).length ? `<p class="note">${a.warnings.map(esc).join(' ')}</p>` : ''}
-    <div class="tablewrap"><table><thead><tr><th>Passagem</th><th>Água km²</th>${hasFlood(a) ? '<th>Cheia km²</th><th>Veg. km²</th>' : ''}<th>Chuva 7d</th><th>Válido</th><th>Confiança</th><th>CRID</th></tr></thead>
-      <tbody>${a.dates.map(d => `<tr><td>${isoBR(d.date)}${d.suspeita_vento ? ' · vento' : ''}</td><td>${d.water_km2 == null ? '–' : fmt(d.water_km2, 2)}</td>${hasFlood(a) ? `<td>${fmt(d.flood_km2 || 0, 2)}</td><td>${fmt(d.flooded_vegetation_km2 || 0, 2)}</td>` : ''}<td>${d.rain_7d_mm == null ? '–' : fmt(d.rain_7d_mm, 0)}</td><td>${fmt((d.valid_fraction_aoi || 0) * 100, 0)}%</td><td>${esc(confOf(d).level || '–')}</td><td>${esc(d.crid || '–')}</td></tr>`).join('')}</tbody></table></div>
-    ${(a.skipped_scenes || []).length ? `<p class="note">Passagens descartadas: ${a.skipped_scenes.map(s => `${isoBR(s.date)} (${esc(s.reason)})`).join('; ')}.</p>` : ''}
-    <div class="row"><a class="btn" href="${f.csv}" download>CSV desta análise</a>${ctx.kind === 'region' && !STATIC ? `<a class="btn" href="${API}/regions/${ctx.id}/history?format=csv" download title="Todas as passagens já medidas nesta região, guardadas no banco">Histórico completo (CSV)</a>` : ''}<a class="btn" href="estudo/index.html?id=${a.analysis_id}" target="_blank" rel="noopener">Estudo completo</a><a class="btn" href="${f.sources}" target="_blank" rel="noopener">Proveniência</a></div>
+    <p>${tr('Órbita', 'Orbit')} ${g.track ?? '–'} ${esc(DIR[g.direction] || g.direction || '')}, frame ${g.frame ?? '–'} · ${esc(g.collection || 'local')} · ${tr('limiar', 'threshold')} ${fmt(a.params.threshold_db, 2)} dB · ${tr('versão', 'version')} ${esc(a.algorithm_version)}</p>
+    ${(a.warnings || []).length ? `<p class="note">${a.warnings.map(w => esc(dados(w))).join(' ')}</p>` : ''}
+    <div class="tablewrap"><table><thead><tr><th>${tr('Passagem', 'Pass')}</th><th>${tr('Água km²', 'Water km²')}</th>${hasFlood(a) ? `<th>${tr('Cheia km²', 'Flood km²')}</th><th>${tr('Veg. km²', 'Veg. km²')}</th>` : ''}<th>${tr('Chuva 7d', 'Rain 7d')}</th><th>${tr('Válido', 'Valid')}</th><th>${tr('Confiança', 'Confidence')}</th><th>CRID</th></tr></thead>
+      <tbody>${a.dates.map(d => `<tr><td>${isoBR(d.date)}${d.suspeita_vento ? tr(' · vento', ' · wind') : ''}</td><td>${d.water_km2 == null ? '–' : fmt(d.water_km2, 2)}</td>${hasFlood(a) ? `<td>${fmt(d.flood_km2 || 0, 2)}</td><td>${fmt(d.flooded_vegetation_km2 || 0, 2)}</td>` : ''}<td>${d.rain_7d_mm == null ? '–' : fmt(d.rain_7d_mm, 0)}</td><td>${fmt((d.valid_fraction_aoi || 0) * 100, 0)}%</td><td>${esc(confOf(d).level ? lvl(confOf(d).level) : '–')}</td><td>${esc(d.crid || '–')}</td></tr>`).join('')}</tbody></table></div>
+    ${(a.skipped_scenes || []).length ? `<p class="note">${tr('Passagens descartadas:', 'Discarded passes:')} ${a.skipped_scenes.map(s => `${isoBR(s.date)} (${esc(dados(s.reason))})`).join('; ')}.</p>` : ''}
+    <div class="row"><a class="btn" href="${f.csv}" download>${tr('CSV desta análise', 'CSV of this analysis')}</a>${ctx.kind === 'region' && !STATIC ? `<a class="btn" href="${API}/regions/${ctx.id}/history?format=csv" download title="${tr('Todas as passagens já medidas nesta região, guardadas no banco', 'All passes measured in this region, stored in the database')}">${tr('Histórico completo (CSV)', 'Full history (CSV)')}</a>` : ''}<a class="btn" href="${I18N.comLang(`estudo/index.html?id=${a.analysis_id}`)}" target="_blank" rel="noopener">${tr('Estudo completo', 'Full study')}</a><a class="btn" href="${f.sources}" target="_blank" rel="noopener">${tr('Proveniência', 'Provenance')}</a></div>
   </div></details>`;
 }
 /* ================= avisos curtos sobre o mapa ================= */
@@ -1152,12 +1194,12 @@ function parseCoord(s) {
 }
 q.addEventListener('input', () => {
   const raw = q.value.trim(), s = norm(raw), co = parseCoord(raw);
-  if (co) hits = [{ kind: 'coord', ...co, label: 'Ir para a coordenada', small: `${fmt(co.lat, 4)}, ${fmt(co.lng, 4)}` }];
+  if (co) hits = [{ kind: 'coord', ...co, label: tr('Ir para a coordenada', 'Go to the coordinate'), small: `${fmt(co.lat, 4)}, ${fmt(co.lng, 4)}` }];
   else if (s.length >= 2) hits = searchIndex.filter(e => e.n.includes(s)).sort((a, b) => (a.n.startsWith(s) ? 0 : 1) - (b.n.startsWith(s) ? 0 : 1) || a.rank - b.rank).slice(0, 8);
   else { results.hidden = true; return; }
   activeHit = -1;
   results.innerHTML = hits.length ? hits.map((h, i) => `<li><button type="button" data-i="${i}" role="option">${esc(h.label)}<small>${esc(h.small)}</small></button></li>`).join('')
-    : '<li class="hint">Nada encontrado. Também dá para digitar uma coordenada, como -29.45, -51.96.</li>';
+    : `<li class="hint">${tr('Nada encontrado. Também dá para digitar uma coordenada, como -29.45, -51.96.', 'Nothing found. You can also type a coordinate, such as -29.45, -51.96.')}</li>`;
   results.hidden = false;
 });
 q.addEventListener('keydown', (e) => {
@@ -1174,14 +1216,14 @@ function pickHit(h) {
   if (h.kind === 'mun') {
     const reg = REGIONS.find(r => inFeature([h.m[2], h.m[3]], { geometry: r.geometry, __bb: r.b }));
     if (reg) return openPlace(reg);
-    return goToBox(h.m[4], `${h.m[0]} (${h.m[1]}) fica fora das regiões monitoradas.`);
+    return goToBox(h.m[4], tr(`${h.m[0]} (${h.m[1]}) fica fora das regiões monitoradas.`, `${h.m[0]} (${h.m[1]}) is outside the monitored regions.`));
   }
   if (h.kind === 'coord') return goToBox([h.lng - 0.05, h.lat - 0.05, h.lng + 0.05, h.lat + 0.05]);
   if (h.kind === 'state' || h.kind === 'country') { if (ctx) closePanel(); if (view === 'map') setView('globe', { fly: false }); const c = h.c; flyTo(c.lat, c.lng, h.kind === 'state' ? 0.35 : 0.9); }
 }
 fetch('sul.json').then(r => r.json()).then(j => {
   southMun = j.municipios;
-  southMun.forEach(m => searchIndex.push({ kind: 'mun', m, n: norm(m[0]), label: m[0], small: `município · ${m[1]}`, rank: 1 }));
+  southMun.forEach(m => searchIndex.push({ kind: 'mun', m, n: norm(m[0]), label: m[0], small: `${tr('município', 'municipality')} · ${m[1]}`, rank: 1 }));
 }).catch(() => {});
 
 /* navegar até uma caixa (cidade fora das regiões, coordenada): só leva o mapa até lá */
@@ -1197,11 +1239,11 @@ function tagPais(f) { const a2 = f.properties.a2; return Object.assign(f, { __lv
 fetch('geo.json').then(r => r.json()).then(geo => {
   world = topojson.feature(geo.world, geo.world.objects.countries).features.filter(f => f.properties.n !== 'Antarctica').map(tagPais);
   brStates = (geo.adm1.BR || []).map(f => Object.assign(f, { __lvl: 'estado', __uf: f.properties.pc, __name: f.properties.n, __c: { lat: f.properties.lat, lng: f.properties.lng } }));
-  world.forEach(f => { const b = bboxOf(f.geometry); searchIndex.push({ kind: 'country', n: norm(f.__name), label: f.__name, small: 'país', c: centerOfBox(b), rank: 3 }); });
-  brStates.forEach(f => searchIndex.push({ kind: 'state', n: norm(f.__name), label: f.__name, small: 'estado', c: f.__c, rank: 2 }));
+  world.forEach(f => { const b = bboxOf(f.geometry); searchIndex.push({ kind: 'country', n: norm(f.__name), label: f.__name, small: tr('país', 'country'), c: centerOfBox(b), rank: 3 }); });
+  brStates.forEach(f => searchIndex.push({ kind: 'state', n: norm(f.__name), label: f.__name, small: tr('estado', 'state'), c: f.__c, rank: 2 }));
   setGlobePolygons(); refreshPins();
   $('#loading').hidden = true;
-}).catch(() => { $('#loading').textContent = 'Não foi possível carregar os mapas. Recarregue a página.'; });
+}).catch(() => { $('#loading').textContent = tr('Não foi possível carregar os mapas. Recarregue a página.', 'Could not load the maps. Reload the page.'); });
 
 /* ================= tamanho e teclado ================= */
 function resize() { if (view === 'map') { if (map2) map2.invalidateSize(); clipSwipe(); return; } globe.width(el.clientWidth).height(el.clientHeight); buildSky(); }
@@ -1216,15 +1258,25 @@ document.addEventListener('keydown', (e) => {
   else if (e.key === ' ' && !e.target.closest('button')) { e.preventDefault(); playing ? stopPlay() : startPlay(); }
 });
 
+/* idioma: título, textos fixos do HTML, seletor EN | PT (mantém a região aberta) e links para os estudos */
+if (EN) {
+  document.title = 'Arara · Floods in southern Brazil';
+  const md = document.querySelector('meta[name="description"]');
+  if (md) md.setAttribute('content', 'Where water left the riverbed in southern Brazil, measured by NASA–ISRO\'s NISAR radar, with rainfall, municipalities and the confidence of every number.');
+}
+I18N.aplicarHtml();
+I18N.botao($('#langsw'), () => ({ regiao: ctx && ctx.kind === 'region' ? ctx.id : null }));
+document.querySelectorAll('a[data-lang-link]').forEach(a => a.setAttribute('href', I18N.comLang(a.getAttribute('href'))));
+
 findGlobe();
 // abrir direto uma região ou análise: ?regiao=guaiba ou ?id=<análise>
 const qs = new URLSearchParams(location.search);
 fetch('regioes.json').then(r => r.json()).then(j => {
   setRegions(j);
-  REGIONS.forEach(p => searchIndex.push({ kind: 'region', p, n: norm(p.n + ' ' + p.who), label: p.n, small: `região monitorada · ${p.uf}`, rank: 0 }));
+  REGIONS.forEach(p => searchIndex.push({ kind: 'region', p, n: norm(p.n + ' ' + p.who), label: p.n, small: `${tr('região monitorada', 'monitored region')} · ${p.uf}`, rank: 0 }));
   fillHome(); refreshPins(); if (world.length) setGlobePolygons(); map2dRefresh();
   if (qs.get('regiao')) { const p = REGIONS.find(r => r.id === qs.get('regiao')); if (p) openPlace(p); }
-}).catch(() => { $('#regionList').innerHTML = '<li class="note">Não foi possível carregar a lista de regiões. Recarregue a página.</li>'; });
+}).catch(() => { $('#regionList').innerHTML = `<li class="note">${tr('Não foi possível carregar a lista de regiões. Recarregue a página.', 'Could not load the region list. Reload the page.')}</li>`; });
 if (qs.get('id')) setTimeout(() => api(`/analyses/${qs.get('id')}`).then(a => openAnalysisPlace(a)).catch(() => {}), 300);
 else if (!qs.get('regiao') && store.get('arara-view', 'globe') === 'map') setView('map');
 })();
