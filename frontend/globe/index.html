@@ -1512,6 +1512,8 @@ function openAnalysis(h) {
   }).catch(() => { loadCards(); });
 }
 loadCards();
+// estudos novos aparecem sozinhos enquanto o lote roda (a cada 20 s, só com a aba visível)
+setInterval(() => { if (!document.hidden) loadCards(); }, 20000);
 
 /* ================= início (barra lateral) ================= */
 // recortes de até ~1.500 km², dentro do limite de uma análise; o catálogo diz se há cenas NISAR ali
