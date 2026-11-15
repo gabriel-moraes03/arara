@@ -25,3 +25,7 @@ Thumbs.db
 desktop.ini
 .vscode/
 .idea/
+
+# metadados do Windows/WSL (nomes com ":" quebram o checkout no Windows)
+*:Zone.Identifier
+*Zone.Identifier
