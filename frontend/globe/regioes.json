@@ -1,0 +1,114 @@
+{
+ "descricao": "Regiões monitoradas no Sul: recortes de até ~1.000 km² com terra dos dois lados da água (o limiar precisa de margem água/terra), onde as cheias se repetem. Lido pelo globo e pelo monitor do backend.",
+ "inicio": "2026-06-01",
+ "regioes": [
+  {
+   "id": "guaiba",
+   "n": "Delta do Jacuí e Guaíba",
+   "uf": "RS",
+   "who": "Porto Alegre, Eldorado do Sul, Guaíba, Canoas",
+   "b": [
+    -51.4,
+    -30.15,
+    -51.1,
+    -29.9
+   ]
+  },
+  {
+   "id": "taquari",
+   "n": "Vale do Taquari",
+   "uf": "RS",
+   "who": "Lajeado, Estrela, Arroio do Meio",
+   "b": [
+    -52.05,
+    -29.55,
+    -51.85,
+    -29.35
+   ]
+  },
+  {
+   "id": "sinos",
+   "n": "Rio dos Sinos",
+   "uf": "RS",
+   "who": "São Leopoldo, Novo Hamburgo, Sapucaia do Sul",
+   "b": [
+    -51.25,
+    -29.8,
+    -50.95,
+    -29.62
+   ]
+  },
+  {
+   "id": "cai",
+   "n": "Rio Caí",
+   "uf": "RS",
+   "who": "Montenegro, São Sebastião do Caí",
+   "b": [
+    -51.55,
+    -29.72,
+    -51.33,
+    -29.48
+   ]
+  },
+  {
+   "id": "jacui",
+   "n": "Rio Jacuí em Cachoeira do Sul",
+   "uf": "RS",
+   "who": "Cachoeira do Sul",
+   "b": [
+    -53.0,
+    -30.12,
+    -52.78,
+    -29.95
+   ]
+  },
+  {
+   "id": "pelotas",
+   "n": "Canal São Gonçalo e Pelotas",
+   "uf": "RS",
+   "who": "Pelotas, Rio Grande",
+   "b": [
+    -52.45,
+    -31.85,
+    -52.15,
+    -31.65
+   ]
+  },
+  {
+   "id": "uruguaiana",
+   "n": "Rio Uruguai em Uruguaiana",
+   "uf": "RS",
+   "who": "Uruguaiana",
+   "b": [
+    -57.2,
+    -29.85,
+    -56.95,
+    -29.65
+   ]
+  },
+  {
+   "id": "itajai",
+   "n": "Vale do Itajaí",
+   "uf": "SC",
+   "who": "Blumenau, Gaspar",
+   "b": [
+    -49.15,
+    -26.98,
+    -48.9,
+    -26.82
+   ]
+  },
+  {
+   "id": "iguacu",
+   "n": "Rio Iguaçu em União da Vitória",
+   "uf": "PR",
+   "who": "União da Vitória (PR), Porto União (SC)",
+   "b": [
+    -51.2,
+    -26.3,
+    -50.95,
+    -26.13
+   ]
+  }
+ ]
+}

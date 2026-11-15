@@ -1,0 +1,628 @@
+{
+ "projeto": "Arara (caso Barra Grande + Machadinho)",
+ "licenca": "MIT",
+ "versao_algoritmo": "arara-water-0.2.1",
+ "versao_algoritmo_nota": "método validado em Furnas (0.2.1); o monitor de cheias usa a versão 0.3.0",
+ "colecao": "NISAR_L2_GCOV_PROVISIONAL_V1",
+ "arquivo_daac": "ASF DAAC",
+ "trilha": 53,
+ "direcao": "D",
+ "frame": 102,
+ "modo": "2005",
+ "banda": "L",
+ "polarizacoes": [
+  "HH",
+  "HV"
+ ],
+ "crid": [
+  "P05023"
+ ],
+ "pixel_original_m": 20,
+ "pixel_processado_m": 40.0,
+ "epsg_original": 32722,
+ "datas": [
+  "2026-06-17",
+  "2026-06-29",
+  "2026-07-11",
+  "2026-07-23",
+  "2026-08-16",
+  "2026-08-28",
+  "2026-10-15"
+ ],
+ "metodo": {
+  "canal": "HH",
+  "filtro": "média 5x5 em dB",
+  "limiar_db": -14.61,
+  "limiar_origem": "vale água/terra dos blocos de margem das 7 datas e dos 2 reservatórios",
+  "limiar_conferencia": {
+   "n_blocos_margem": 3,
+   "minimo_blocos_metodo": 5,
+   "vale_dentro_poligonos_db": 3.92,
+   "otsu_dentro_poligonos_db": -15.05
+  },
+  "mesmo_limiar_todas_datas": true,
+  "contagem": "só dentro do polígono oficial da ANA, sem buffer",
+  "mancha_minima_km2": 0.1,
+  "encostas": {
+   "criterio": "fator RTC gamma0->sigma0 fora de [0.35, 0.93]",
+   "mascaradas": true
+  },
+  "vento": "mediana do HH no núcleo de água >= 1.5 dB acima da mediana da série"
+ },
+ "reservatorios": {
+  "barra_grande": {
+   "nome": "Barra Grande",
+   "ana": "BARRA GRANDE",
+   "codigo_ana": 19067,
+   "rio": "Pelotas",
+   "na_max_normal_m": 647.0,
+   "na_min_normal_m": 617.0,
+   "area_ficha_km2": 90.736,
+   "referencia_cota": "sistema local (coluna A da CAV; a coluna B, SGB, é +0,14 m)",
+   "fonte_poligono": "ANA/SNIRH, Barra Grande.gdb, camada Isóbatas, curva de 647,00 m (a camada Reservatório é a curva de 651,14 m, o máximo maximorum)",
+   "cobertura": {
+    "area_poligono_km2": 90.18,
+    "frac_valido_por_data": {
+     "20260617": 0.9755,
+     "20260629": 0.9676,
+     "20260711": 0.9853,
+     "20260723": 0.9707,
+     "20260816": 0.9719,
+     "20260828": 0.9861,
+     "20261015": 0.9707
+    },
+    "frac_valido_todas_datas": 0.9674,
+    "frac_fora_da_passagem": 0.0326,
+    "frac_encosta_sombra": 0.0302,
+    "frac_encosta_layover": 0.0143,
+    "frac_usada": 0.9229,
+    "area_usada_km2": 83.22,
+    "shadow_masking_no_produto": "False"
+   },
+   "imagem": {
+    "bounds": [
+     [
+      -28.365665,
+      -51.211963
+     ],
+     [
+      -27.739759,
+      -50.626184
+     ]
+    ],
+    "largura": 1400,
+    "altura": 1695
+   },
+   "datas_suspeita_vento": [],
+   "curva_cav": [
+    [
+     625.0,
+     60.73
+    ],
+    [
+     625.5,
+     61.12
+    ],
+    [
+     626.0,
+     61.5
+    ],
+    [
+     626.5,
+     61.88
+    ],
+    [
+     627.0,
+     62.27
+    ],
+    [
+     627.5,
+     62.66
+    ],
+    [
+     628.0,
+     63.04
+    ],
+    [
+     628.5,
+     63.43
+    ],
+    [
+     629.0,
+     63.81
+    ],
+    [
+     629.5,
+     64.2
+    ],
+    [
+     630.0,
+     64.58
+    ],
+    [
+     630.5,
+     64.96
+    ],
+    [
+     631.0,
+     65.35
+    ],
+    [
+     631.5,
+     65.75
+    ],
+    [
+     632.0,
+     66.15
+    ],
+    [
+     632.5,
+     66.55
+    ],
+    [
+     633.0,
+     66.97
+    ],
+    [
+     633.5,
+     67.4
+    ],
+    [
+     634.0,
+     67.85
+    ],
+    [
+     634.5,
+     68.32
+    ],
+    [
+     635.0,
+     68.81
+    ],
+    [
+     635.5,
+     69.32
+    ],
+    [
+     636.0,
+     69.85
+    ],
+    [
+     636.5,
+     70.41
+    ],
+    [
+     637.0,
+     71.01
+    ],
+    [
+     637.5,
+     71.64
+    ],
+    [
+     638.0,
+     72.34
+    ],
+    [
+     638.5,
+     73.1
+    ],
+    [
+     639.0,
+     73.92
+    ],
+    [
+     639.5,
+     74.78
+    ],
+    [
+     640.0,
+     75.67
+    ],
+    [
+     640.5,
+     76.6
+    ],
+    [
+     641.0,
+     77.58
+    ],
+    [
+     641.5,
+     78.57
+    ],
+    [
+     642.0,
+     79.6
+    ],
+    [
+     642.5,
+     80.68
+    ],
+    [
+     643.0,
+     81.8
+    ],
+    [
+     643.5,
+     82.92
+    ],
+    [
+     644.0,
+     84.04
+    ],
+    [
+     644.5,
+     85.17
+    ],
+    [
+     645.0,
+     86.29
+    ],
+    [
+     645.5,
+     87.42
+    ],
+    [
+     646.0,
+     88.55
+    ],
+    [
+     646.5,
+     89.66
+    ],
+    [
+     647.0,
+     90.74
+    ]
+   ]
+  },
+  "machadinho": {
+   "nome": "Machadinho",
+   "ana": "MACHADINHO",
+   "codigo_ana": 19069,
+   "rio": "Uruguai",
+   "na_max_normal_m": 480.0,
+   "na_min_normal_m": 465.0,
+   "area_ficha_km2": 80.494,
+   "referencia_cota": "cota de operação (coluna A da CAV; a coluna B, SGB, é +0,21 m)",
+   "fonte_poligono": "ANA/SNIRH, Machadinho.gdb, camada Reservatório (linhas a 480,00 m)",
+   "cobertura": {
+    "area_poligono_km2": 79.72,
+    "frac_valido_por_data": {
+     "20260617": 1.0,
+     "20260629": 1.0,
+     "20260711": 1.0,
+     "20260723": 1.0,
+     "20260816": 1.0,
+     "20260828": 1.0,
+     "20261015": 1.0
+    },
+    "frac_valido_todas_datas": 1.0,
+    "frac_fora_da_passagem": 0.0,
+    "frac_encosta_sombra": 0.0231,
+    "frac_encosta_layover": 0.0139,
+    "frac_usada": 0.9629,
+    "area_usada_km2": 76.76,
+    "shadow_masking_no_produto": "False"
+   },
+   "imagem": {
+    "bounds": [
+     [
+      -27.800061,
+      -51.832525
+     ],
+     [
+      -27.442036,
+      -51.196413
+     ]
+    ],
+    "largura": 1400,
+    "altura": 889
+   },
+   "datas_suspeita_vento": [],
+   "curva_cav": [
+    [
+     473.0,
+     71.04
+    ],
+    [
+     473.5,
+     71.6
+    ],
+    [
+     474.0,
+     72.16
+    ],
+    [
+     474.5,
+     72.73
+    ],
+    [
+     475.0,
+     73.31
+    ],
+    [
+     475.5,
+     73.88
+    ],
+    [
+     476.0,
+     74.44
+    ],
+    [
+     476.5,
+     75.01
+    ],
+    [
+     477.0,
+     75.61
+    ],
+    [
+     477.5,
+     76.23
+    ],
+    [
+     478.0,
+     76.86
+    ],
+    [
+     478.5,
+     77.52
+    ],
+    [
+     479.0,
+     78.24
+    ],
+    [
+     479.5,
+     79.09
+    ],
+    [
+     480.0,
+     80.49
+    ]
+   ]
+  }
+ },
+ "cenas": [
+  {
+   "data": "2026-06-17",
+   "arquivo": "NISAR_L2_PR_GCOV_023_053_D_102_2005_DHDH_M_20260617T213319_20260617T213353_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_023_053_D_102_2005_DHDH_M_20260617T213319_20260617T213353_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-06-17T21:33:19.000000000",
+   "trackNumber": 53,
+   "frameNumber": 102,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 4650,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-06-29",
+   "arquivo": "NISAR_L2_PR_GCOV_024_053_D_102_2005_DHDH_M_20260629T213318_20260629T213352_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_024_053_D_102_2005_DHDH_M_20260629T213318_20260629T213352_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-06-29T21:33:18.000000000",
+   "trackNumber": 53,
+   "frameNumber": 102,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 4823,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-07-11",
+   "arquivo": "NISAR_L2_PR_GCOV_025_053_D_102_2005_DHDH_M_20260711T213317_20260711T213352_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_025_053_D_102_2005_DHDH_M_20260711T213317_20260711T213352_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-07-11T21:33:17.000000000",
+   "trackNumber": 53,
+   "frameNumber": 102,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 4996,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-07-23",
+   "arquivo": "NISAR_L2_PR_GCOV_026_053_D_102_2005_DHDH_M_20260723T213316_20260723T213351_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_026_053_D_102_2005_DHDH_M_20260723T213316_20260723T213351_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-07-23T21:33:16.000000000",
+   "trackNumber": 53,
+   "frameNumber": 102,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 5169,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-08-16",
+   "arquivo": "NISAR_L2_PR_GCOV_028_053_D_102_2005_DHDH_M_20260816T213315_20260816T213350_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_028_053_D_102_2005_DHDH_M_20260816T213315_20260816T213350_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-08-16T21:33:15.000000000",
+   "trackNumber": 53,
+   "frameNumber": 102,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 5515,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-08-28",
+   "arquivo": "NISAR_L2_PR_GCOV_029_053_D_102_2005_DHDH_M_20260828T213315_20260828T213350_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_029_053_D_102_2005_DHDH_M_20260828T213315_20260828T213350_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-08-28T21:33:15.000000000",
+   "trackNumber": 53,
+   "frameNumber": 102,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 5688,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-10-15",
+   "arquivo": "NISAR_L2_PR_GCOV_033_053_D_102_2005_DHDH_M_20261015T213315_20261015T213350_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_033_053_D_102_2005_DHDH_M_20261015T213315_20261015T213350_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-10-15T21:33:15.000000000",
+   "trackNumber": 53,
+   "frameNumber": 102,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 6380,
+   "processingCenter": "JPL"
+  }
+ ],
+ "fontes": {
+  "nisar": "https://nisar-docs.asf.alaska.edu/",
+  "ana_sar": "https://www.ana.gov.br/sar/sin/ (MedicaoSin, reservatórios 19067 e 19069)",
+  "ana_cav": "ANA/SNIRH, pacotes 'Cota x Área x Volume dos Reservatórios de UHEs' (Barra Grande, Machadinho)"
+ },
+ "rotulo": {
+  "status": "experimental",
+  "motivos": [
+   "Barra Grande: erro absoluto médio de 20.0% (viés -15.3 km², NISAR abaixo da CAV em todas as datas)",
+   "Machadinho: erro absoluto médio de 25.7% (viés -18.3 km², NISAR abaixo da CAV em todas as datas)"
+  ],
+  "criterio": "erro absoluto médio <= 5.0% e cobertura válida >= 90%"
+ },
+ "metricas": {
+  "barra_grande": {
+   "todas": {
+    "n": 7,
+    "erro_abs_medio_km2": 15.3,
+    "erro_abs_medio_pct": 20.0,
+    "vies_km2": -15.3,
+    "ruido_dp_km2": 5.2,
+    "r_cota_area": 0.98,
+    "inclinacao_nisar_km2_por_m": 0.68,
+    "inclinacao_cav_km2_por_m": 1.33,
+    "inclinacao_cav_nas_datas_km2_por_m": 1.33,
+    "r_variacoes": 0.89,
+    "razao_variacoes": 0.57
+   },
+   "sem_vento": {
+    "n": 7,
+    "erro_abs_medio_km2": 15.3,
+    "erro_abs_medio_pct": 20.0,
+    "vies_km2": -15.3,
+    "ruido_dp_km2": 5.2,
+    "r_cota_area": 0.98,
+    "inclinacao_nisar_km2_por_m": 0.68,
+    "inclinacao_cav_km2_por_m": 1.33,
+    "inclinacao_cav_nas_datas_km2_por_m": 1.33,
+    "r_variacoes": 0.89,
+    "razao_variacoes": 0.57
+   },
+   "datas_vento": [],
+   "resumo_validate_ana": {
+    "n_datas": 7,
+    "n_datas_calmas": 7,
+    "erro_abs_medio_km2": 15.3,
+    "erro_abs_medio_pct": 20.0,
+    "vies_km2": -15.3,
+    "ruido_dp_km2": 5.2,
+    "inclinacao_nisar_km2_por_m": 0.7,
+    "intercepto_nisar_km2": -376.3,
+    "inclinacao_ana_km2_por_m": 1.3,
+    "r_cota_area": 0.98,
+    "cota_max_m": 646.17,
+    "cota_max_data": "2026-07-23",
+    "cota_min_m": 628.96,
+    "cota_min_data": "2026-06-17",
+    "queda_cota_m": 17.21,
+    "variacao_area_esperada_km2": 23.2,
+    "erro_abs_medio_todas_km2": 15.3,
+    "area_esperada_faixa_km2": [
+     58.9,
+     82.1
+    ],
+    "area_nisar_calmas_faixa_km2": [
+     50.53,
+     63.33
+    ],
+    "brilho_agua_calmas_db": -18.3,
+    "brilho_agua_vento_db": []
+   },
+   "subida": {
+    "de": "20260629",
+    "para": "20260711",
+    "agua_nova_km2": 10.67,
+    "agua_perdida_km2": 0.11,
+    "delta_nisar_km2": 10.56,
+    "delta_cav_km2": 18.01
+   }
+  },
+  "machadinho": {
+   "todas": {
+    "n": 7,
+    "erro_abs_medio_km2": 18.3,
+    "erro_abs_medio_pct": 25.7,
+    "vies_km2": -18.3,
+    "ruido_dp_km2": 2.9,
+    "r_cota_area": 0.85,
+    "inclinacao_nisar_km2_por_m": 0.54,
+    "inclinacao_cav_km2_por_m": 1.1,
+    "inclinacao_cav_nas_datas_km2_por_m": 1.1,
+    "r_variacoes": 0.64,
+    "razao_variacoes": 0.44
+   },
+   "sem_vento": {
+    "n": 7,
+    "erro_abs_medio_km2": 18.3,
+    "erro_abs_medio_pct": 25.7,
+    "vies_km2": -18.3,
+    "ruido_dp_km2": 2.9,
+    "r_cota_area": 0.85,
+    "inclinacao_nisar_km2_por_m": 0.54,
+    "inclinacao_cav_km2_por_m": 1.1,
+    "inclinacao_cav_nas_datas_km2_por_m": 1.1,
+    "r_variacoes": 0.64,
+    "razao_variacoes": 0.44
+   },
+   "datas_vento": [],
+   "resumo_validate_ana": {
+    "n_datas": 7,
+    "n_datas_calmas": 7,
+    "erro_abs_medio_km2": 18.3,
+    "erro_abs_medio_pct": 25.7,
+    "vies_km2": -18.3,
+    "ruido_dp_km2": 2.9,
+    "inclinacao_nisar_km2_por_m": 0.5,
+    "intercepto_nisar_km2": -203.3,
+    "inclinacao_ana_km2_por_m": 1.1,
+    "r_cota_area": 0.85,
+    "cota_max_m": 479.04,
+    "cota_max_data": "2026-07-23",
+    "cota_min_m": 468.21,
+    "cota_min_data": "2026-06-17",
+    "queda_cota_m": 10.83,
+    "variacao_area_esperada_km2": 12.1,
+    "erro_abs_medio_todas_km2": 18.3,
+    "area_esperada_faixa_km2": [
+     63.3,
+     75.4
+    ],
+    "area_nisar_calmas_faixa_km2": [
+     48.26,
+     55.55
+    ],
+    "brilho_agua_calmas_db": -19.3,
+    "brilho_agua_vento_db": []
+   },
+   "subida": {
+    "de": "20260629",
+    "para": "20260711",
+    "agua_nova_km2": 5.16,
+    "agua_perdida_km2": 0.36,
+    "delta_nisar_km2": 4.79,
+    "delta_cav_km2": 10.34
+   }
+  }
+ }
+}

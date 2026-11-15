@@ -1,0 +1,348 @@
+{
+ "projeto": "Arara",
+ "licenca": "MIT",
+ "colecao": "NISAR_L2_GCOV_PROVISIONAL_V1",
+ "arquivo_daac": "ASF DAAC",
+ "trilha": 24,
+ "direcao": "D",
+ "frame": 99,
+ "modo": "2005",
+ "banda": "L",
+ "polarizacoes": [
+  "HH",
+  "HV"
+ ],
+ "pixel_original_m": 20,
+ "pixel_processado_m": 40.0,
+ "epsg_original": 32723,
+ "metodo": {
+  "canal": "HH",
+  "filtro": "média 5x5 em dB",
+  "limiar_db": -15.65,
+  "contagem": "só dentro do polígono oficial da ANA, sem buffer",
+  "mancha_minima_km2": 0.1,
+  "mesmo_limiar_todas_datas": true
+ },
+ "poligono": {
+  "fonte": "ANA/SNIRH, Furnas.gdb, camada Reservatório",
+  "cota_operacao_m": 768.0,
+  "area_km2": 1332.11,
+  "area_ficha_ana_km2": 1332.14
+ },
+ "cobertura": {
+  "furnas_frac": 1.0,
+  "funil_frac": 0.212
+ },
+ "datas_suspeita_vento": [
+  "2026-09-07",
+  "2026-10-01"
+ ],
+ "mudanca": {
+  "antes": "2026-06-27",
+  "depois": "2026-10-13",
+  "secou_km2": 32.94,
+  "agua_nova_km2": 12.99,
+  "foco_latlon": [
+   -21.0638,
+   -45.7865
+  ]
+ },
+ "metricas": {
+  "n_datas": 9,
+  "n_datas_calmas": 7,
+  "erro_abs_medio_km2": 10.4,
+  "erro_abs_medio_pct": 1.0,
+  "vies_km2": 9.0,
+  "ruido_dp_km2": 12.3,
+  "inclinacao_nisar_km2_por_m": 47.4,
+  "intercepto_nisar_km2": -35161.2,
+  "inclinacao_ana_km2_por_m": 45.0,
+  "r_cota_area": 0.75,
+  "cota_max_m": 763.72,
+  "cota_max_data": "2026-07-09",
+  "cota_min_m": 762.85,
+  "cota_min_data": "2026-09-07",
+  "queda_cota_m": 0.87,
+  "variacao_area_esperada_km2": 39.4,
+  "erro_abs_medio_todas_km2": 19.7,
+  "pior_diferenca_vento_km2": -81.5,
+  "brilho_agua_calmas_db": -20.0,
+  "brilho_agua_vento_db": [
+   -17.57,
+   -18.11
+  ],
+  "area_esperada_faixa_km2": [
+   1005.6,
+   1045.0
+  ],
+  "area_nisar_calmas_faixa_km2": [
+   1019.84,
+   1071.43
+  ]
+ },
+ "cota_max_normal_m": 768.0,
+ "curva_ana": [
+  [
+   762.6,
+   995.3
+  ],
+  [
+   762.65,
+   997.3
+  ],
+  [
+   762.7,
+   999.3
+  ],
+  [
+   762.75,
+   1001.3
+  ],
+  [
+   762.8,
+   1003.4
+  ],
+  [
+   762.85,
+   1005.6
+  ],
+  [
+   762.9,
+   1007.9
+  ],
+  [
+   762.95,
+   1010.1
+  ],
+  [
+   763.0,
+   1012.3
+  ],
+  [
+   763.05,
+   1014.4
+  ],
+  [
+   763.1,
+   1016.6
+  ],
+  [
+   763.15,
+   1018.8
+  ],
+  [
+   763.2,
+   1020.9
+  ],
+  [
+   763.25,
+   1023.1
+  ],
+  [
+   763.3,
+   1025.3
+  ],
+  [
+   763.35,
+   1027.5
+  ],
+  [
+   763.4,
+   1029.8
+  ],
+  [
+   763.45,
+   1032.0
+  ],
+  [
+   763.5,
+   1034.4
+  ],
+  [
+   763.55,
+   1036.9
+  ],
+  [
+   763.6,
+   1039.4
+  ],
+  [
+   763.65,
+   1041.8
+  ],
+  [
+   763.7,
+   1044.1
+  ],
+  [
+   763.75,
+   1046.4
+  ],
+  [
+   763.8,
+   1048.6
+  ],
+  [
+   763.85,
+   1050.9
+  ],
+  [
+   763.9,
+   1053.1
+  ],
+  [
+   763.95,
+   1055.3
+  ],
+  [
+   764.0,
+   1057.5
+  ]
+ ],
+ "camadas": {
+  "escala_hh_db": [
+   -23.0,
+   -2.0
+  ],
+  "escala_hv_db": [
+   -27.0,
+   -9.0
+  ],
+  "escala_razao_db": [
+   3.5,
+   10.0
+  ],
+  "hv_volume_db": -13.0,
+  "data_polarizacoes": "2026-06-27",
+  "sonda": {
+   "largura": 640,
+   "altura": 610,
+   "db_min": -35.0,
+   "db_por_nivel": 0.5
+  }
+ },
+ "cenas": [
+  {
+   "data": "2026-06-27",
+   "arquivo": "NISAR_L2_PR_GCOV_024_024_D_099_2005_DHDH_M_20260627T211458_20260627T211533_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_024_024_D_099_2005_DHDH_M_20260627T211458_20260627T211533_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-06-27T21:14:58.000000000",
+   "trackNumber": 24,
+   "frameNumber": 99,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 4794,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-07-09",
+   "arquivo": "NISAR_L2_PR_GCOV_025_024_D_099_2005_DHDH_M_20260709T211458_20260709T211532_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_025_024_D_099_2005_DHDH_M_20260709T211458_20260709T211532_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-07-09T21:14:58.000000000",
+   "trackNumber": 24,
+   "frameNumber": 99,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 4967,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-07-21",
+   "arquivo": "NISAR_L2_PR_GCOV_026_024_D_099_2005_DHDH_M_20260721T211457_20260721T211531_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_026_024_D_099_2005_DHDH_M_20260721T211457_20260721T211531_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-07-21T21:14:57.000000000",
+   "trackNumber": 24,
+   "frameNumber": 99,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 5140,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-08-14",
+   "arquivo": "NISAR_L2_PR_GCOV_028_024_D_099_2005_DHDH_M_20260814T211456_20260814T211530_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_028_024_D_099_2005_DHDH_M_20260814T211456_20260814T211530_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-08-14T21:14:56.000000000",
+   "trackNumber": 24,
+   "frameNumber": 99,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 5486,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-08-26",
+   "arquivo": "NISAR_L2_PR_GCOV_029_024_D_099_2005_DHDH_M_20260826T211455_20260826T211530_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_029_024_D_099_2005_DHDH_M_20260826T211455_20260826T211530_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-08-26T21:14:55.000000000",
+   "trackNumber": 24,
+   "frameNumber": 99,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 5659,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-09-07",
+   "arquivo": "NISAR_L2_PR_GCOV_030_024_D_099_2005_DHDH_M_20260907T211455_20260907T211530_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_030_024_D_099_2005_DHDH_M_20260907T211455_20260907T211530_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-09-07T21:14:55.000000000",
+   "trackNumber": 24,
+   "frameNumber": 99,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 5832,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-09-19",
+   "arquivo": "NISAR_L2_PR_GCOV_031_024_D_099_2005_DHDH_M_20260919T211455_20260919T211530_P05023_F_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_031_024_D_099_2005_DHDH_M_20260919T211455_20260919T211530_P05023_F_F_J_001",
+   "zeroDopplerStartTime": "2026-09-19T21:14:55.000000000",
+   "trackNumber": 24,
+   "frameNumber": 99,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 6005,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-10-01",
+   "arquivo": "NISAR_L2_PR_GCOV_032_024_D_099_2005_DHDH_M_20261001T211456_20261001T211530_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_032_024_D_099_2005_DHDH_M_20261001T211456_20261001T211530_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-10-01T21:14:56.000000000",
+   "trackNumber": 24,
+   "frameNumber": 99,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 6178,
+   "processingCenter": "JPL"
+  },
+  {
+   "data": "2026-10-13",
+   "arquivo": "NISAR_L2_PR_GCOV_033_024_D_099_2005_DHDH_M_20261013T211455_20261013T211530_P05023_N_F_J_001.h5",
+   "granuleId": "NISAR_L2_PR_GCOV_033_024_D_099_2005_DHDH_M_20261013T211455_20261013T211530_P05023_N_F_J_001",
+   "zeroDopplerStartTime": "2026-10-13T21:14:55.000000000",
+   "trackNumber": 24,
+   "frameNumber": 99,
+   "orbitPassDirection": "Descending",
+   "compositeReleaseId": "P05023",
+   "productVersion": "1.0.11",
+   "absoluteOrbitNumber": 6351,
+   "processingCenter": "JPL"
+  }
+ ],
+ "fontes": {
+  "nisar": "https://nisar-docs.asf.alaska.edu/",
+  "ana_boletins": "https://www.gov.br/ana/pt-br/sala-de-situacao/sistemas-hidricos-dos-rios-grande-e-paranaiba",
+  "ana_cav": "https://metadados.snirh.gov.br/geonetwork/srv/api/records/b8f0487a-df73-4f8d-8b22-bb49cf9f3683"
+ }
+}

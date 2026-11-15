@@ -1,0 +1,438 @@
+"""Orquestrador de uma análise: python -m arara_pipeline.run --spec spec.json --out <dir>
+
+Progresso em JSON Lines no stdout ({"stage","progress","message"}); o resultado fica em
+<out>/result.json com status completed | unavailable | failed. Nada é simulado: sem acesso,
+cobertura ou cenas válidas, o status é "unavailable" com o motivo.
+
+spec.json: {"analysis_id", "aoi": <GeoJSON>, "start", "end", "group_id"?, "maturity"?,
+            "max_scenes"?, "params": {"step"?, "filter"?, "threshold_db"?},
+            "local_scenes"?: [caminhos .h5 já no disco, mesma geometria]}
+"""
+import argparse
+import csv
+import datetime
+import json
+import os
+import sys
+import time
+import traceback
+
+import numpy as np
+
+from . import ALGORITHM_VERSION, cache, catalog_nisar, change, gcov_read, leitura, passagens, patterns, publish, quality, water
+from .geom import aneis_do_geojson, mascara_do_poligono, reprojetar_aneis
+
+AOI_MAX_KM2 = float(os.environ.get("ARARA_AOI_MAX_KM2", 2500))
+MAX_CENAS = int(os.environ.get("ARARA_MAX_SCENES", 12))
+VALIDO_MINIMO = 0.95
+ETAPAS = ["discover", "select", "acquire", "process", "classify", "compare", "optical_s2",
+          "validate_cross", "forecast", "insights", "publish"]
+
+
+class Indisponivel(Exception):
+    """A análise não pode ser feita com dados reais; o motivo vai para o usuário."""
+
+
+_TEMPOS = []
+
+
+def progresso(etapa, fracao, mensagem):
+    if not _TEMPOS or _TEMPOS[-1][0] != etapa:
+        _TEMPOS.append((etapa, time.monotonic()))
+    print(json.dumps({"stage": etapa, "progress": round(float(fracao), 3), "message": mensagem},
+                     ensure_ascii=False), flush=True)
+
+
+def tempos():
+    """Segundos gastos em cada etapa (soma das vezes em que ela esteve ativa)."""
+    out = {}
+    fim = _TEMPOS[1:] + [(None, time.monotonic())]
+    for (etapa, t0), (_, t1) in zip(_TEMPOS, fim):
+        out[etapa] = round(out.get(etapa, 0) + t1 - t0, 1)
+    return out
+
+
+def agora():
+    return datetime.datetime.now(datetime.timezone.utc).strftime("%Y-%m-%dT%H:%M:%SZ")
+
+
+def area_km2(geom):
+    from pyproj import Geod
+    return abs(Geod(ellps="WGS84").geometry_area_perimeter(geom)[0]) / 1e6
+
+
+def cenas_locais(caminhos):
+    """Cenas já no disco (Furnas e testes): metadados lidos do próprio .h5."""
+    import h5py
+    cenas = []
+    for c in sorted(caminhos):
+        with h5py.File(c, "r") as h:
+            ident = gcov_read.validar_estrutura(h).get("identification", {})
+        nome = os.path.basename(c)[:-3]
+        campos = nome.split("_")
+        inicio = str(ident.get("zeroDopplerStartTime") or "")
+        data = inicio[:10] if inicio else f"{campos[11][:4]}-{campos[11][4:6]}-{campos[11][6:8]}"
+        cenas.append({"granule": nome, "collection": None, "maturity": "LOCAL",
+                      "crid": ident.get("compositeReleaseId") or (campos[13] if len(campos) > 13 else None),
+                      "date": data, "start_time": inicio or data, "track": ident.get("trackNumber"),
+                      "direction": str(ident.get("orbitPassDirection") or "")[:1].upper() or None,
+                      "frame": ident.get("frameNumber"), "url": c, "local": True, "size_bytes": os.path.getsize(c)})
+    geometrias = {(c["track"], c["direction"], c["frame"]) for c in cenas}
+    if len(geometrias) > 1:
+        raise Indisponivel(f"as cenas locais misturam geometrias (trilha, direção, frame): {sorted(map(str, geometrias))}")
+    return cenas
+
+
+def alinhar(janelas):
+    """Recorta todas as janelas para a grade comum (mesma origem e passo; só desloca inteiros)."""
+    ref = janelas[0]
+    dx, dy = ref["xs"][1] - ref["xs"][0], ref["ys"][1] - ref["ys"][0]
+    x_a = max(j["xs"][0] if dx > 0 else -j["xs"][0] for j in janelas) * (1 if dx > 0 else -1)
+    x_b = min(j["xs"][-1] if dx > 0 else -j["xs"][-1] for j in janelas) * (1 if dx > 0 else -1)
+    y_a = max(j["ys"][0] if dy > 0 else -j["ys"][0] for j in janelas) * (1 if dy > 0 else -1)
+    y_b = min(j["ys"][-1] if dy > 0 else -j["ys"][-1] for j in janelas) * (1 if dy > 0 else -1)
+    nx, ny = int(round((x_b - x_a) / dx)) + 1, int(round((y_b - y_a) / dy)) + 1
+    if nx < 2 or ny < 2:
+        raise Indisponivel("as cenas não têm área em comum sobre a AOI")
+    fatias = []
+    for j in janelas:
+        c0, r0 = (x_a - j["xs"][0]) / dx, (y_a - j["ys"][0]) / dy
+        if abs(c0 - round(c0)) > 0.01 or abs(r0 - round(r0)) > 0.01:
+            raise Indisponivel("as cenas não estão na mesma grade (frames ou versões diferentes)")
+        fatias.append((slice(int(round(r0)), int(round(r0)) + ny), slice(int(round(c0)), int(round(c0)) + nx)))
+    return x_a + dx * np.arange(nx), y_a + dy * np.arange(ny), fatias
+
+
+def executar(spec, saida):
+    _TEMPOS.clear()
+    os.makedirs(saida, exist_ok=True)
+    from shapely.geometry import mapping
+    aoi = catalog_nisar.geometria(spec["aoi"])
+    if aoi.is_empty or not aoi.is_valid:
+        raise Indisponivel("a geometria da área é inválida")
+    km2_aoi = area_km2(aoi)
+    if km2_aoi > AOI_MAX_KM2:
+        raise Indisponivel(f"área de {km2_aoi:,.0f} km² acima do limite de {AOI_MAX_KM2:,.0f} km²; desenhe uma área menor")
+    params = spec.get("params") or {}
+    passo = int(params.get("step", 1))
+    filtro = params.get("filter", "db")
+    maximo = min(int(spec.get("max_scenes") or MAX_CENAS), MAX_CENAS)
+    avisos, puladas = [], []
+
+    # ---- discover + select ----
+    if spec.get("local_scenes"):
+        progresso("discover", 0.02, "cenas locais (sem consulta ao catálogo)")
+        cenas = cenas_locais(spec["local_scenes"])
+        grupo = {"id": "local", "collection": None, "maturity": "LOCAL", "track": cenas[0]["track"],
+                 "direction": cenas[0]["direction"], "frame": cenas[0]["frame"]}
+    else:
+        progresso("discover", 0.02, "consultando o catálogo NISAR (ASF)")
+        try:
+            todas = catalog_nisar.buscar(aoi, spec.get("start"), spec.get("end"), spec.get("maturity"))
+        except Exception as e:  # noqa: BLE001
+            raise Indisponivel(f"catálogo ASF indisponível: {type(e).__name__}: {e}") from e
+        progresso("select", 0.05, f"{len(todas)} cenas encontradas; escolhendo uma geometria")
+        escolhido, motivo = catalog_nisar.escolher(catalog_nisar.agrupar(todas, aoi), spec.get("group_id"))
+        if escolhido is None:
+            raise Indisponivel(motivo)
+        cenas = escolhido["scenes"]
+        grupo = {k: escolhido[k] for k in ("id", "collection", "maturity", "track", "direction", "frame", "aoi_coverage")}
+    if len(cenas) > maximo:
+        avisos.append(f"{len(cenas)} datas disponíveis; usadas {maximo} (limite por análise), espaçadas no período")
+        cenas = catalog_nisar.limitar(cenas, maximo)
+
+    # ---- acquire + validate: só a janela da AOI + 1 km de cada cena (cache por passagem, leitura em paralelo) ----
+    progresso("acquire", 0.08, f"lendo {len(cenas)} passagens (as que já estão no cache não são relidas)")
+    try:
+        lidas = passagens.ler(cenas, aoi, passo, filtro, progresso)
+    except gcov_read.AcessoIndisponivel as e:
+        raise Indisponivel(str(e)) from e
+    janelas, usadas = [], []
+    for c, j in zip(cenas, lidas):
+        if isinstance(j, str):
+            puladas.append({"granule": c["granule"], "date": c["date"], "reason": j})
+            continue
+        if janelas and j["epsg"] != janelas[0]["epsg"]:
+            puladas.append({"granule": c["granule"], "date": c["date"], "reason": "projeção diferente das demais cenas"})
+            continue
+        janelas.append(j)
+        usadas.append(c)
+    if not janelas:
+        raise Indisponivel("nenhuma cena válida sobre a área: " + "; ".join(p["reason"] for p in puladas))
+
+    # ---- process: grade comum, máscara da AOI, dB (uma vez) com filtro 5x5 ----
+    progresso("process", 0.52, "alinhando as cenas na grade comum")
+    xs, ys, fatias = alinhar(janelas)
+    epsg, pixel_m, area_px = janelas[0]["epsg"], janelas[0]["pixel_m"], janelas[0]["pixel_area_m2"]
+    mascara_aoi = mascara_do_poligono(reprojetar_aneis(aneis_do_geojson(mapping(aoi)), 4326, epsg), xs, ys)
+    if not mascara_aoi.any():
+        raise Indisponivel("a área não cai sobre a grade das cenas")
+    dbs, validos, hvs, manter = [], [], [], []
+    for j, c, f in zip(janelas, usadas, fatias):
+        valido = j["valid"]["HHHH"][f]
+        fracao = float((valido & mascara_aoi).sum() / mascara_aoi.sum())
+        c["valid_fraction_aoi"] = round(fracao, 4)
+        if fracao < VALIDO_MINIMO:
+            puladas.append({"granule": c["granule"], "date": c["date"],
+                            "reason": f"só {fracao:.0%} da área com dado válido (mínimo {VALIDO_MINIMO:.0%})"})
+            continue
+        dbs.append(j["db"]["HHHH"][f])
+        validos.append(valido)
+        hvs.append(j["db"]["HVHV"][f] if "HVHV" in j["db"] else None)
+        manter.append((j, c))
+    janelas.clear()
+    if not dbs:
+        raise Indisponivel("nenhuma cena com dado válido suficiente na área: " + "; ".join(p["reason"] for p in puladas))
+    usadas = [c for _, c in manter]
+    if any(h is None for h in hvs):
+        avisos.append("HV ausente em parte das datas (modo de polarização simples); a água é classificada só com HH")
+
+    # ---- classify ----
+    progresso("classify", 0.62, "classificando água (limiar bimodal nos blocos de margem)")
+    cls = water.classificar_serie(dbs, validos, mascara_aoi, pixel_m, params.get("threshold_db"))
+    datas = []
+    for i, c in enumerate(usadas):
+        n = int(cls["water"][i].sum())
+        datas.append({
+            "date": c["date"], "granule": c["granule"], "crid": c["crid"],
+            "water_km2": round(n * area_px / 1e6, 3), "water_pct": round(100 * n / cls["n_common"], 3),
+            "threshold_db": cls["threshold_db"], "date_threshold_db": cls["per_date_threshold_db"][i],
+            "margin_blocks": cls["margin_blocks"][i], "margin_seed_db": cls["seed_db"][i],
+            "hh_water_median_db": None if np.isnan(cls["hh_water_db"][i]) else round(cls["hh_water_db"][i], 2),
+            "suspeita_vento": cls["wind"][i], "valid_fraction_aoi": c["valid_fraction_aoi"],
+            "has_hv": hvs[i] is not None,
+        })
+    if any(cls["wind"]):
+        avisos.append("datas com suspeita de vento (água mais clara que o normal da série): "
+                      + ", ".join(d["date"] for d in datas if d["suspeita_vento"])
+                      + "; a área nessas datas tende a sair subestimada e não foi corrigida")
+
+    # ---- compare: primeira x última data ----
+    comparacao, classes = None, None
+    if len(datas) >= 2:
+        progresso("compare", 0.70, f"comparando {datas[0]['date']} com {datas[-1]['date']}")
+        classes, m = change.comparar(cls["water"][0], cls["water"][-1], cls["common_valid"], area_px)
+        comparacao = {"before": datas[0]["date"], "after": datas[-1]["date"], **m,
+                      "wind_caveat": datas[0]["suspeita_vento"] or datas[-1]["suspeita_vento"]}
+    else:
+        avisos.append("só uma data válida: sem comparação entre datas")
+
+    # ---- padrões medidos: tendência, alerta, permanência, trechos que mais secaram, modo evento ----
+    nomes = [d["date"] for d in datas]
+    areas_km2 = [d["water_km2"] for d in datas]
+    padroes = {"trend": patterns.tendencia(nomes, areas_km2, cls["wind"]), "anomaly": patterns.anomalia(nomes, areas_km2, cls["wind"])}
+    classes_freq, info_freq = patterns.permanencia(cls["water"], cls["common_valid"], cls["wind"])
+    padroes["frequency"] = ({**patterns.resumo_permanencia(classes_freq, area_px), "n_dates": info_freq["n_dates"],
+                             "n_wind_excluded": info_freq["n_wind_excluded"], "note": info_freq["note"],
+                             "thresholds": info_freq["thresholds"]} if classes_freq is not None else info_freq)
+    padroes["retraction_hotspots"] = (patterns.trechos_secos(classes == change.RETRACAO, xs, ys, epsg, area_px) if classes is not None else [])
+    classes_evento = None
+    if len(datas) >= 3:
+        classes_evento, m_ev = change.comparar(cls["water"][-2], cls["water"][-1], cls["common_valid"], area_px)
+        padroes["event"] = {"before": datas[-2]["date"], "after": datas[-1]["date"], **m_ev,
+                            "wind_caveat": datas[-2]["suspeita_vento"] or datas[-1]["suspeita_vento"]}
+    elif comparacao:
+        padroes["event"] = {k: comparacao[k] for k in comparacao}
+
+    contexto = {"spec": spec, "aoi": aoi, "xs": xs, "ys": ys, "epsg": epsg, "pixel_m": pixel_m, "area_px": area_px,
+                "cls": cls, "dbs": dbs, "datas": datas, "comparacao": comparacao, "saida": saida, "avisos": avisos,
+                "alerta": padroes["anomaly"]}
+    extras = etapas_opcionais(contexto, ("optical_stage",))
+
+    # ---- qualidade: decide o que pode ser publicado ----
+    q = quality.avaliar(cls, extras.get("validacao"))
+    contexto["quality"] = q
+    sem_agua = q["quality"] == quality.NO_RELIABLE_WATER
+    if q["quality"] == quality.RELIABLE:
+        etapas_opcionais(contexto, ("forecast", "insights"), extras)
+    elif q["quality"] == quality.EXPERIMENTAL:
+        extras["previsao"] = {"status": "unavailable", "experimental": True,
+                              "reason": "análise experimental: sem projeção (" + "; ".join(q["reasons"]) + ")"}
+        etapas_opcionais(contexto, ("insights",), extras)
+    if not sem_agua and spec.get("flood") is not False:
+        # modo cheia, chuva e municípios: contexto para interpretar; nenhuma falha aqui derruba a análise
+        etapas_opcionais(contexto, ("cheia", "chuva", "municipios"), extras)
+    elif spec.get("flood") is not False:
+        etapas_opcionais(contexto, ("chuva",), extras)
+    juntar_por_data(datas, extras.get("cheia"), extras.get("chuva"))
+    leitura.confianca(datas, q["quality"], extras.get("validacao"), extras.get("cheia"))
+    if sem_agua:
+        # o radar não separou água de terra: nenhum número de água sai daqui, só status, motivos, cenas e HH
+        for d in datas:
+            d.update(water_km2=None, water_pct=None, hh_water_median_db=None, suspeita_vento=None)
+        for p in (extras.get("validacao") or {}).get("per_date", []):
+            p.pop("suspeita_vento", None)
+        avisos[:] = [w for w in avisos if not w.startswith("datas com suspeita de vento")]
+        comparacao, classes, classes_freq, classes_evento, padroes = None, None, None, None, None
+        for d in datas:
+            d["confidence"] = {"level": "baixa", "reasons": ["o radar não separou água de terra nesta área"]}
+    resumo = None if sem_agua else leitura.resumo(datas, km2_aoi, extras.get("cheia"), extras.get("chuva"), extras.get("municipios"))
+
+    # ---- publish ----
+    progresso("publish", 0.90, "gravando COGs, PNGs, tiles e métricas")
+    camadas, rgba = [], {}
+    idx, limites = publish.grade_latlon(xs, ys, epsg)
+    for sub in ("cog", "png"):
+        os.makedirs(os.path.join(saida, sub), exist_ok=True)
+
+    def camada(ident, tipo, data, img, titulo):
+        publish.salvar_png(os.path.join(saida, "png", ident + ".png"), img, idx)
+        rgba[ident] = img
+        camadas.append({"id": ident, "type": tipo, "date": data, "title": titulo, "png": f"png/{ident}.png",
+                        "bounds": limites, "tiles": f"tiles/{ident}/{{z}}/{{x}}/{{y}}.png"})
+
+    for i, d in enumerate(datas):
+        s = d["date"].replace("-", "")
+        publish.salvar_cog(os.path.join(saida, "cog", f"hh_db_{s}.tif"), dbs[i], xs, ys, epsg, nodata=float("nan"))
+        if hvs[i] is not None:
+            publish.salvar_cog(os.path.join(saida, "cog", f"hv_db_{s}.tif"), hvs[i], xs, ys, epsg, nodata=float("nan"))
+        if sem_agua:
+            continue
+        publish.salvar_cog(os.path.join(saida, "cog", f"water_{s}.tif"),
+                           np.where(cls["common_valid"], cls["water"][i], 255).astype("uint8"), xs, ys, epsg, nodata=255)
+        camada(f"water_{s}", "water", d["date"], publish.rgba_mascara(cls["water"][i]), f"Água em {d['date']}")
+    for i in sorted({0, len(datas) - 1}):
+        s = datas[i]["date"].replace("-", "")
+        camada(f"hh_{s}", "backscatter", datas[i]["date"], publish.rgba_db(dbs[i]), f"Radar HH (dB) em {datas[i]['date']}")
+    if classes is not None:
+        publish.salvar_cog(os.path.join(saida, "cog", "change.tif"), classes, xs, ys, epsg, nodata=0)
+        camada("change", "change", None, publish.rgba_classes(classes),
+               f"Mudança {comparacao['before']} → {comparacao['after']}")
+    if classes_freq is not None:
+        publish.salvar_cog(os.path.join(saida, "cog", "frequency.tif"), classes_freq, xs, ys, epsg, nodata=0)
+        camada("frequency", "frequency", None, publish.rgba_classes(classes_freq, publish.CORES_FREQUENCIA), "Permanência da água")
+    if classes_evento is not None:
+        camada("change_last", "change", datas[-1]["date"], publish.rgba_classes(classes_evento), f"Última passagem: {datas[-2]['date']} → {datas[-1]['date']}")
+    for ident, (tipo, data, img, titulo) in extras.get("camadas", {}).items():
+        camada(ident, tipo, data, img, titulo)
+    tiles = publish.gerar_tiles(rgba, xs, ys, epsg, os.path.join(saida, "tiles"))
+    for c in camadas:
+        c["zooms"] = tiles["zooms"]
+
+    with open(os.path.join(saida, "metrics.csv"), "w", newline="", encoding="utf-8") as f:
+        colunas = ["date", "water_km2", "water_pct", "flood_km2", "flooded_vegetation_km2", "rain_7d_mm",
+                   "threshold_db", "hh_water_median_db", "suspeita_vento",
+                   "valid_fraction_aoi", "crid", "granule"]
+        w = csv.DictWriter(f, fieldnames=colunas, extrasaction="ignore")
+        w.writeheader()
+        w.writerows(datas)
+    fontes = {
+        "generated_at": agora(), "algorithm_version": ALGORITHM_VERSION, "sensor": "NISAR L-band SAR (GCOV L2)",
+        "group": grupo, "aoi_window_m": {"epsg": epsg, "x_min": float(min(xs[0], xs[-1])), "x_max": float(max(xs[0], xs[-1])),
+                                         "y_min": float(min(ys[0], ys[-1])), "y_max": float(max(ys[0], ys[-1])), "step": passo},
+        "scenes": [{"granule": c["granule"], "collection": c.get("collection"), "maturity": c.get("maturity"),
+                    "crid": c.get("crid"), "date": c["date"], "start_time": c.get("start_time"),
+                    "track": c.get("track"), "direction": c.get("direction"), "frame": c.get("frame"),
+                    "url": None if c.get("local") else c.get("url"), "size_bytes": c.get("size_bytes"),
+                    "access": j["source"]["access"], "cache": j["source"].get("cache"), "read_at": j["source"].get("read_at"),
+                    "checksum": "arquivo local, não conferido" if c.get("local") else gcov_read.LIMITACAO_CHECKSUM,
+                    "window": j["window"]} for j, c in manter],
+        "skipped_scenes": puladas, "optical": extras.get("fontes_opticas"),
+        "raw_data_policy": ("janelas lidas por streaming; a potência linear é descartada e só o radar em dB (média "
+                            "5x5) de cada passagem fica no cache local, com a chave (cena, CRID, área), para não "
+                            "reler a mesma passagem"),
+    }
+    with open(os.path.join(saida, "sources.json"), "w", encoding="utf-8") as f:
+        json.dump(fontes, f, ensure_ascii=False, indent=1)
+    oeste, sul, leste, norte = aoi.bounds
+    resultado = {
+        "status": "completed", "analysis_id": spec.get("analysis_id"), "generated_at": agora(),
+        "algorithm_version": ALGORITHM_VERSION, "method": "limiar_bimodal", "sensor": "NISAR L-band SAR (GCOV L2), HH",
+        "params": {"step": passo, "filter": filtro, "threshold_db": cls["threshold_db"], "threshold": cls["threshold"]},
+        "aoi": {"geometry": mapping(aoi), "area_km2": round(km2_aoi, 2), "bbox": [oeste, sul, leste, norte]},
+        "group": grupo, "pixel_m": pixel_m, "pixel_area_m2": area_px,
+        "quality": q["quality"], "quality_reasons": q["reasons"], "what_to_try": q.get("what_to_try"),
+        "experimental": q["quality"] != quality.RELIABLE, "experimental_reasons": q["reasons"],
+        "dates": datas, "comparison": comparacao, "layers": camadas, "warnings": avisos, "skipped_scenes": puladas,
+        "optical_validation": extras.get("validacao", {"status": "not_optically_validated",
+                                                       "reason": "validação óptica não executada nesta versão"}),
+        "forecast": extras.get("previsao"), "insights": extras.get("insights"), "patterns": padroes,
+        "flood": extras.get("cheia"), "rain": extras.get("chuva"), "municipalities": extras.get("municipios"),
+        "summary_text": resumo,
+        "timings_s": tempos(),
+        "cache": {"scenes_from_cache": sum(1 for j, _ in manter if j["source"].get("cache") == "hit"),
+                  "scenes_read": sum(1 for j, _ in manter if j["source"].get("cache") == "miss")},
+    }
+    try:
+        cache.limitar()
+    except OSError:
+        pass
+    with open(os.path.join(saida, "metrics.json"), "w", encoding="utf-8") as f:
+        json.dump({k: resultado[k] for k in ("analysis_id", "algorithm_version", "method", "sensor", "params", "group",
+                                              "quality", "quality_reasons", "experimental", "experimental_reasons", "dates", "comparison",
+                                              "optical_validation", "forecast", "patterns", "flood", "rain", "municipalities",
+                                              "summary_text", "warnings")}, f, ensure_ascii=False, indent=1)
+    return resultado
+
+
+FALHA_ETAPA = {
+    "cheia": "modo cheia indisponível nesta análise",
+    "chuva": "chuva GPM IMERG indisponível nesta análise",
+    "municipios": "cruzamento com os municípios do IBGE indisponível nesta análise",
+    "optical_stage": "validação óptica indisponível nesta análise (erro ao comparar com o Sentinel-2)",
+    "forecast": "projeção indisponível nesta análise",
+    "insights": "leitura da mudança indisponível nesta análise",
+}
+
+
+def juntar_por_data(datas, cheia, chuva):
+    """Copia cheia e chuva de cada passagem para a linha da data (tabela, CSV e linha do tempo)."""
+    por = {}
+    if cheia and cheia.get("status") == "ok":
+        for p in cheia["per_date"]:
+            por.setdefault(p["date"], {}).update(flood_km2=p["flood_km2"], flooded_vegetation_km2=p["flooded_vegetation_km2"])
+    if chuva and chuva.get("status") == "ok":
+        for p in chuva["per_date"]:
+            por.setdefault(p["date"], {}).update(rain_3d_mm=p["rain_3d_mm"], rain_7d_mm=p["rain_7d_mm"])
+    for d in datas:
+        d.update(por.get(d["date"], {}))
+
+
+def etapas_opcionais(ctx, nomes, extras=None):
+    """Validação óptica, previsão e interpretação: uma falha aqui nunca derruba a análise de radar.
+    O traceback vai só para o log do servidor (stderr); o usuário recebe uma frase simples."""
+    extras = {} if extras is None else extras
+    for nome in nomes:
+        modulo = __import__(f"arara_pipeline.{nome}", fromlist=["rodar"])
+        try:
+            modulo.rodar(ctx, extras, progresso)
+        except Exception:  # noqa: BLE001
+            traceback.print_exc(file=sys.stderr)
+            ctx["avisos"].append(FALHA_ETAPA[nome])
+            if nome == "optical_stage":
+                extras["validacao"] = {"status": "not_optically_validated", "reason": FALHA_ETAPA[nome]}
+    return extras
+
+
+def main(argv=None):
+    # o backend lê o stdout como UTF-8; no Windows o padrão do pipe seria a página de código local
+    for fluxo in (sys.stdout, sys.stderr):
+        if hasattr(fluxo, "reconfigure"):
+            fluxo.reconfigure(encoding="utf-8")
+    ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
+    ap.add_argument("--spec", required=True)
+    ap.add_argument("--out", required=True)
+    a = ap.parse_args(argv)
+    with open(a.spec, encoding="utf-8") as f:
+        spec = json.load(f)
+    os.makedirs(a.out, exist_ok=True)
+    codigo = 0
+    try:
+        resultado = executar(spec, a.out)
+        progresso("publish", 1.0, "análise concluída")
+    except Indisponivel as e:
+        resultado = {"status": "unavailable", "analysis_id": spec.get("analysis_id"), "reason": str(e), "generated_at": agora()}
+        progresso("unavailable", 1.0, str(e))
+    except Exception as e:  # noqa: BLE001
+        traceback.print_exc(file=sys.stderr)
+        resultado = {"status": "failed", "analysis_id": spec.get("analysis_id"),
+                     "reason": f"{type(e).__name__}: {e}", "generated_at": agora()}
+        progresso("failed", 1.0, resultado["reason"])
+        codigo = 1
+    with open(os.path.join(a.out, "result.json"), "w", encoding="utf-8") as f:
+        json.dump(resultado, f, ensure_ascii=False, indent=1)
+    return codigo
+
+
+if __name__ == "__main__":
+    sys.exit(main())

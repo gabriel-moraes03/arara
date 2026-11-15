@@ -1,0 +1,3 @@
+# scripts de shell com LF, também quando o checkout é no Windows
+*.sh text eol=lf
+backend/mvnw text eol=lf

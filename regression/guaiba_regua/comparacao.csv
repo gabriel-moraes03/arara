@@ -1,0 +1,7 @@
+data,passagem_utc,passagem_brasilia,nivel_medio_cm,leituras,chuva_regua_3d_mm,chuva_regua_7d_mm,flood_km2,water_km2,quality,confidence
+2026-08-16,21:33,18:33,135.4,8,14.0,14.0,83.405,197.728,reliable,alta
+2026-08-28,21:33,18:33,123.4,8,48.2,48.2,81.262,195.817,reliable,alta
+2026-09-09,21:33,18:33,121.2,8,0.6,0.6,78.692,198.676,reliable,alta
+2026-09-21,21:33,18:33,100.0,8,85.4,85.4,91.751,202.822,reliable,alta
+2026-10-03,21:33,18:33,155.2,8,0.4,29.8,109.775,230.406,reliable,alta
+2026-10-15,21:33,18:33,146.2,8,14.8,22.6,106.05,223.472,reliable,alta

@@ -1,0 +1,12 @@
+régua ANA 87450020 (Gasômetro): 15/08/2026 03:00 a 17/10/2026 02:45 UTC, 6048 leituras
+passagens no período: 6; janela ±1 h, nível médio da régua × flood_km2
+r (todas as 6): +0.63
+r sem 2026-09-21 (5 passagens): +0.95; inclinação 0.97 km²/cm
+r tirando cada passagem: 2026-08-16 +0.71, 2026-08-28 +0.62, 2026-09-09 +0.61, 2026-09-21 +0.95, 2026-10-03 +0.37, 2026-10-15 +0.54
+maior nível: 2026-10-03 (155 cm); maior flood_km2: 2026-10-03 (109.8 km²)
+2026-08-16 18:33 BRT  nível  135.4 cm (8 leituras)  flood   83.4 km²  (reta das outras:   91.0; resíduo   -7.6)  chuva na régua 3 d  14.0 mm
+2026-08-28 18:33 BRT  nível  123.4 cm (8 leituras)  flood   81.3 km²  (reta das outras:   79.4; resíduo   +1.9)  chuva na régua 3 d  48.2 mm
+2026-09-09 18:33 BRT  nível  121.2 cm (8 leituras)  flood   78.7 km²  (reta das outras:   77.3; resíduo   +1.4)  chuva na régua 3 d   0.6 mm
+2026-09-21 18:33 BRT  nível  100.0 cm (8 leituras)  flood   91.8 km²  (reta das outras:   56.8; resíduo  +35.0)  chuva na régua 3 d  85.4 mm
+2026-10-03 18:33 BRT  nível  155.2 cm (8 leituras)  flood  109.8 km²  (reta das outras:  110.1; resíduo   -0.4)  chuva na régua 3 d   0.4 mm
+2026-10-15 18:33 BRT  nível  146.2 cm (8 leituras)  flood  106.0 km²  (reta das outras:  101.4; resíduo   +4.6)  chuva na régua 3 d  14.8 mm

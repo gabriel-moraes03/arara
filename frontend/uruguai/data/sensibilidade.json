@@ -1,0 +1,210 @@
+{
+ "limiar_db": -14.61,
+ "nota": "sensibilidade à resolução; o resultado oficial é o de 40 m",
+ "variantes": {
+  "20m_5x5": {
+   "barra_grande": {
+    "erro_abs_medio_pct": 9.5,
+    "fracao_usada": 0.9226,
+    "datas": [
+     {
+      "data": "20260617",
+      "area_nisar_km2": 58.52,
+      "area_esperada_km2": 58.8,
+      "diferenca_pct": -0.6
+     },
+     {
+      "data": "20260629",
+      "area_nisar_km2": 57.9,
+      "area_esperada_km2": 59.3,
+      "diferenca_pct": -2.4
+     },
+     {
+      "data": "20260711",
+      "area_nisar_km2": 69.2,
+      "area_esperada_km2": 77.3,
+      "diferenca_pct": -10.5
+     },
+     {
+      "data": "20260723",
+      "area_nisar_km2": 70.69,
+      "area_esperada_km2": 82.0,
+      "diferenca_pct": -13.8
+     },
+     {
+      "data": "20260816",
+      "area_nisar_km2": 69.36,
+      "area_esperada_km2": 81.6,
+      "diferenca_pct": -15.0
+     },
+     {
+      "data": "20260828",
+      "area_nisar_km2": 70.96,
+      "area_esperada_km2": 79.7,
+      "diferenca_pct": -10.9
+     },
+     {
+      "data": "20261015",
+      "area_nisar_km2": 69.5,
+      "area_esperada_km2": 80.0,
+      "diferenca_pct": -13.1
+     }
+    ]
+   },
+   "machadinho": {
+    "erro_abs_medio_pct": 15.9,
+    "fracao_usada": 0.963,
+    "datas": [
+     {
+      "data": "20260617",
+      "area_nisar_km2": 55.56,
+      "area_esperada_km2": 63.3,
+      "diferenca_pct": -12.2
+     },
+     {
+      "data": "20260629",
+      "area_nisar_km2": 54.96,
+      "area_esperada_km2": 64.5,
+      "diferenca_pct": -14.8
+     },
+     {
+      "data": "20260711",
+      "area_nisar_km2": 60.71,
+      "area_esperada_km2": 74.8,
+      "diferenca_pct": -18.9
+     },
+     {
+      "data": "20260723",
+      "area_nisar_km2": 61.92,
+      "area_esperada_km2": 75.4,
+      "diferenca_pct": -17.9
+     },
+     {
+      "data": "20260816",
+      "area_nisar_km2": 60.46,
+      "area_esperada_km2": 73.4,
+      "diferenca_pct": -17.6
+     },
+     {
+      "data": "20260828",
+      "area_nisar_km2": 62.06,
+      "area_esperada_km2": 72.2,
+      "diferenca_pct": -14.0
+     },
+     {
+      "data": "20261015",
+      "area_nisar_km2": 60.67,
+      "area_esperada_km2": 71.9,
+      "diferenca_pct": -15.6
+     }
+    ]
+   }
+  },
+  "20m_3x3": {
+   "barra_grande": {
+    "erro_abs_medio_pct": 7.0,
+    "fracao_usada": 0.9226,
+    "datas": [
+     {
+      "data": "20260617",
+      "area_nisar_km2": 61.03,
+      "area_esperada_km2": 58.8,
+      "diferenca_pct": 3.7
+     },
+     {
+      "data": "20260629",
+      "area_nisar_km2": 60.59,
+      "area_esperada_km2": 59.3,
+      "diferenca_pct": 2.1
+     },
+     {
+      "data": "20260711",
+      "area_nisar_km2": 72.5,
+      "area_esperada_km2": 77.3,
+      "diferenca_pct": -6.2
+     },
+     {
+      "data": "20260723",
+      "area_nisar_km2": 73.73,
+      "area_esperada_km2": 82.0,
+      "diferenca_pct": -10.1
+     },
+     {
+      "data": "20260816",
+      "area_nisar_km2": 72.9,
+      "area_esperada_km2": 81.6,
+      "diferenca_pct": -10.6
+     },
+     {
+      "data": "20260828",
+      "area_nisar_km2": 73.9,
+      "area_esperada_km2": 79.7,
+      "diferenca_pct": -7.2
+     },
+     {
+      "data": "20261015",
+      "area_nisar_km2": 72.62,
+      "area_esperada_km2": 80.0,
+      "diferenca_pct": -9.2
+     }
+    ]
+   },
+   "machadinho": {
+    "erro_abs_medio_pct": 12.1,
+    "fracao_usada": 0.963,
+    "datas": [
+     {
+      "data": "20260617",
+      "area_nisar_km2": 57.78,
+      "area_esperada_km2": 63.3,
+      "diferenca_pct": -8.7
+     },
+     {
+      "data": "20260629",
+      "area_nisar_km2": 57.64,
+      "area_esperada_km2": 64.5,
+      "diferenca_pct": -10.6
+     },
+     {
+      "data": "20260711",
+      "area_nisar_km2": 63.69,
+      "area_esperada_km2": 74.8,
+      "diferenca_pct": -14.9
+     },
+     {
+      "data": "20260723",
+      "area_nisar_km2": 64.63,
+      "area_esperada_km2": 75.4,
+      "diferenca_pct": -14.3
+     },
+     {
+      "data": "20260816",
+      "area_nisar_km2": 63.54,
+      "area_esperada_km2": 73.4,
+      "diferenca_pct": -13.4
+     },
+     {
+      "data": "20260828",
+      "area_nisar_km2": 64.58,
+      "area_esperada_km2": 72.2,
+      "diferenca_pct": -10.6
+     },
+     {
+      "data": "20261015",
+      "area_nisar_km2": 63.29,
+      "area_esperada_km2": 71.9,
+      "diferenca_pct": -12.0
+     }
+    ]
+   }
+  },
+  "40m_5x5_oficial": {
+   "barra_grande": {
+    "erro_abs_medio_pct": 20.0
+   },
+   "machadinho": {
+    "erro_abs_medio_pct": 25.7
+   }
+  }
+ }
+}

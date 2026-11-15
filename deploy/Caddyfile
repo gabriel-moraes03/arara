@@ -1,0 +1,16 @@
+# Proxy na frente do Arara. DOMAIN vem do compose: ":80" (padrão) = HTTP puro na porta 80, acesso pelo IP.
+# Com DOMAIN=arara.exemplo.org: HTTPS automático (Let's Encrypt) e redirecionamento de 80 para 443.
+{$DOMAIN} {
+	encode zstd gzip
+	reverse_proxy backend:8080
+	header {
+		-Server
+		X-Content-Type-Options nosniff
+		Referrer-Policy strict-origin-when-cross-origin
+		X-Frame-Options SAMEORIGIN
+	}
+	log {
+		output stdout
+		format console
+	}
+}

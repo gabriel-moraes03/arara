@@ -1,0 +1,9 @@
+# contexto do docker build (deploy/Dockerfile.backend): só backend/ e frontend/ são usados
+*
+!backend/
+!frontend/
+backend/target/
+**/.env
+**/*.h5
+**/__pycache__/
+**/*Zone.Identifier

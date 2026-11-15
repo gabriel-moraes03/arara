@@ -1,0 +1,1233 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Arara · Cheias no Sul</title>
+<meta name="description" content="Onde a água saiu do leito no Sul do Brasil, medido pelo radar NISAR da NASA, com chuva, municípios e confiança de cada número.">
+<link rel="icon" href="favicon.ico" sizes="any">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<!-- fontes sem bloquear o primeiro desenho: a página abre com a fonte do sistema e troca quando chegam -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
+<style>
+/* Layout: barra lateral fixa (lista de regiões ou leitura da região) + palco (globo para a visão geral,
+   mapa de satélite para a leitura de uma região, com a linha do tempo das passagens por cima).
+   Visual escuro único, de propósito: as camadas de água e cheia precisam de contraste sobre o satélite. */
+:root {
+  --space: #04060c;
+  --bg-side: #080d16;
+  --ink: #e9eef2;
+  --ink-2: #a8b6c1;
+  --ink-3: #74859a;
+  --glass: rgba(10, 16, 26, 0.92);
+  --line: rgba(160, 196, 214, 0.16);
+  --line-2: rgba(160, 196, 214, 0.08);
+  --macaw-yellow: #f4b63f;
+  --macaw-red: #e5482d;
+  /* o que o mapa mostra: uma cor por coisa medida */
+  --flood: #22d3ee;        /* água de cheia (além da passagem mais seca) */
+  --veg: #c084fc;          /* possível vegetação alagada */
+  --ref: #3b6fd1;          /* água da passagem mais seca */
+  --water: #2e86de;        /* água medida (modo água) */
+  --s2: #40c4a0;           /* água no Sentinel-2 */
+  --rain: #8ea4c8;         /* chuva GPM IMERG */
+  --wind: #f0b44c;
+  /* confiança */
+  --c-alta: #4ade80; --c-media: #f0b44c; --c-baixa: #f07a6a;
+  --down: #f07a6a;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "IBM Plex Mono", ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; margin: 0; }
+body { background: var(--space); color: var(--ink); font-family: var(--font-body); font-size: 14px; overflow: hidden; }
+button, input, select { font-family: var(--font-body); }
+button { color: inherit; }
+:focus-visible { outline: 2px solid var(--macaw-yellow); outline-offset: 2px; }
+.sr { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); }
+[hidden] { display: none !important; }
+
+#app { display: flex; height: 100%; overflow: hidden; }
+
+/* ---------- barra lateral ---------- */
+#side { flex: none; width: 420px; height: 100%; display: flex; flex-direction: column; background: var(--bg-side); border-right: 1px solid var(--line); z-index: 10; position: relative; }
+.sidehead { display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 14px 18px 10px; }
+.logo { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
+.logo .mark { width: 36px; height: auto; display: block; }
+.logo small { font: 500 11px var(--font-mono); color: var(--ink-3); letter-spacing: .06em; text-transform: uppercase; margin-top: 6px; }
+.seg { display: flex; gap: 2px; padding: 3px; background: rgba(255,255,255,.04); border: 1px solid var(--line); border-radius: 10px; }
+.seg button { border: 0; background: transparent; color: var(--ink-2); padding: 6px 11px; border-radius: 7px; font-size: 12.5px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: rgba(34, 211, 238, 0.15); color: var(--flood); }
+.search { position: relative; margin: 0 18px 10px; }
+.search input { width: 100%; height: 42px; padding: 0 14px 0 38px; background: #0c121c; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; font-size: 14px; }
+.search input::placeholder { color: var(--ink-3); }
+.search > svg { position: absolute; left: 12px; top: 12px; width: 18px; height: 18px; color: var(--ink-3); }
+.results { position: absolute; z-index: 30; top: 48px; left: 0; right: 0; margin: 0; padding: 4px; list-style: none; background: rgba(10, 16, 26, 0.98); border: 1px solid var(--line); border-radius: 10px; max-height: 340px; overflow-y: auto; }
+.results li button { width: 100%; text-align: left; display: flex; justify-content: space-between; gap: 12px; align-items: baseline; padding: 9px 10px; border: 0; background: transparent; font-size: 14px; border-radius: 7px; cursor: pointer; }
+.results li button:hover, .results li button.active { background: rgba(244, 182, 63, 0.14); }
+.results li small { color: var(--ink-3); font-size: 12px; white-space: nowrap; }
+.results li.hint { padding: 8px 10px; color: var(--ink-3); font-size: 12px; }
+.sidebody { flex: 1; overflow-y: auto; min-height: 0; border-top: 1px solid var(--line); }
+
+/* ---------- início ---------- */
+#home { padding: 16px 18px 28px; display: flex; flex-direction: column; gap: 18px; }
+.eyebrow { margin: 0; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; }
+#home h2 { margin: 6px 0 8px; font-family: var(--font-display); font-weight: 700; font-size: 27px; line-height: 1.08; letter-spacing: -0.015em; }
+.lead { margin: 0; color: var(--ink-2); font-size: 13.5px; line-height: 1.5; }
+.h3 { margin: 0 0 8px; font-size: 11px; letter-spacing: 0.09em; text-transform: uppercase; color: var(--ink-3); font-weight: 600; display: flex; justify-content: space-between; gap: 8px; }
+.h3 span { text-transform: none; letter-spacing: 0; font-weight: 400; font-family: var(--font-mono); }
+.regions { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 8px; }
+.rcard { width: 100%; display: grid; grid-template-columns: 22px 1fr auto; gap: 4px 10px; align-items: center; text-align: left; border: 1px solid var(--line); background: rgba(255,255,255,.03); border-radius: 11px; padding: 10px 12px; cursor: pointer; }
+.rcard:hover { border-color: rgba(34, 211, 238, .45); background: rgba(34, 211, 238, .05); }
+.rcard .rank { font: 500 12px var(--font-mono); color: var(--ink-3); align-self: start; padding-top: 2px; }
+.rcard .nm { font-weight: 600; font-size: 14px; line-height: 1.25; }
+.rcard .nm small { font-weight: 400; color: var(--ink-3); font-size: 12px; margin-left: 4px; }
+.rcard .st { grid-column: 2; font-size: 12px; color: var(--ink-2); display: flex; gap: 6px; align-items: center; flex-wrap: wrap; }
+.rcard .st b { color: var(--flood); font: 500 12.5px var(--font-mono); }
+.rcard .spark { grid-row: 1 / span 2; grid-column: 3; width: 92px; height: 34px; }
+.rcard.none .st { color: var(--ink-3); }
+.rcard.none .rank { color: transparent; }
+.dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; flex: none; }
+.btn { display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 38px; padding: 0 14px; border-radius: 9px; border: 1px solid var(--line); background: rgba(255,255,255,.04); color: var(--ink); font: 500 13px var(--font-body); cursor: pointer; white-space: nowrap; text-decoration: none; }
+.btn:hover { border-color: rgba(244, 182, 63, 0.55); }
+.btn svg { width: 15px; height: 15px; flex: none; }
+.btn.primary { background: var(--macaw-yellow); color: #1a1205; border-color: transparent; font-weight: 600; }
+.btn.primary:hover { filter: brightness(1.06); }
+.btn.big { height: 46px; width: 100%; font-size: 14.5px; }
+.btn:disabled { opacity: .45; cursor: not-allowed; }
+.row { display: flex; gap: 8px; flex-wrap: wrap; }
+.row .btn { flex: 1; }
+.foot { margin: 0; font-size: 12px; color: var(--ink-3); line-height: 1.7; }
+.foot a, .note a, .lead a { color: var(--flood); }
+.others { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 4px; }
+.others button { width: 100%; text-align: left; border: 0; background: rgba(255,255,255,.03); border-radius: 8px; padding: 8px 10px; font-size: 13px; cursor: pointer; display: flex; justify-content: space-between; gap: 8px; }
+.others button small { color: var(--ink-3); font: 11px var(--font-mono); white-space: nowrap; }
+.others button:hover { background: rgba(255,255,255,.07); }
+details.fold > summary { cursor: pointer; list-style: none; }
+details.fold > summary::-webkit-details-marker { display: none; }
+details.fold > summary::after { content: "＋"; float: right; color: var(--ink-3); }
+details.fold[open] > summary::after { content: "－"; }
+
+/* ---------- painel da região ---------- */
+#panel { padding: 14px 18px 28px; display: flex; flex-direction: column; gap: 14px; }
+.ph { display: flex; justify-content: space-between; gap: 12px; align-items: flex-start; }
+.ph > div { min-width: 0; }
+.crumb { margin: 0 0 4px; font-size: 12px; color: var(--ink-3); }
+.back { border: 0; background: none; color: var(--ink-2); cursor: pointer; padding: 0; font-size: 12.5px; display: inline-flex; gap: 6px; align-items: center; }
+.back:hover { color: var(--ink); }
+#panel h2 { margin: 2px 0 0; font-family: var(--font-display); font-weight: 700; font-size: 25px; letter-spacing: -0.015em; line-height: 1.1; text-wrap: balance; overflow-wrap: anywhere; }
+.sub { margin: 6px 0 0; color: var(--ink-2); font-size: 12.5px; }
+.chips { display: flex; gap: 6px; flex-wrap: wrap; }
+.chip { display: inline-flex; gap: 6px; align-items: center; padding: 3px 9px; border-radius: 999px; background: rgba(255,255,255,.06); color: var(--ink-2); font-size: 11.5px; white-space: nowrap; }
+.chip.ok { background: rgba(74, 222, 128, .12); color: var(--c-alta); }
+.chip.warn { background: rgba(240, 180, 76, .14); color: var(--c-media); }
+.chip.bad { background: rgba(240, 122, 106, .14); color: var(--c-baixa); }
+.conf { display: inline-flex; align-items: center; gap: 6px; font-size: 11.5px; padding: 3px 9px; border-radius: 999px; white-space: nowrap; font-weight: 500; }
+.conf::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: currentColor; }
+.conf.alta { color: var(--c-alta); background: rgba(74, 222, 128, .11); }
+.conf.média { color: var(--c-media); background: rgba(240, 180, 76, .13); }
+.conf.baixa { color: var(--c-baixa); background: rgba(240, 122, 106, .13); }
+.story { padding: 13px 14px; border-radius: 12px; background: linear-gradient(180deg, rgba(34, 211, 238, .09), rgba(34, 211, 238, .03)); border: 1px solid rgba(34, 211, 238, .22); }
+.story p { margin: 0; line-height: 1.55; font-size: 14px; }
+.story .h3 { color: var(--flood); margin-bottom: 6px; flex-wrap: wrap; align-items: baseline; }
+.story .h3 span { font-size: 10.5px; color: var(--ink-3); }
+.card { padding: 13px 14px; border-radius: 12px; border: 1px solid var(--line); background: rgba(255,255,255,.02); display: flex; flex-direction: column; gap: 10px; }
+.card > header { display: flex; justify-content: space-between; align-items: center; gap: 8px; flex-wrap: wrap; }
+.card > header b { font-size: 14px; }
+.kpis { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
+.kpi { border-radius: 10px; padding: 9px 10px; background: rgba(255,255,255,.035); min-width: 0; }
+.kpi .v { font-family: var(--font-display); font-weight: 700; font-size: 24px; line-height: 1; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+.kpi .v small { font: 500 11.5px var(--font-body); color: var(--ink-2); margin-left: 3px; letter-spacing: 0; }
+.kpi .l { font-size: 11.5px; color: var(--ink-2); margin-top: 5px; line-height: 1.3; display: flex; gap: 5px; align-items: baseline; }
+.kpi .l i { width: 8px; height: 8px; border-radius: 2px; flex: none; transform: translateY(1px); }
+.kpi.flood .v { color: var(--flood); } .kpi.veg .v { color: var(--veg); } .kpi.rain .v { color: var(--rain); }
+.kpi.na .v { color: var(--ink-3); font-size: 18px; }
+.reasons { margin: 0; padding-left: 18px; font-size: 12.5px; line-height: 1.5; color: var(--ink-2); }
+.note { margin: 0; color: var(--ink-3); font-size: 11.8px; line-height: 1.5; }
+.note.warn { color: var(--wind); border-left: 2px solid var(--wind); padding-left: 8px; }
+.munis { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 7px; }
+.munis li { display: grid; grid-template-columns: 1fr auto; gap: 3px 10px; font-size: 13px; }
+.munis .bar { grid-column: 1 / -1; height: 5px; border-radius: 3px; background: rgba(255,255,255,.06); overflow: hidden; display: flex; }
+.munis .bar i { display: block; height: 100%; }
+.munis small { color: var(--ink-3); font: 11.5px var(--font-mono); white-space: nowrap; }
+.munis b { font-weight: 500; }
+details.box { border: 1px solid var(--line); border-radius: 12px; padding: 0 14px; }
+details.box > summary { padding: 12px 0; font-weight: 600; font-size: 13px; cursor: pointer; list-style: none; display: flex; justify-content: space-between; }
+details.box > summary::-webkit-details-marker { display: none; }
+details.box > summary::after { content: "＋"; color: var(--ink-3); }
+details.box[open] > summary::after { content: "－"; }
+details.box > div { padding: 0 0 14px; display: flex; flex-direction: column; gap: 10px; font-size: 13px; line-height: 1.55; color: var(--ink-2); }
+details.box p { margin: 0; }
+.tablewrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 12px; font-variant-numeric: tabular-nums; }
+th, td { padding: 6px 8px; text-align: right; border-bottom: 1px solid var(--line-2); white-space: nowrap; }
+th { color: var(--ink-3); font-weight: 500; font-size: 11px; }
+th:first-child, td:first-child { text-align: left; }
+td { font-family: var(--font-mono); color: var(--ink-2); }
+.progress { height: 6px; border-radius: 3px; background: rgba(255,255,255,.08); overflow: hidden; }
+.progress i { display: block; height: 100%; background: var(--flood); transition: width .4s; }
+.big-n { font-family: var(--font-display); font-weight: 700; font-size: 38px; line-height: 1; letter-spacing: -0.02em; }
+.big-n small { font: 500 13px var(--font-body); color: var(--ink-2); margin-left: 4px; letter-spacing: 0; }
+.steps { margin: 0; padding-left: 0; list-style: none; display: flex; flex-direction: column; gap: 6px; font-size: 12.5px; color: var(--ink-3); }
+.steps li::before { content: "○ "; }
+.steps li.done { color: var(--ink-2); } .steps li.done::before { content: "● "; color: var(--flood); }
+.steps li.now { color: var(--ink); } .steps li.now::before { content: "◐ "; color: var(--macaw-yellow); }
+
+/* ---------- palco ---------- */
+#stage { position: relative; flex: 1; min-width: 0; height: 100%; overflow: hidden; }
+#stars, #globe, #map2d { position: absolute; inset: 0; }
+#stars { width: 100%; height: 100%; display: block; }
+#globe { cursor: grab; touch-action: none; z-index: 1; }
+#globe.dragging { cursor: grabbing; }
+#map2d { z-index: 1; background: #070b12; }
+.mode-map #globe, .mode-map #stars, .mode-map #attrib, .mode-map #loading { display: none !important; }
+#map2d .leaflet-tooltip { background: rgba(8,13,22,.95); color: var(--ink); border: 1px solid var(--line); font: 12px var(--font-body); }
+#map2d .leaflet-control-attribution { background: rgba(8,13,22,.7); color: var(--ink-3); } #map2d .leaflet-control-attribution a { color: var(--ink-2); }
+#loading { position: absolute; inset: 0; display: grid; place-items: center; color: var(--ink-2); z-index: 3; pointer-events: none; }
+#attrib { position: absolute; right: 10px; bottom: 6px; z-index: 4; font-size: 10.5px; color: rgba(255,255,255,0.75); text-shadow: 0 1px 2px #000; pointer-events: none; }
+.topbar { position: absolute; z-index: 8; top: 14px; right: 14px; display: flex; gap: 8px; flex-wrap: wrap; justify-content: flex-end; }
+.topbar .btn { background: var(--glass); backdrop-filter: blur(6px); }
+.maplegend { position: absolute; z-index: 8; top: 14px; left: 14px; max-width: min(360px, calc(100% - 28px)); padding: 10px 12px; border-radius: 11px; background: var(--glass); border: 1px solid var(--line); font-size: 12px; color: var(--ink-2); display: flex; flex-direction: column; gap: 5px; }
+.maplegend b { color: var(--ink); font-weight: 600; font-size: 12.5px; }
+.maplegend span { display: flex; gap: 7px; align-items: center; }
+.maplegend i { width: 12px; height: 12px; border-radius: 3px; flex: none; }
+.hint { position: absolute; z-index: 8; left: 50%; transform: translateX(-50%); bottom: 18px; padding: 8px 14px; border-radius: 999px; background: var(--glass); border: 1px solid var(--line); font-size: 12.5px; color: var(--ink-2); white-space: nowrap; pointer-events: none; }
+
+/* pinos das regiões no globo */
+.pin { position: relative; width: 0; height: 0; }
+.pin button { position: absolute; left: -7px; top: -7px; display: flex; align-items: center; gap: 7px; padding: 0; border: 0; background: none; cursor: pointer; white-space: nowrap; }
+.pin .d { width: 14px; height: 14px; border-radius: 50%; background: var(--c); box-shadow: 0 0 0 3px rgba(4,6,12,.75), 0 0 14px var(--c); flex: none; }
+.pin .t { padding: 3px 8px; border-radius: 7px; background: var(--glass); border: 1px solid var(--line); font-size: 12px; color: var(--ink); }
+.pin .t b { color: var(--c); font: 500 11.5px var(--font-mono); margin-left: 4px; }
+.pin.dot .t { display: none; }
+.pin.dot button:hover .t { display: inline-block; }
+.pin.off { display: none; }
+.tip { padding: 6px 10px; border-radius: 8px; background: rgba(6, 10, 18, 0.94); border: 1px solid var(--line); font-size: 12.5px; color: var(--ink); font-family: var(--font-body); }
+.tip small { display: block; color: var(--ink-3); font-size: 11px; }
+
+/* ---------- linha do tempo ---------- */
+#tl { position: absolute; z-index: 9; left: 14px; right: 14px; bottom: 14px; padding: 10px 12px 8px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(8px); display: flex; flex-direction: column; gap: 6px; }
+.tlhead { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+.tlhead .play { width: 34px; height: 34px; border-radius: 50%; border: 1px solid var(--line); background: rgba(255,255,255,.05); cursor: pointer; display: grid; place-items: center; flex: none; }
+.tlhead .play svg { width: 14px; height: 14px; }
+.tlhead .when { display: flex; flex-direction: column; min-width: 0; margin-right: auto; }
+.tlhead .when b { font-family: var(--font-display); font-size: 17px; font-weight: 700; letter-spacing: -0.01em; }
+.tlhead .when span { font-size: 11.5px; color: var(--ink-3); }
+.tlhead .seg button { padding: 5px 9px; font-size: 12px; }
+.tlhead .seg button:disabled { opacity: .35; cursor: not-allowed; }
+.tlhead .cmp[aria-pressed="true"] { border-color: var(--macaw-yellow); color: var(--macaw-yellow); }
+.tlbars { display: flex; align-items: stretch; gap: 4px; height: 92px; }
+.tlcol { flex: 1; min-width: 0; display: flex; flex-direction: column; align-items: stretch; gap: 3px; border: 0; background: transparent; padding: 3px 0 0; border-radius: 8px; cursor: pointer; position: relative; }
+.tlcol:hover { background: rgba(255,255,255,.04); }
+.tlcol[aria-selected="true"] { background: rgba(244, 182, 63, .12); box-shadow: inset 0 0 0 1px rgba(244, 182, 63, .55); }
+.tlcol .up { flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; min-height: 0; }
+.tlcol .up i { display: block; width: min(60%, 26px); border-radius: 3px 3px 0 0; }
+.tlcol .up i + i { border-radius: 0; }
+.tlcol .up i.veg { background: var(--veg); } .tlcol .up i.fl { background: var(--flood); } .tlcol .up i.wa { background: var(--water); opacity: .8; }
+.tlcol .up i.zero { height: 2px !important; background: rgba(255,255,255,.18); border-radius: 1px; }
+.tlcol .dn { height: 18px; display: flex; justify-content: center; align-items: flex-start; border-top: 1px solid rgba(255,255,255,.14); }
+.tlcol .dn i { display: block; width: min(40%, 16px); background: var(--rain); border-radius: 0 0 2px 2px; opacity: .85; }
+.tlcol .lb { font: 10.5px var(--font-mono); color: var(--ink-3); text-align: center; display: flex; justify-content: center; gap: 4px; align-items: center; }
+.tlcol[aria-selected="true"] .lb { color: var(--ink); }
+.tlcol .w { position: absolute; top: 2px; right: 3px; width: 7px; height: 7px; border-radius: 50%; border: 2px solid var(--wind); }
+.tlcol.ref .lb::after { content: "seca"; font: 9px var(--font-body); color: var(--ref); background: rgba(59, 111, 209, .18); padding: 0 4px; border-radius: 4px; }
+.tlkey { display: flex; gap: 12px; flex-wrap: wrap; font-size: 11px; color: var(--ink-3); }
+.tlkey span { display: inline-flex; gap: 5px; align-items: center; }
+.tlkey i { width: 9px; height: 9px; border-radius: 2px; }
+.tlkey i.w { border-radius: 50%; border: 2px solid var(--wind); width: 8px; height: 8px; }
+
+/* comparação deslizante */
+#swipe { position: absolute; z-index: 7; top: 0; bottom: 0; width: 0; left: 50%; pointer-events: none; }
+#swipe .ln { position: absolute; top: 0; bottom: 0; left: -1px; width: 2px; background: var(--macaw-yellow); box-shadow: 0 0 8px rgba(0,0,0,.6); }
+#swipe .hd { position: absolute; top: 42%; left: -22px; width: 44px; height: 44px; border-radius: 50%; background: var(--macaw-yellow); color: #1a1205; display: grid; place-items: center; cursor: ew-resize; pointer-events: auto; touch-action: none; font: 700 15px var(--font-body); box-shadow: 0 2px 10px rgba(0,0,0,.5); }
+#swipe .lab { position: absolute; top: 14px; padding: 4px 9px; border-radius: 7px; background: var(--glass); border: 1px solid var(--line); font-size: 12px; white-space: nowrap; }
+#swipe .lab.l { right: 10px; } #swipe .lab.r { left: 10px; }
+
+/* barra de desenho / avisos */
+.drawbar { position: absolute; z-index: 9; left: 50%; transform: translateX(-50%); top: 70px; width: max-content; max-width: calc(100% - 32px); display: flex; gap: 10px; align-items: center; flex-wrap: wrap; justify-content: center; padding: 10px 12px; background: rgba(8, 13, 22, 0.96); border: 1px solid var(--macaw-yellow); border-radius: 12px; }
+.drawbar p { margin: 0; font-size: 13px; color: var(--ink-2); }
+
+@media (max-width: 900px) {
+  #app { flex-direction: column; }
+  #stage { order: 1; flex: 1 1 50%; height: auto; }
+  #side { order: 2; width: 100%; height: 50%; border-right: 0; border-top: 1px solid var(--line); }
+  .sidehead { padding-top: 10px; } .logo { font-size: 21px; } .logo small { display: none; }
+  #tl { left: 8px; right: 8px; bottom: 8px; padding: 8px; }
+  .tlbars { height: 70px; }
+  .tlhead .seg { order: 3; width: 100%; justify-content: space-between; }
+  .maplegend { display: none !important; }
+  .topbar { top: 8px; right: 8px; }
+  .hint { display: none; }
+}
+@media (prefers-reduced-motion: reduce) { .progress i { transition: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <aside id="side">
+    <div class="sidehead">
+      <h1 class="logo"><img class="mark" src="img/arara-marca.png" alt="" width="36" height="35">Arara <small>cheias · NISAR</small></h1>
+      <div class="seg" id="viewsw" role="group" aria-label="Tipo de mapa"><button type="button" data-v="globe" aria-pressed="true">Globo</button><button type="button" data-v="map" aria-pressed="false">Mapa</button></div>
+    </div>
+    <div class="search" role="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Cidade do Sul, região ou coordenada" autocomplete="off" aria-label="Buscar cidade, região ou coordenada" aria-controls="results">
+      <ul id="results" class="results" role="listbox" hidden></ul>
+    </div>
+    <div class="sidebody" id="sidebody">
+      <section id="panel" hidden aria-live="polite"></section>
+      <section id="home" aria-label="Início">
+        <div>
+          <p class="eyebrow">Sul do Brasil · radar NISAR (NASA/ISRO)</p>
+          <h2>Onde a água saiu do leito</h2>
+          <p class="lead">A cada passagem do satélite, o radar enxerga a água através de nuvem e chuva. O Arara compara cada passagem com a mais seca do período e mostra onde alagou, quanto choveu antes e em quais municípios.</p>
+        </div>
+        <div>
+          <p class="h3">Regiões monitoradas <span id="lastPass"></span></p>
+          <ul class="regions" id="regionList"></ul>
+          <p class="note" style="margin-top:8px">Ordenadas pela maior área de cheia medida. Cinza: aguardando a primeira análise do servidor, que confere as passagens novas do NISAR sozinho.</p>
+        </div>
+        <p class="note">Busque uma cidade do Sul para ir até ela; se ela estiver numa região monitorada, a região abre.</p>
+        <details class="fold" id="othersWrap" hidden><summary class="h3" style="display:block">Outras análises</summary><ul class="others" id="others" style="margin-top:8px"></ul></details>
+        <details class="fold">
+          <summary class="h3" style="display:block">Como ler o Arara</summary>
+          <div class="lead" style="display:flex;flex-direction:column;gap:8px;margin-top:8px;font-size:13px">
+            <p style="margin:0"><b style="color:var(--flood)">Água de cheia</b> é água que o radar viu numa passagem e que não estava lá na passagem mais seca do período. É medida, não estimada.</p>
+            <p style="margin:0"><b style="color:var(--veg)">Possível vegetação alagada</b>: na banda L a água embaixo de mata ou banhado faz a vegetação brilhar mais. Solo encharcado também brilha, por isso é sempre "possível".</p>
+            <p style="margin:0"><b style="color:var(--rain)">Chuva</b> vem do satélite GPM (NASA) e é contexto: ajuda a entender, não prova a causa.</p>
+            <p style="margin:0"><b>Confiança</b> de cada passagem: <span class="conf alta">alta</span> <span class="conf média">média</span> <span class="conf baixa">baixa</span>, com o motivo (vento, cena parcial, divergência do Sentinel-2).</p>
+          </div>
+        </details>
+        <p class="foot">Caso validado: <a href="furnas/index.html">lago de Furnas (MG), 1% de erro contra a ANA</a><br>Estudo experimental: <a href="uruguai/index.html">Barra Grande e Machadinho (RS/SC)</a><br><a href="https://github.com/gabriel-moraes03/arara" target="_blank" rel="noopener">Código no GitHub</a> · dados NISAR L2 GCOV (NASA/ASF), GPM IMERG, IBGE, Sentinel-2<br>Feito com apoio de IA (Claude, da Anthropic), revisado e testado pela equipe; todos os resultados vêm de dados reais do NISAR.</p>
+      </section>
+    </div>
+  </aside>
+
+  <main id="stage">
+    <canvas id="stars" aria-hidden="true"></canvas>
+    <div id="globe" aria-label="Globo: arraste para girar, role para aproximar, clique numa região"></div>
+    <div id="map2d" hidden aria-label="Mapa de satélite"></div>
+    <div id="loading">Carregando o globo…</div>
+    <div class="topbar">
+      <button class="btn" type="button" id="goSouth"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/></svg>Ver o Sul</button>
+    </div>
+    <div class="maplegend" id="legend" hidden></div>
+    <div id="swipe" hidden><div class="ln"></div><span class="lab l" id="swL"></span><span class="lab r" id="swR"></span><div class="hd" id="swHandle" role="slider" aria-label="Comparar com a passagem mais seca" tabindex="0" aria-valuemin="0" aria-valuemax="100" aria-valuenow="50">⇔</div></div>
+    <section id="tl" hidden aria-label="Linha do tempo das passagens do radar"></section>
+    <div class="hint" id="hint">Arraste para girar · role para aproximar · clique numa região</div>
+    <div class="drawbar" id="drawbar" hidden></div>
+    <div id="attrib" hidden>Imagens: Esri, Maxar, Earthstar Geographics</div>
+  </main>
+</div>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<!-- globe.gl 2.41.6, three r176 e topojson-client 3.1.0 servidos daqui (sem depender do CDN na primeira carga) -->
+<script src="vendor/globe.gl/globe.gl.min.js"></script>
+<script src="vendor/topojson/topojson-client.min.js"></script>
+<script>
+(() => {
+'use strict';
+const $ = (s) => document.querySelector(s);
+const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const esc = (s) => String(s).replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+/* ================= utilidades ================= */
+const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+const fmt = (v, d = 0) => Number(v).toLocaleString('pt-BR', { minimumFractionDigits: d, maximumFractionDigits: d });
+const km2Fmt = (v) => fmt(v, v < 10 ? 2 : v < 100 ? 1 : 0);
+const ptRegion = (() => { try { return new Intl.DisplayNames(['pt-BR'], { type: 'region' }); } catch (e) { return null; } })();
+const norm = (s) => s.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+const DAY = 864e5;
+const isoDay = (ms) => new Date(ms).toISOString().slice(0, 10);
+const isoBR = (s) => { const [y, m, d] = String(s).slice(0, 10).split('-'); return `${d}/${m}/${y}`; };
+const dm = (s) => isoBR(s).slice(0, 5);
+const key8 = (d) => d.replaceAll('-', '');
+// abrir a página com ?reset=1 apaga o que o Arara guardou neste navegador
+try { if (/[?&]reset(=|&|$)/.test(location.search)) { ['arara-links-v1', 'arara-view'].forEach(k => localStorage.removeItem(k)); history.replaceState(null, '', location.pathname); } } catch (e) { /* sem armazenamento */ }
+const store = {
+  get(k, d) { try { const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; } catch (e) { return d; } },
+  set(k, v) { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sem armazenamento: segue só na sessão */ } },
+};
+function ringsOf(geom) { return geom.type === 'Polygon' ? [geom.coordinates] : geom.coordinates; }
+function inRing(pt, ring) {
+  let inside = false; const [x, y] = pt;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) {
+    const [xi, yi] = ring[i], [xj, yj] = ring[j];
+    if ((yi > y) !== (yj > y) && x < (xj - xi) * (y - yi) / (yj - yi) + xi) inside = !inside;
+  }
+  return inside;
+}
+function bboxOf(geom) {
+  const b = [180, 90, -180, -90];
+  ringsOf(geom).forEach(p => p[0].forEach(([x, y]) => { b[0] = Math.min(b[0], x); b[1] = Math.min(b[1], y); b[2] = Math.max(b[2], x); b[3] = Math.max(b[3], y); }));
+  return b;
+}
+function inFeature(pt, f) {
+  const b = f.__bb || (f.__bb = bboxOf(f.geometry));
+  if (pt[0] < b[0] || pt[0] > b[2] || pt[1] < b[1] || pt[1] > b[3]) return false;
+  return ringsOf(f.geometry).some(poly => inRing(pt, poly[0]) && !poly.slice(1).some(h => inRing(pt, h)));
+}
+const boxRing = (b) => [[b[0], b[1]], [b[2], b[1]], [b[2], b[3]], [b[0], b[3]], [b[0], b[1]]];
+const boxGeom = (b) => ({ type: 'Polygon', coordinates: [boxRing(b)] });
+function km2OfRing(ring) {
+  const lat0 = ring.reduce((s, p) => s + p[1], 0) / ring.length * Math.PI / 180;
+  const kx = 111.32 * Math.cos(lat0), ky = 110.57; let a = 0;
+  for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) a += (ring[j][0] * kx) * (ring[i][1] * ky) - (ring[i][0] * kx) * (ring[j][1] * ky);
+  return Math.abs(a) / 2;
+}
+const bboxKm2 = (b) => km2OfRing(boxRing(b));
+const centerOfBox = (b) => ({ lng: (b[0] + b[2]) / 2, lat: (b[1] + b[3]) / 2 });
+
+/* ================= regiões monitoradas no Sul =================
+   Vêm de regioes.json, o mesmo arquivo que o monitor do backend usa para reanalisar cada região quando o
+   NISAR passa de novo. A cobertura do NISAR é conferida ao vivo no catálogo. */
+let REGIONS = [];
+function setRegions(j) {
+  NISAR_START = j.inicio || NISAR_START;
+  REGIONS = (j.regioes || []).map(r => ({ ...r, kind: 'region', key: 'reg-' + r.id, geometry: boxGeom(r.b), __bb: r.b, km2: bboxKm2(r.b) }));
+}
+const SOUTH = { lat: -28.2, lng: -52.0, alt: 0.62 };
+// a série do NISAR sobre o Sul começa em junho de 2026; as análises de região usam tudo desde então
+let NISAR_START = '2026-06-01';
+
+/* ================= API do Arara: só dados reais ================= */
+const API = 'api/arara';
+// modo vitrine: build estático (scripts/exportar_vitrine.py) ou ?static=1; análises vêm de data/, sem servidor
+const STATIC = !!window.ARARA_STATIC || new URLSearchParams(location.search).has('static');
+const LIVE_MSG = 'Esta vitrine não tem servidor: mostra só análises já concluídas e não consulta o catálogo da NASA. Para analisar uma área nova, rode o Arara com o backend (instruções no GitHub).';
+// sem servidor nada é consultado ao vivo; o cabeçalho do painel diz o que a página realmente mostra
+const CATALOG_HEAD = STATIC ? 'Radar NISAR, banda L · vitrine com análises já concluídas' : 'Radar NISAR, banda L · catálogo consultado ao vivo (NASA / ASF DAAC)';
+const REPO = 'https://github.com/gabriel-moraes03/arara';
+const files = (id) => STATIC
+  ? { png: (l) => `data/analyses/${id}/png/${l}.png`, sources: `data/analyses/${id}/sources.json`, csv: `data/analyses/${id}/metrics.csv` }
+  : { png: (l) => `${API}/analyses/${id}/png/${l}.png`, sources: `${API}/analyses/${id}/sources`, csv: `${API}/analyses/${id}/metrics?format=csv` };
+function staticApi(path) {
+  const json = (u) => fetch(u).then(r => { if (!r.ok) throw Object.assign(new Error('análise não incluída nesta vitrine'), { status: r.status }); return r.json(); });
+  if (path === '/config') return Promise.resolve({ aoi_max_km2: 2500, on_demand_available: false, on_demand_reason: LIVE_MSG, static: true });
+  if (path.startsWith('/analyses?') || path === '/analyses') return json('data/analyses.json');
+  const m = path.match(/^\/analyses\/([0-9a-f]{8,64})$/);
+  if (m) return json(`data/analyses/${m[1]}/analysis.json`);
+  return Promise.reject(new Error(LIVE_MSG));
+}
+function api(path, opt) {
+  if (STATIC) return staticApi(path);
+  const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60000);   // consulta nunca fica pendente para sempre
+  return fetch(API + path, Object.assign({ signal: ctl.signal }, opt)).finally(() => clearTimeout(timer)).then(async (r) => {
+    const j = await r.json().catch(() => ({}));
+    if (!r.ok) throw Object.assign(new Error(j.reason || `erro ${r.status} no servidor do Arara`), { status: r.status });
+    return j;
+  }, (e) => { throw new Error(e && e.name === 'AbortError' ? 'o servidor do Arara demorou mais de 60 s para responder' : 'não foi possível falar com o servidor do Arara (abra a página pelo endereço do servidor do Arara)'); });
+}
+let serverCfg = { aoi_max_km2: 2500, on_demand_available: false, on_demand_reason: 'servidor do Arara não respondeu' };
+api('/config').then(c => { serverCfg = c; }).catch(() => {});
+const STAGES = [
+  ['discover', 'Consultando o catálogo do NISAR'], ['select', 'Escolhendo a órbita que cobre a área'],
+  ['acquire', 'Lendo na NASA só o pedaço da área em cada passagem'], ['process', 'Preparando as imagens de radar'],
+  ['classify', 'Separando água de terra'], ['compare', 'Comparando as datas'], ['optical_s2', 'Conferindo com o Sentinel-2'],
+  ['flood', 'Procurando água de cheia'], ['rain', 'Somando a chuva do GPM'], ['exposure', 'Cruzando com os municípios'],
+  ['publish', 'Gravando mapas e números'],
+];
+const STAGE_ORDER = Object.fromEntries(STAGES.map(([k], i) => [k, i]));
+Object.assign(STAGE_ORDER, { queued: -1, validate_cross: STAGE_ORDER.optical_s2, forecast: STAGE_ORDER.compare, insights: STAGE_ORDER.compare });
+const DIR = { A: 'ascendente', D: 'descendente' };
+const MAT = { PROVISIONAL: 'produto provisório', VALIDATED: 'produto validado', BETA: 'produto beta', LOCAL: 'cenas locais' };
+const NO_WATER = 'no_reliable_water';
+const links = store.get('arara-links-v1', {});          // chave do lugar -> { analysis } ou { job }
+const saveLinks = () => store.set('arara-links-v1', links);
+const analysesById = new Map();
+let analysesList = [];
+const live = { token: 0, poll: null, timer: null };
+
+/* ================= estado da tela ================= */
+let ctx = null;                 // lugar aberto: região, município, área do usuário ou análise avulsa
+let A = null;                   // análise aberta (resultado completo)
+let sel = 0;                    // passagem selecionada na linha do tempo
+let mode = 'flood';             // camada do mapa: flood | water | radar | s2
+let compare = false, playing = null;
+let southMun = [];
+const searchIndex = [];
+
+/* ================= céu estrelado ================= */
+const sky = { c: $('#stars'), stars: [], bg: null, w: 0, h: 0, off: 0, offY: 0 };
+function buildSky() {
+  const c = sky.c, w = c.clientWidth, h = c.clientHeight; sky.w = w; sky.h = h;
+  if (!w || !h) return;
+  c.width = w; c.height = h;
+  const bg = document.createElement('canvas'); bg.width = w; bg.height = h;
+  const g = bg.getContext('2d');
+  g.fillStyle = '#04060c'; g.fillRect(0, 0, w, h);
+  const neb = g.createRadialGradient(w * 0.82, h * 0.2, 0, w * 0.82, h * 0.2, w * 0.35);
+  neb.addColorStop(0, 'rgba(34,211,238,0.05)'); neb.addColorStop(1, 'rgba(34,211,238,0)');
+  g.fillStyle = neb; g.fillRect(0, 0, w, h);
+  sky.bg = bg;
+  let s = 7; const rnd = () => (s = (s * 16807) % 2147483647) / 2147483647;
+  sky.stars = Array.from({ length: Math.min(Math.round(w * h / 2600), 520) }, () => ({ x: rnd() * w, y: rnd() * h, r: rnd() ** 4 * 1.5 + 0.25, a: 0.25 + rnd() * 0.7, depth: rnd(), tw: 0.4 + rnd() * 1.6, ph: rnd() * 6.28 }));
+}
+function drawSky(t) {
+  if (!sky.bg) return;
+  const g = sky.c.getContext('2d'); g.drawImage(sky.bg, 0, 0);
+  for (const st of sky.stars) {
+    const sp = 0.25 + st.depth * 0.9;
+    let x = (st.x + sky.off * sp) % sky.w; if (x < 0) x += sky.w;
+    let y = (st.y + sky.offY * sp * 0.6) % sky.h; if (y < 0) y += sky.h;
+    const a = reduceMotion ? st.a : st.a * (0.72 + 0.28 * Math.sin(t / 1000 * st.tw + st.ph));
+    g.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`; g.beginPath(); g.arc(x, y, st.r, 0, 6.2832); g.fill();
+  }
+}
+buildSky();
+
+/* ================= cor de cada região pelo que foi medido ================= */
+function regionAnalysis(p) {
+  const l = links[p.key];
+  if (l && l.analysis) { const a = analysesList.find(x => x.analysis_id === l.analysis); if (a) return a; }
+  // a análise mais recente com o mesmo nome (o lote e outros navegadores também analisam as regiões)
+  return analysesList.filter(a => a.name === p.n && a.status === 'completed').sort((a, b) => String(b.updated_at).localeCompare(String(a.updated_at)))[0] || null;
+}
+function peakOf(a) {
+  const s = a && a.summary; if (!s || s.flood_peak_km2 == null) return null;
+  return (s.flood_peak_km2 || 0) + (s.flood_peak_vegetation_km2 || 0);
+}
+const RELEVANT_KM2 = 1;
+function statusColor(a) {
+  if (!a) return '#5b6b7c';
+  const s = a.summary || {};
+  if (s.quality === NO_WATER) return '#f07a6a';
+  const p = peakOf(a);
+  if (p == null) return '#6aa6d8';
+  return p >= RELEVANT_KM2 ? '#22d3ee' : '#3b6fd1';
+}
+
+/* ================= globo ================= */
+const C = { globe: '#0a1b2c', land: 'rgba(44, 78, 74, 0.94)', landHover: 'rgba(70, 116, 106, 0.98)', side: 'rgba(20, 40, 44, 0.9)', stroke: 'rgba(164, 214, 204, 0.28)',
+  south: 'rgba(58, 104, 96, 0.97)', southHover: 'rgba(80, 132, 120, 1)' };
+const SOUTH_UF = new Set(['RS', 'SC', 'PR']);
+let world = [], brStates = [], hover = null;
+const el = $('#globe');
+const PINS = [];
+const globe = Globe({ animateIn: false })(el)
+  .backgroundColor('rgba(0,0,0,0)')
+  .showAtmosphere(true).atmosphereColor('#7fc8ff').atmosphereAltitude(0.16)
+  .showGraticules(false)
+  .polygonsTransitionDuration(300)
+  .polygonCapCurvatureResolution(d => d.__lvl === 'regiao' ? 0.5 : d.__lvl === 'estado' ? 1.5 : 2.5)
+  .polygonLabel(d => d.__lvl === 'regiao' ? `<div class="tip">${esc(d.__p.n)}<small>${esc(d.__p.who)}</small></div>` : `<div class="tip">${esc(d.__name)}</div>`)
+  .onPolygonHover(d => { hover = d; refreshStyle(); el.style.cursor = d && (d.__lvl === 'regiao' || d.__lvl === 'estado') ? 'pointer' : ''; })
+  .onPolygonClick((d) => {
+    if (dragMoved) return;
+    if (d.__lvl === 'regiao') return openPlace(d.__p);
+    if (d.__lvl === 'estado' && SOUTH_UF.has(d.__uf)) { const c = d.__c; flyTo(c.lat, c.lng, 0.35); }
+  })
+  .htmlElementsData(PINS).htmlLat(d => d.lat).htmlLng(d => d.lng).htmlAltitude(0.012).htmlElement(d => d.el)
+  .width(el.clientWidth).height(el.clientHeight);
+try { globe.renderer().setPixelRatio(Math.min(window.devicePixelRatio || 1, 1.5)); } catch (e) { /* padrão */ }
+const mat = globe.globeMaterial(); mat.color.set(C.globe); mat.shininess = 8; if (mat.specular) mat.specular.set('#1b3550');
+const R = globe.getGlobeRadius(), camera = globe.camera(), controls = globe.controls();
+controls.enableRotate = false; controls.enablePan = false;
+controls.minDistance = R * 1.004; controls.maxDistance = R * 4.2; controls.zoomSpeed = 0.9;
+globe.pointOfView({ lat: 0, lng: 0, altitude: 2.35 }, 0);
+let gObj = null;
+const Q = camera.quaternion.constructor, V3 = camera.position.constructor;
+const AX_Y = new V3(0, 1, 0), AX_X = new V3(1, 0, 0);
+function orientationFor(lat, lng) {
+  return new Q().setFromAxisAngle(AX_X, lat * Math.PI / 180).multiply(new Q().setFromAxisAngle(AX_Y, -lng * Math.PI / 180));
+}
+function findGlobe() {
+  globe.scene().traverse(o => { if (!gObj && typeof o.getGlobeRadius === 'function') gObj = o; });
+  if (!gObj) { requestAnimationFrame(findGlobe); return; }
+  gObj.quaternion.copy(orientationFor(-15, -45));
+  requestAnimationFrame(frame);
+  if (!ctx) setTimeout(() => { if (!ctx && view === 'globe') flyTo(SOUTH.lat, SOUTH.lng, SOUTH.alt, 2200); }, 500);
+}
+const altitude = () => camera.position.length() / R - 1;
+let dragging = false, dragMoved = false, last = null, vel = { x: 0, y: 0 };
+const qTmp = new Q();
+function rotateBy(dx, dy) {
+  const k = 0.0017 * altitude() + 0.000004;
+  qTmp.setFromAxisAngle(AX_Y, dx * k); gObj.quaternion.premultiply(qTmp);
+  qTmp.setFromAxisAngle(AX_X, dy * k); gObj.quaternion.premultiply(qTmp);
+  sky.off += dx * 0.05; sky.offY += dy * 0.05;
+}
+el.addEventListener('pointerdown', (e) => {
+  if (!gObj || e.target.closest('.pin') || e.button !== 0) return;
+  dragging = true; dragMoved = false; last = { x: e.clientX, y: e.clientY, t: performance.now(), x0: e.clientX, y0: e.clientY }; vel = { x: 0, y: 0 }; tween = null;
+  el.classList.add('dragging'); $('#hint').hidden = true;
+});
+window.addEventListener('pointermove', (e) => {
+  if (!dragging) return;
+  const dx = e.clientX - last.x, dy = e.clientY - last.y;
+  if (Math.abs(e.clientX - last.x0) + Math.abs(e.clientY - last.y0) > 4) dragMoved = true;
+  rotateBy(dx, dy);
+  const now = performance.now(), dt = Math.max(now - last.t, 1);
+  vel = { x: dx / dt * 16, y: dy / dt * 16 }; Object.assign(last, { x: e.clientX, y: e.clientY, t: now });
+});
+window.addEventListener('pointerup', () => {
+  if (!dragging) return; dragging = false; el.classList.remove('dragging');
+  if (performance.now() - last.t > 80) vel = { x: 0, y: 0 };
+  setTimeout(() => { dragMoved = false; }, 0);
+});
+let tween = null;
+function flyTo(lat, lng, alt, ms = 1500) {
+  if (!gObj) return;
+  tween = { q0: gObj.quaternion.clone(), q1: orientationFor(lat, lng), a0: altitude(), a1: alt, t0: performance.now(), ms: reduceMotion ? 1 : ms };
+}
+const ease = (t) => t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+const camDir = new V3(), wp = new V3();
+let frameN = 0;
+function frame(now) {
+  if (view === 'globe') {
+    if (tween) {
+      const t = clamp((performance.now() - tween.t0) / tween.ms, 0, 1), e = ease(t);
+      gObj.quaternion.slerpQuaternions(tween.q0, tween.q1, e);
+      const la = Math.log(tween.a0), lb = Math.log(tween.a1);
+      camera.position.setLength(R * (1 + Math.exp(la + (lb - la) * e)));
+      if (t >= 1) tween = null;
+    } else if (!dragging && (Math.abs(vel.x) + Math.abs(vel.y) > 0.05)) { rotateBy(vel.x, vel.y); vel.x *= 0.92; vel.y *= 0.92; }
+    if (!reduceMotion) sky.off += 0.03;
+    frameN++;
+    if (frameN % 3 === 0) drawSky(now || 0);
+    updatePins();
+    if (frameN % 10 === 0) setBasemap(altitude() < 0.05);
+  }
+  requestAnimationFrame(frame);
+}
+
+/* pinos das regiões: ponto colorido pelo que foi medido; rótulo quando cabe */
+function makePin(p) {
+  const w = document.createElement('div'); w.className = 'pin';
+  w.innerHTML = '<button type="button"><span class="d"></span><span class="t"></span></button>';
+  w.querySelector('button').addEventListener('click', (e) => { e.stopPropagation(); openPlace(p); });
+  w.addEventListener('pointerdown', (e) => e.stopPropagation());
+  return w;
+}
+function refreshPins() {
+  PINS.length = 0;
+  REGIONS.forEach(p => {
+    const a = regionAnalysis(p), pk = peakOf(a), c = centerOfBox(p.b);
+    if (!p.__pin) p.__pin = makePin(p);
+    p.__pin.style.setProperty('--c', statusColor(a));
+    p.__pin.querySelector('.t').innerHTML = `${esc(p.n)}${pk != null ? `<b>${km2Fmt(pk)} km²</b>` : a ? '' : `<b style="color:var(--ink-3)">${busyNames.has(p.n) ? 'em análise' : 'aguardando'}</b>`}`;
+    PINS.push({ lat: c.lat, lng: c.lng, el: p.__pin, p });
+  });
+  globe.htmlElementsData(PINS.slice());
+}
+function updatePins() {
+  if (!gObj) return;
+  camDir.copy(camera.position).normalize();
+  const alt = altitude(), W = el.clientWidth, H = el.clientHeight, placed = [];
+  PINS.forEach(h => {
+    const c = globe.getCoords(h.lat, h.lng, 0.012);
+    wp.set(c.x, c.y, c.z).applyQuaternion(gObj.quaternion);
+    const on = wp.clone().normalize().dot(camDir) > 0.4 && alt > 0.03;
+    h.el.classList.toggle('off', !on);
+    if (!on) return;
+    const sp = wp.project(camera), x = (sp.x + 1) / 2 * W, y = (1 - sp.y) / 2 * H;
+    const r = { x0: x, y0: y - 12, x1: x + 210, y1: y + 12 };
+    const clash = alt > 1.2 || placed.some(p => r.x0 < p.x1 && r.x1 > p.x0 && r.y0 < p.y1 && r.y1 > p.y0);
+    h.el.classList.toggle('dot', clash);
+    if (!clash) placed.push(r);
+  });
+}
+function capColor(d) {
+  if (d.__lvl === 'regiao') { const a = regionAnalysis(d.__p), c = statusColor(a); return d === hover ? c + 'aa' : c + (a ? '55' : '22'); }
+  if (basemapOn) return 'rgba(0,0,0,0)';
+  if (d.__lvl === 'estado') return SOUTH_UF.has(d.__uf) ? (d === hover ? C.southHover : C.south) : 'rgba(44, 78, 74, 0.94)';
+  return d === hover ? C.landHover : C.land;
+}
+function strokeColor(d) {
+  if (d.__lvl === 'regiao') return statusColor(regionAnalysis(d.__p));
+  if (d.__lvl === 'estado') return SOUTH_UF.has(d.__uf) ? 'rgba(220, 240, 235, 0.55)' : C.stroke;
+  return C.stroke;
+}
+const ALT = { pais: 0.004, estado: 0.006, regiao: 0.009 };
+function refreshStyle() {
+  globe.polygonCapColor(capColor).polygonStrokeColor(strokeColor).polygonSideColor(() => C.side)
+    .polygonAltitude(d => (basemapOn ? 0.2 : 1) * ALT[d.__lvl] + (d === hover && (d.__lvl === 'regiao') ? 0.004 : 0));
+}
+// no globo (geometria esférica do d3) o anel externo tem de ser horário; anti-horário vira "o planeta
+// inteiro menos a caixa" e cobre tudo
+function clockwise(ring) {
+  let a = 0; for (let i = 0, j = ring.length - 1; i < ring.length; j = i++) a += (ring[i][0] - ring[j][0]) * (ring[i][1] + ring[j][1]);
+  return a > 0 ? ring : ring.slice().reverse();
+}
+const sphereGeom = (ring) => ({ type: 'Polygon', coordinates: [clockwise(ring)] });
+function setGlobePolygons() {
+  const regs = REGIONS.map(p => ({ type: 'Feature', geometry: sphereGeom(boxRing(p.b)), properties: {}, __lvl: 'regiao', __p: p }));
+  globe.polygonsData(world.filter(f => f.__a2 !== 'BR').concat(brStates, regs));
+  refreshStyle();
+}
+let basemapOn = false;
+function setBasemap(on) {
+  if (on === basemapOn) return; basemapOn = on;
+  globe.globeTileEngineUrl(on ? (x, y, l) => `https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/${l}/${y}/${x}` : null);
+  $('#attrib').hidden = !on; refreshStyle();
+}
+
+/* ================= mapa plano (Leaflet): a leitura de uma região ================= */
+let view = 'globe';
+let map2 = null, mapReady = false;
+const L2 = {};
+const ESRI = 'https://server.arcgisonline.com/ArcGIS/rest/services/';
+function initMap2() {
+  if (map2) return;
+  map2 = L.map('map2d', { zoomControl: false, minZoom: 3, preferCanvas: true }).setView([-28.5, -52], 6);
+  L.control.zoom({ position: 'bottomright' }).addTo(map2);
+  L.tileLayer(ESRI + 'World_Imagery/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, attribution: 'Esri, Maxar, Earthstar Geographics' }).addTo(map2);
+  L.tileLayer(ESRI + 'Reference/World_Boundaries_and_Places/MapServer/tile/{z}/{y}/{x}', { maxZoom: 18, opacity: 0.85 }).addTo(map2);
+  map2.createPane('ovl').style.zIndex = 380;
+  map2.createPane('ovlTop').style.zIndex = 390;
+  ['regions', 'sel'].forEach(k => { L2[k] = L.layerGroup().addTo(map2); });
+  map2.on('move zoom zoomend moveend resize', clipSwipe);
+  mapReady = true; map2dRefresh();
+}
+function map2dRefresh() {
+  if (!mapReady) return;
+  L2.regions.clearLayers();
+  REGIONS.forEach(p => {
+    const a = regionAnalysis(p), col = statusColor(a), pk = peakOf(a);
+    L.rectangle([[p.b[1], p.b[0]], [p.b[3], p.b[2]]], { color: col, weight: 2, fillColor: col, fillOpacity: ctx && ctx.key === p.key ? 0 : 0.12, dashArray: a ? null : '6 5' })
+      .bindTooltip(`<b>${esc(p.n)}</b><br>${pk != null ? `pico de ${km2Fmt(pk)} km² de cheia` : a ? 'análise anterior ao modo cheia' : 'ainda sem análise'}`, { sticky: true })
+      .on('click', () => openPlace(p)).addTo(L2.regions);
+  });
+}
+function mapHighlight(p) {
+  if (!mapReady) return; L2.sel.clearLayers();
+  if (p) L.geoJSON(p.geometry, { style: { color: '#f4b63f', weight: 2.5, fill: false, dashArray: '8 6' }, interactive: false }).addTo(L2.sel);
+}
+function setView(v, { fly = true } = {}) {
+  if (v === view) return;
+  view = v; store.set('arara-view', v);
+  document.querySelectorAll('#viewsw button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.v === v)));
+  $('#stage').classList.toggle('mode-map', v === 'map');
+  $('#map2d').hidden = v !== 'map';
+  $('#hint').hidden = v === 'map' || !!ctx;
+  if (v === 'map') {
+    initMap2(); try { globe.pauseAnimation(); } catch (e) { /* ok */ }
+    setTimeout(() => { map2.invalidateSize(); if (fly) { if (ctx) focusPlace(ctx); else map2.setView([-28.5, -52], 6); } renderOverlay(); renderLegend(); }, 40);
+  } else {
+    stopCompare(); clearMapOverlays();
+    try { globe.resumeAnimation(); } catch (e) { /* ok */ }
+    setTimeout(() => { globe.width(el.clientWidth).height(el.clientHeight); buildSky(); renderOverlay(); renderLegend(); if (fly) { if (ctx) { const c = centerOfBox(ctx.__bb); flyTo(c.lat, c.lng, 0.12); } else flyTo(SOUTH.lat, SOUTH.lng, SOUTH.alt); } }, 40);
+  }
+  renderTimelineHead();
+}
+document.querySelectorAll('#viewsw button').forEach(b => b.addEventListener('click', () => setView(b.dataset.v)));
+function focusPlace(p) {
+  if (view === 'map') { initMap2(); const b = p.__bb; map2.flyToBounds([[b[1], b[0]], [b[3], b[2]]], { paddingTopLeft: [20, 70], paddingBottomRight: [20, A ? 190 : 40], maxZoom: 13, duration: reduceMotion ? 0 : 0.9 }); }
+  else { const c = centerOfBox(p.__bb); flyTo(c.lat, c.lng, clamp(Math.max(p.__bb[2] - p.__bb[0], p.__bb[3] - p.__bb[1]) * 0.9, 0.05, 0.5)); }
+}
+$('#goSouth').addEventListener('click', () => { closePanel(); if (view === 'map') map2.flyToBounds([[-33.8, -57.7], [-22.5, -48.0]], { duration: 0.9 }); else flyTo(SOUTH.lat, SOUTH.lng, SOUTH.alt); });
+
+/* camadas da análise sobre o satélite: PNG lat/lon da pipeline */
+const ovl = { top: null, base: null };
+function clearMapOverlays() { ['top', 'base'].forEach(k => { if (ovl[k] && map2) map2.removeLayer(ovl[k]); ovl[k] = null; }); clearOverlayGlobe(); }
+function layerFor(a, i, m) {
+  const L_ = a.layers || [], d = a.dates[i];
+  if (!d) return null;
+  if (m === 'flood') return L_.find(l => l.id === 'flood_' + key8(d.date));
+  if (m === 'water') return L_.find(l => l.id === 'water_' + key8(d.date));
+  if (m === 'radar') return L_.find(l => l.id === 'hh_' + key8(d.date));
+  if (m === 's2') { const p = s2For(a, i); return p ? L_.find(l => l.id === 's2_water_' + key8(p.optical_date)) : null; }
+  return null;
+}
+function s2For(a, i) { const v = a.optical_validation || {}; return (v.per_date || []).find(p => p.date === a.dates[i].date && p.status === 'validated') || null; }
+function renderOverlay() {
+  clearMapOverlays();
+  if (!A) return;
+  const l = layerFor(A, sel, mode); if (!l) return;
+  const url = files(A.analysis_id).png(l.id), b = l.bounds;
+  if (view === 'map' && mapReady) {
+    const bounds = [[b.south, b.west], [b.north, b.east]];
+    ovl.top = L.imageOverlay(url, bounds, { opacity: 0.95, pane: 'ovlTop' }).addTo(map2);
+    if (compare) {
+      const ref = refIndex(A), lr = ref != null ? layerFor(A, ref, mode === 'radar' ? 'flood' : mode) : null;
+      if (lr) ovl.base = L.imageOverlay(files(A.analysis_id).png(lr.id), bounds, { opacity: 0.95, pane: 'ovl' }).addTo(map2);
+      ovl.top.on('load', clipSwipe);
+    }
+  } else if (view === 'globe') setOverlayGlobe(url, b);
+}
+let overlayMesh = null, THREE_NS = null, pendingOverlay = null;
+// mesma revisão do three embutido no globo.gl 2.41.6 (r176); versões diferentes quebram o renderizador
+import(new URL('vendor/three/three.module.min.js', document.baseURI).href).then(m => { THREE_NS = m; if (pendingOverlay) setOverlayGlobe(...pendingOverlay); }).catch(() => {});
+function clearOverlayGlobe() {
+  pendingOverlay = null; if (!overlayMesh) return;
+  if (gObj) gObj.remove(overlayMesh);
+  overlayMesh.geometry.dispose(); if (overlayMesh.material.map) overlayMesh.material.map.dispose(); overlayMesh.material.dispose(); overlayMesh = null;
+}
+function setOverlayGlobe(url, b) {
+  clearOverlayGlobe(); if (!url || !gObj) return;
+  if (!THREE_NS) { pendingOverlay = [url, b]; return; }
+  const T = THREE_NS, N = 32, pos = [], uv = [], idx = [];
+  for (let j = 0; j <= N; j++) for (let i = 0; i <= N; i++) {
+    const c = globe.getCoords(b.north - (b.north - b.south) * j / N, b.west + (b.east - b.west) * i / N, 0.0003);
+    pos.push(c.x, c.y, c.z); uv.push(i / N, 1 - j / N);
+  }
+  for (let j = 0; j < N; j++) for (let i = 0; i < N; i++) { const a = j * (N + 1) + i, d = a + N + 1; idx.push(a, d, a + 1, a + 1, d, d + 1); }
+  const g = new T.BufferGeometry();
+  g.setAttribute('position', new T.Float32BufferAttribute(pos, 3)); g.setAttribute('uv', new T.Float32BufferAttribute(uv, 2)); g.setIndex(idx);
+  const tex = new T.TextureLoader().load(url); tex.colorSpace = T.SRGBColorSpace;
+  const m = new T.Mesh(g, new T.MeshBasicMaterial({ map: tex, transparent: true, depthWrite: false, side: T.DoubleSide, polygonOffset: true, polygonOffsetFactor: -4, polygonOffsetUnits: -4 }));
+  m.renderOrder = 10; overlayMesh = m; gObj.add(m);
+}
+
+/* comparação deslizante: à esquerda a passagem mais seca, à direita a selecionada */
+let swipeX = 0.5;
+function clipSwipe() {
+  if (!compare || !ovl.top) return;
+  const img = ovl.top.getElement(); if (!img) return;
+  const st = $('#stage').getBoundingClientRect(), r = img.getBoundingClientRect();
+  const x = st.left + swipeX * st.width;
+  img.style.clipPath = `inset(0 0 0 ${Math.max(0, x - r.left)}px)`;
+  $('#swipe').style.left = (swipeX * 100) + '%';
+}
+function startCompare() {
+  if (!A || refIndex(A) == null) return;
+  compare = true; if (view !== 'map') setView('map', { fly: false });
+  $('#swipe').hidden = false; renderOverlay(); renderTimelineHead(); setTimeout(clipSwipe, 60);
+}
+function stopCompare() { if (!compare) return; compare = false; $('#swipe').hidden = true; if (ovl.top) { const i = ovl.top.getElement(); if (i) i.style.clipPath = ''; } renderOverlay(); renderTimelineHead(); }
+(() => {
+  const h = $('#swHandle'); let on = false;
+  const move = (e) => { if (!on) return; const st = $('#stage').getBoundingClientRect(); swipeX = clamp((e.clientX - st.left) / st.width, 0.03, 0.97); h.setAttribute('aria-valuenow', Math.round(swipeX * 100)); clipSwipe(); };
+  h.addEventListener('pointerdown', (e) => { on = true; h.setPointerCapture(e.pointerId); e.preventDefault(); });
+  h.addEventListener('pointermove', move);
+  h.addEventListener('pointerup', () => { on = false; });
+  h.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft' || e.key === 'ArrowRight') { e.preventDefault(); e.stopPropagation(); swipeX = clamp(swipeX + (e.key === 'ArrowLeft' ? -0.05 : 0.05), 0.03, 0.97); clipSwipe(); } });
+})();
+
+/* ================= lista de regiões (início) ================= */
+function sparkSvg(series, W = 92, H = 34) {
+  if (!series || series.length < 2) return '';
+  const v = series.map(p => (p.flood_km2 || 0) + (p.flooded_vegetation_km2 || 0)), hi = Math.max(...v, 0.5);
+  const bw = W / v.length;
+  return `<svg class="spark" viewBox="0 0 ${W} ${H}" aria-hidden="true">${v.map((x, i) => {
+    const h = Math.max(1.5, x / hi * (H - 4));
+    return `<rect x="${(i * bw + 1).toFixed(1)}" y="${(H - h).toFixed(1)}" width="${Math.max(1, bw - 2).toFixed(1)}" height="${h.toFixed(1)}" rx="1" fill="${x >= RELEVANT_KM2 ? '#22d3ee' : '#3b6fd1'}" opacity="${x >= RELEVANT_KM2 ? 1 : 0.6}"/>`;
+  }).join('')}</svg>`;
+}
+function regionLine(p, a) {
+  if (!a) return busyNames.has(p.n) ? 'em análise agora no servidor' : 'aguardando a primeira análise';
+  const s = a.summary || {};
+  if (s.quality === NO_WATER) return 'o radar não separou água de terra aqui';
+  const pk = peakOf(a);
+  if (pk == null) return `análise anterior ao modo cheia · ${s.n_dates || '?'} passagens`;
+  if (pk < RELEVANT_KM2) return `sem cheia relevante em ${s.n_dates} passagens`;
+  return `pico de <b>${km2Fmt(pk)} km²</b> em ${dm(s.flood_peak_date)}`;
+}
+function fillHome() {
+  const rows = REGIONS.map(p => ({ p, a: regionAnalysis(p) }));
+  rows.sort((x, y) => (peakOf(y.a) ?? (y.a ? -1 : -2)) - (peakOf(x.a) ?? (x.a ? -1 : -2)));
+  let rank = 0;
+  $('#regionList').innerHTML = rows.map(({ p, a }, i) => {
+    const pk = peakOf(a);
+    return `<li><button class="rcard${a ? '' : ' none'}" type="button" data-i="${REGIONS.indexOf(p)}">
+      <span class="rank">${pk != null && pk >= RELEVANT_KM2 ? ++rank : '·'}</span>
+      <span class="nm">${esc(p.n)}<small>${esc(p.uf)}</small></span>
+      ${a ? sparkSvg((a.summary || {}).flood_series) : ''}
+      <span class="st"><span class="dot" style="background:${statusColor(a)}"></span>${regionLine(p, a)}</span></button></li>`;
+  }).join('');
+  $('#regionList').querySelectorAll('button').forEach(b => b.addEventListener('click', () => openPlace(REGIONS[+b.dataset.i])));
+  const lastDates = analysesList.map(a => (a.summary || {}).last_date).filter(Boolean).sort();
+  $('#lastPass').textContent = lastDates.length ? `última passagem ${dm(lastDates[lastDates.length - 1])}` : '';
+  const regionNames = new Set(REGIONS.map(r => r.n));
+  const others = analysesList.filter(a => a.status === 'completed' && !regionNames.has(a.name));
+  $('#othersWrap').hidden = !others.length;
+  $('#others').innerHTML = others.map((a, i) => `<li><button type="button" data-i="${i}">${esc(a.name || 'Área analisada')}<small>${a.summary ? `${a.summary.n_dates} passagens` : ''}</small></button></li>`).join('');
+  $('#others').querySelectorAll('button').forEach(b => b.addEventListener('click', () => openAnalysisPlace(others[+b.dataset.i])));
+}
+let busyNames = new Set();
+function loadAnalyses() {
+  return api('/analyses').then(r => {
+    const all = r.analyses || [];
+    analysesList = all.filter(a => a.status === 'completed');
+    busyNames = new Set(all.filter(a => ['queued', 'downloading', 'processing'].includes(a.status)).map(a => a.name));
+    fillHome(); refreshPins(); refreshStyle(); map2dRefresh();
+    // região aberta antes de a lista chegar (?regiao=, clique rápido): agora há análise para mostrar
+    if (ctx && !A && ctx.kind === 'region' && !(links[ctx.key] || {}).job && regionAnalysis(ctx)) renderPanel();
+    else if (ctx && !A && ctx.kind === 'region' && $('#catTxt') && !busyNames.has(ctx.n)) clearInterval(live.poll);
+  }).catch(() => { fillHome(); refreshPins(); });
+}
+loadAnalyses();
+setInterval(() => { if (!document.hidden && !A) loadAnalyses(); }, 30000);
+
+/* ================= lugares: região, município, área do usuário, análise avulsa ================= */
+function openAnalysisPlace(a) {
+  const b = a.bbox;
+  openPlace({ kind: 'analysis', key: 'an-' + a.analysis_id, n: a.name || 'Área analisada', uf: '', who: '', geometry: boxGeom(b), __bb: b, km2: a.area_km2, analysisId: a.analysis_id });
+}
+let returnTo = null;
+function openPlace(p) {
+  stopPlay(); stopCompare();
+  if (!ctx) returnTo = view;
+  ctx = p; A = null; sel = 0;
+  $('#home').hidden = true; $('#panel').hidden = false; $('#hint').hidden = true; $('#sidebody').scrollTop = 0;
+  $('#tl').hidden = true; $('#legend').hidden = true; clearMapOverlays();
+  if (view !== 'map') setView('map'); else focusPlace(p);
+  mapHighlight(p); map2dRefresh();
+  renderPanel();
+}
+function closePanel() {
+  stopPlay(); stopCompare();
+  clearInterval(live.poll); clearTimeout(live.timer); live.token++;
+  ctx = null; A = null;
+  $('#panel').hidden = true; $('#home').hidden = false; $('#tl').hidden = true; $('#legend').hidden = true;
+  clearMapOverlays(); mapHighlight(null); map2dRefresh(); fillHome();
+  if (returnTo === 'globe' && view === 'map') setView('globe'); returnTo = null;
+}
+function head(sub) {
+  const where = ctx.kind === 'region' ? `Sul do Brasil › ${ctx.uf}` : 'Análise';
+  return `<div class="ph"><div>
+      <button class="back" type="button" id="backBtn">← Regiões</button>
+      <p class="crumb" style="margin-top:8px">${esc(where)}</p>
+      <h2>${esc(ctx.n)}</h2>
+      ${sub ? `<p class="sub">${sub}</p>` : ''}
+    </div></div>`;
+}
+function setPanel(html) { const p = $('#panel'); p.innerHTML = html; p.querySelector('#backBtn').addEventListener('click', closePanel); }
+function renderPanel() {
+  clearInterval(live.poll); clearTimeout(live.timer); const token = ++live.token;
+  const link = links[ctx.key] || {};
+  if (link.job) return renderJob(link.job, token);
+  const id = ctx.analysisId || link.analysis || (ctx.kind === 'region' && (regionAnalysis(ctx) || {}).analysis_id);
+  if (id) return loadAnalysis(id, token);
+  renderStart(token);
+}
+
+/* ---- região sem análise: o monitor do servidor analisa quando o NISAR passa (não há criação pelo navegador) ---- */
+function renderStart(token) {
+  const busy = busyNames.has(ctx.n);
+  setPanel(`${head(ctx.who ? esc(ctx.who) : '')}
+    <div class="card"><header><b>${busy ? 'Em análise agora no servidor' : 'Ainda sem análise aqui'}</b><span class="chip">${fmt(ctx.km2, 0)} km²</span></header>
+      <p class="lead" id="catTxt">${STATIC ? esc(LIVE_MSG) : 'Consultando o catálogo do NISAR…'}</p>
+      <p class="note">${busy ? 'O resultado aparece aqui sozinho quando terminar (leva alguns minutos).'
+        : 'O servidor confere o catálogo do NISAR a cada poucas horas e analisa as regiões monitoradas quando há passagem nova.'}</p>
+    </div>
+    <p class="note">O Arara lê na NASA só o pedaço desta região em cada passagem do radar desde ${isoBR(NISAR_START)}, separa água de terra, compara cada passagem com a mais seca e soma a chuva do GPM.</p>`);
+  if (STATIC) return;
+  api(`/scenes?aoi=${encodeURIComponent(JSON.stringify(ctx.geometry))}&start=${NISAR_START}&end=${isoDay(Date.now())}`).then(r => {
+    if (token !== live.token) return;
+    const g = (r.groups || [])[0];
+    $('#catTxt').innerHTML = !g ? `Nenhuma passagem do NISAR sobre esta região desde ${isoBR(NISAR_START)}.`
+      : !g.eligible ? `Nenhuma órbita do NISAR cobre a região inteira (a melhor cobre ${fmt(g.aoi_coverage * 100, 0)}%).`
+      : `O radar passou <b>${g.n_dates} vezes</b> sobre esta região entre ${isoBR(g.first_date)} e ${isoBR(g.last_date)} (órbita ${g.track} ${DIR[g.direction] || g.direction}, ${esc(MAT[g.maturity] || g.maturity)}).`;
+  }).catch(e => { if (token === live.token) $('#catTxt').textContent = 'Catálogo indisponível: ' + e.message; });
+  if (busy) live.poll = setInterval(() => { if (token === live.token) loadAnalyses(); }, 15000);
+}
+function renderJob(jobId, token) {
+  const draw = (j) => {
+    const k = STAGE_ORDER[j.stage] ?? -1;
+    setPanel(`${head('Analisando agora')}
+      <div class="card"><header><b>${esc((STAGES.find(s => s[0] === j.stage) || [, 'Na fila'])[1])}</b><span class="chip">${fmt((j.progress || 0) * 100, 0)}%</span></header>
+        <div class="progress" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="${Math.round((j.progress || 0) * 100)}"><i style="width:${Math.round((j.progress || 0) * 100)}%"></i></div>
+        <p class="note">${esc(j.message || '')}</p>
+        <ul class="steps">${STAGES.map(([s, t], i) => `<li class="${i < k ? 'done' : i === k ? 'now' : ''}">${esc(t)}</li>`).join('')}</ul>
+      </div>
+      <p class="note">Os dados brutos não ficam guardados: o Arara lê só a janela da área e apaga depois. Dá para fechar e voltar; o progresso continua no servidor.</p>`);
+  };
+  draw({ stage: 'queued', progress: 0 });
+  const tick = () => api(`/jobs/${jobId}`).then(j => {
+    if (token !== live.token) return clearInterval(live.poll);
+    if (j.status === 'completed') { clearInterval(live.poll); links[ctx.key] = { analysis: j.analysis_id }; saveLinks(); loadAnalyses(); renderPanel(); }
+    else if (j.status === 'unavailable' || j.status === 'failed') { clearInterval(live.poll); delete links[ctx.key]; saveLinks(); showUnavailable((j.status === 'failed' ? 'a análise falhou: ' : '') + (j.reason || 'motivo não informado')); }
+    else draw(j);
+  }).catch(e => { clearInterval(live.poll); delete links[ctx.key]; saveLinks(); if (token === live.token) showUnavailable(e.message); });
+  tick(); live.poll = setInterval(tick, 2000);
+}
+function showUnavailable(reason) {
+  setPanel(`${head('')}
+    <div class="card"><header><b>Indisponível</b><span class="chip bad">sem dado</span></header><p class="lead">${esc(reason || 'motivo não informado')}</p>
+    <button class="btn" type="button" id="retryBtn">Tentar de novo</button></div>
+    <p class="note">Quando o dado real não pode ser obtido, o Arara diz o motivo em vez de mostrar um valor substituto.</p>`);
+  $('#retryBtn').addEventListener('click', () => { delete links[ctx.key]; saveLinks(); ctx.analysisId = null; renderPanel(); });
+}
+function loadAnalysis(id, token) {
+  const use = (a) => {
+    if (token !== live.token) return;
+    if (a.status !== 'completed') return showUnavailable(a.reason || `análise ${a.status}`);
+    analysesById.set(id, a); showAnalysis(a);
+  };
+  if (analysesById.has(id)) return use(analysesById.get(id));
+  setPanel(`${head('')}<p class="note">Carregando a análise…</p>`);
+  api(`/analyses/${id}`).then(use).catch(e => {
+    if (token !== live.token) return;
+    if (e.status === 404) { delete links[ctx.key]; saveLinks(); ctx.analysisId = null; return renderStart(token); }   // derivados expirados
+    showUnavailable(e.message);
+  });
+}
+
+/* ================= análise pronta ================= */
+const hasFlood = (a) => a.flood && a.flood.status === 'ok';
+function refIndex(a) { if (!hasFlood(a)) return null; const i = a.dates.findIndex(d => d.date === a.flood.reference_date); return i < 0 ? null : i; }
+function peakIndex(a) { if (!hasFlood(a)) return a.dates.length - 1; const i = a.dates.findIndex(d => d.date === a.flood.peak_date); return i < 0 ? a.dates.length - 1 : i; }
+function confOf(d) { return (d && d.confidence) || { level: null, reasons: [] }; }
+function showAnalysis(a) {
+  A = a;
+  if (a.quality === NO_WATER) { sel = a.dates.length - 1; mode = 'radar'; }
+  else { sel = peakIndex(a); mode = hasFlood(a) ? 'flood' : 'water'; }
+  renderSide(); renderTimeline(); renderOverlay(); renderLegend();
+  $('#tl').hidden = false;
+  if (view === 'map') focusPlace(ctx);
+}
+function select(i) {
+  if (!A) return; sel = clamp(i, 0, A.dates.length - 1);
+  if (mode === 's2' && !layerFor(A, sel, 's2')) mode = hasFlood(A) ? 'flood' : 'water';
+  renderTimeline(); renderOverlay(); renderLegend(); renderDateCard();
+}
+
+/* linha do tempo: uma coluna por passagem; barras de cheia para cima, chuva para baixo */
+function renderTimeline() {
+  const a = A, tl = $('#tl'); if (!a) return;
+  const S = a.dates, fl = hasFlood(a), ref = refIndex(a);
+  const vals = S.map(d => fl ? [d.flood_km2 || 0, d.flooded_vegetation_km2 || 0] : [d.water_km2 || 0, 0]);
+  let lo = 0;
+  if (!fl) { const w = vals.map(v => v[0]); lo = Math.min(...w) * 0.95; }
+  const hi = Math.max(...vals.map(v => v[0] + v[1] - lo), fl ? 1 : 0.01);
+  const rains = S.map(d => d.rain_7d_mm), rhi = Math.max(...rains.filter(v => v != null), 10);
+  const cols = S.map((d, i) => {
+    const [f, v] = vals[i], c = confOf(d), r = rains[i];
+    const hF = clamp((f - lo) / hi * 100, 0, 100), hV = clamp(v / hi * 100, 0, 100);
+    const bars = a.quality === NO_WATER ? '<i class="zero"></i>'
+      : fl ? (f + v < 0.01 ? '<i class="zero"></i>' : `${hV > 0 ? `<i class="veg" style="height:${hV}%"></i>` : ''}<i class="fl" style="height:${hF}%"></i>`)
+      : `<i class="wa" style="height:${Math.max(hF, 2)}%"></i>`;
+    const tip = a.quality === NO_WATER ? `${isoBR(d.date)}` : fl
+      ? `${isoBR(d.date)}: ${km2Fmt(f)} km² de cheia${v ? ` + ${km2Fmt(v)} km² possível vegetação alagada` : ''}${r != null ? ` · chuva 7 dias ${fmt(r, 0)} mm` : ''}${c.level ? ` · confiança ${c.level}` : ''}`
+      : `${isoBR(d.date)}: ${km2Fmt(d.water_km2)} km² de água`;
+    return `<button class="tlcol${i === ref ? ' ref' : ''}" type="button" role="option" aria-selected="${i === sel}" data-i="${i}" title="${esc(tip)}">
+      ${d.suspeita_vento ? '<span class="w" aria-label="suspeita de vento"></span>' : ''}
+      <span class="up">${bars}</span>
+      <span class="dn">${r != null ? `<i style="height:${clamp(r / rhi * 100, 4, 100)}%"></i>` : ''}</span>
+      <span class="lb">${c.level ? `<span class="dot" style="background:var(--c-${c.level === 'média' ? 'media' : c.level})"></span>` : ''}${dm(d.date)}</span></button>`;
+  }).join('');
+  const rainOk = a.rain && a.rain.status === 'ok';
+  tl.innerHTML = `<div class="tlhead" id="tlHead"></div>
+    <div class="tlbars" role="listbox" aria-label="Passagens do radar">${cols}</div>
+    <div class="tlkey">${fl ? '<span><i style="background:var(--flood)"></i>água de cheia</span><span><i style="background:var(--veg)"></i>possível vegetação alagada</span>' : a.quality === NO_WATER ? '<span>sem água confiável: só o radar para inspeção</span>' : '<span><i style="background:var(--water)"></i>área de água (análise anterior ao modo cheia)</span>'}
+      ${rainOk ? '<span><i style="background:var(--rain)"></i>chuva nos 7 dias antes (GPM)</span>' : ''}<span><i class="w"></i>suspeita de vento</span><span><span class="dot" style="background:var(--c-alta)"></span><span class="dot" style="background:var(--c-media)"></span><span class="dot" style="background:var(--c-baixa)"></span>confiança</span></div>`;
+  tl.querySelectorAll('.tlcol').forEach(b => b.addEventListener('click', () => { stopPlay(); select(+b.dataset.i); }));
+  renderTimelineHead();
+}
+function renderTimelineHead() {
+  const h = $('#tlHead'); if (!h || !A) return;
+  const d = A.dates[sel], c = confOf(d), ref = refIndex(A);
+  const can = { flood: !!layerFor(A, sel, 'flood'), water: !!layerFor(A, sel, 'water'), radar: !!layerFor(A, sel, 'radar'), s2: !!layerFor(A, sel, 's2') };
+  const lbl = { flood: 'Cheia', water: 'Água', radar: 'Radar', s2: 'Sentinel-2' };
+  h.innerHTML = `<button class="play" type="button" id="playBtn" aria-label="${playing ? 'Pausar' : 'Passar as datas'}">${playing
+      ? '<svg viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="5" width="4" height="14"/><rect x="14" y="5" width="4" height="14"/></svg>'
+      : '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M7 4v16l13-8z"/></svg>'}</button>
+    <div class="when"><b>${isoBR(d.date)}${c.level ? ` <span class="conf ${c.level}">confiança ${c.level}</span>` : ''}</b><span>passagem ${sel + 1} de ${A.dates.length}${sel === ref ? ' · a mais seca do período (referência)' : ''} · ← → para navegar</span></div>
+    <div class="seg" role="group" aria-label="Camada no mapa">${Object.keys(lbl).filter(k => k !== 'flood' || hasFlood(A)).map(k => `<button type="button" data-m="${k}" aria-pressed="${mode === k}" ${can[k] ? '' : 'disabled title="sem esta camada nesta passagem"'}>${lbl[k]}</button>`).join('')}</div>
+    ${ref != null ? `<button class="btn cmp" type="button" id="cmpBtn" aria-pressed="${compare}">${compare ? 'Fechar comparação' : 'Comparar com a mais seca'}</button>` : ''}`;
+  $('#playBtn').addEventListener('click', () => (playing ? stopPlay() : startPlay()));
+  h.querySelectorAll('[data-m]').forEach(b => b.addEventListener('click', () => { mode = b.dataset.m; renderOverlay(); renderLegend(); renderTimelineHead(); }));
+  if ($('#cmpBtn')) $('#cmpBtn').addEventListener('click', () => (compare ? stopCompare() : startCompare()));
+  if (compare) { $('#swL').textContent = `${dm(A.dates[ref].date)} · mais seca`; $('#swR').textContent = `${dm(d.date)} · selecionada`; }
+}
+function startPlay() {
+  if (!A || A.dates.length < 2) return;
+  if (sel >= A.dates.length - 1) select(0);
+  playing = setInterval(() => { if (sel >= A.dates.length - 1) stopPlay(); else select(sel + 1); }, reduceMotion ? 2200 : 1300);
+  renderTimelineHead();
+}
+function stopPlay() { if (!playing) return; clearInterval(playing); playing = null; renderTimelineHead(); }
+
+function renderLegend() {
+  const lg = $('#legend'); if (!A || view !== 'map') { lg.hidden = true; return; }
+  const d = A.dates[sel], ref = refIndex(A);
+  const it = (c, t) => `<span><i style="background:${c}"></i>${t}</span>`;
+  let html = '';
+  if (mode === 'flood') html = `<b>Cheia em ${isoBR(d.date)}</b>${it('var(--ref)', `água na passagem mais seca (${dm(A.dates[ref].date)})`)}${it('var(--flood)', 'água de cheia: além da mais seca')}${it('var(--veg)', 'possível vegetação alagada')}`;
+  else if (mode === 'water') html = `<b>Água em ${isoBR(d.date)}</b>${it('var(--water)', 'água medida pelo radar')}`;
+  else if (mode === 'radar') html = `<b>Radar HH em ${isoBR(d.date)}</b><span>escuro = água calma; claro = vegetação, cidade ou água agitada</span>`;
+  else if (mode === 's2') { const p = s2For(A, sel); html = `<b>Sentinel-2 em ${isoBR(p.optical_date)}</b>${it('var(--s2)', 'água vista pelo satélite óptico (MNDWI)')}<span>referência independente; não vê através de nuvem</span>`; }
+  if (compare) html += `<span style="color:var(--macaw-yellow)">Esquerda: ${dm(A.dates[ref].date)} (mais seca) · direita: ${dm(d.date)}</span>`;
+  lg.innerHTML = html; lg.hidden = false;
+}
+
+/* barra lateral da análise */
+function qualityChips(a) {
+  const v = a.optical_validation || {}, dv = v.divergence;
+  const out = [`<span class="chip">${esc(MAT[(a.group || {}).maturity] || 'NISAR')}</span>`];
+  if (a.quality === NO_WATER) out.unshift('<span class="chip bad">sem água confiável</span>');
+  else if (a.quality === 'experimental') out.unshift(`<span class="chip warn" title="${esc((a.quality_reasons || []).join('; '))}">experimental</span>`);
+  else out.unshift('<span class="chip ok">análise confiável</span>');
+  if (dv && dv.level && dv.level !== 'none') out.push(`<span class="chip warn">diverge do Sentinel-2 em ${dv.n_strong + dv.n_moderate} de ${dv.n_dates} datas</span>`);
+  else if (v.status === 'validated') out.push(`<span class="chip ok">conferido com Sentinel-2</span>`);
+  return out.join('');
+}
+function renderSide() {
+  const a = A, S = a.dates, g = a.group || {};
+  const sub = `${S.length} ${S.length === 1 ? 'passagem' : 'passagens'} do radar NISAR · ${dm(S[0].date)} a ${isoBR(S[S.length - 1].date)}`;
+  if (a.quality === NO_WATER) {
+    setPanel(`${head(sub)}<div class="chips">${qualityChips(a)}</div>
+      <div class="card"><header><b>O radar não separou água de terra aqui</b></header>
+        <p class="lead">Sem contraste nítido entre água e terra nesta área, o Arara não publica área de água nem de cheia.</p>
+        <ul class="reasons">${(a.quality_reasons || []).map(r => `<li>${esc(r)}</li>`).join('')}</ul>
+        <p class="note">${esc(a.what_to_try || 'desenhe uma área com um rio ou lago largo e terra dos dois lados')}.</p></div>
+      ${techBox(a)}`);
+    return;
+  }
+  const st = a.summary_text && a.summary_text.text;
+  setPanel(`${head(sub)}
+    <div class="chips">${qualityChips(a)}</div>
+    ${st ? `<div class="story"><p class="h3">O que o radar viu <span>gerado dos números, sem IA</span></p><p>${esc(st)}</p></div>` : ''}
+    ${!hasFlood(a) ? `<p class="note warn">Esta análise é anterior ao modo cheia: mostra só a área de água. A próxima análise do servidor traz cheia, chuva e municípios.</p>` : ''}
+    <div class="card" id="dateCard"></div>
+    ${munBox(a)}
+    ${rainNote(a)}
+    <details class="box"><summary>Como o Arara mede</summary><div>
+      <p>O radar NISAR (banda L) manda micro-ondas e mede o que volta. Água calma espelha o sinal para longe e aparece escura; é assim que o Arara separa água de terra, com um limiar calculado para esta área (${fmt(a.params.threshold_db, 2)} dB).</p>
+      ${hasFlood(a) ? `<p><b style="color:var(--flood)">Água de cheia</b> = água de cada passagem que não estava lá na passagem mais seca do período (${isoBR(a.flood.reference_date)}), só em terreno baixo (até ${a.flood.params.hand_max_m ?? '–'} m acima do rio mais próximo, modelo HAND). Manchas menores que ${fmt(a.flood.params.min_patch_km2, 1)} km² são descartadas.</p>
+      <p><b style="color:var(--veg)">Possível vegetação alagada</b> = pontos que ficaram ${fmt(a.flood.params.vegetation_delta_db, 0)} dB mais claros que o normal da série em terreno baixo. Na banda L, água embaixo da mata faz o sinal bater duas vezes e voltar mais forte.</p>
+      <ul class="reasons">${(a.flood.limitations || []).map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      <p>Vento encrespa a água e ela some do radar: datas com vento ficam marcadas (círculo amarelo), nunca escondidas nem corrigidas.</p>
+    </div></details>
+    ${techBox(a)}`);
+  renderDateCard();
+}
+function renderDateCard() {
+  const box = $('#dateCard'); if (!box || !A) return;
+  const a = A, d = a.dates[sel], c = confOf(d), fl = hasFlood(a), ref = refIndex(a);
+  const rainOk = a.rain && a.rain.status === 'ok';
+  const kpi = (cls, v, unit, label, color) => `<div class="kpi ${cls}${v == null ? ' na' : ''}"><div class="v">${v == null ? '—' : v}${v == null ? '' : `<small>${unit}</small>`}</div><div class="l"><i style="background:${color}"></i>${label}</div></div>`;
+  box.innerHTML = `<header><b>Passagem de ${isoBR(d.date)}</b>${c.level ? `<span class="conf ${c.level}">confiança ${c.level}</span>` : ''}</header>
+    <div class="kpis">${fl
+      ? kpi('flood', km2Fmt(d.flood_km2 || 0), 'km²', 'água de cheia', 'var(--flood)') + kpi('veg', km2Fmt(d.flooded_vegetation_km2 || 0), 'km²', 'possível vegetação alagada', 'var(--veg)')
+      : kpi('flood', km2Fmt(d.water_km2), 'km²', 'água total', 'var(--water)') + kpi('veg', null, '', 'cheia: na próxima análise', 'var(--veg)')}
+      ${kpi('rain', rainOk && d.rain_7d_mm != null ? fmt(d.rain_7d_mm, 0) : null, 'mm', 'chuva nos 7 dias antes', 'var(--rain)')}</div>
+    ${sel === ref ? '<p class="note">Esta é a passagem mais seca do período: a referência contra a qual a cheia das outras datas é medida.</p>' : ''}
+    ${c.reasons && c.reasons.length ? `<ul class="reasons">${c.reasons.map(r => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
+    <p class="note">Água total nesta passagem: ${km2Fmt(d.water_km2)} km² (${fmt(d.water_pct, 1)}% da área)${d.rain_3d_mm != null ? ` · chuva nos 3 dias antes: ${fmt(d.rain_3d_mm, 0)} mm` : ''}.</p>`;
+}
+function munBox(a) {
+  const m = a.municipalities;
+  if (!hasFlood(a) || !m) return '';
+  if (m.status !== 'ok') return `<p class="note">Municípios: ${esc(m.reason || 'indisponível')}.</p>`;
+  const rows = m.municipalities.filter(x => x.flood_km2 + x.flooded_vegetation_km2 >= 0.01);
+  if (!rows.length) return `<div class="card"><header><b>Municípios</b></header><p class="note">Nenhum município com água de cheia na passagem de pico (${isoBR(m.date)}).</p></div>`;
+  const hi = Math.max(...rows.map(x => x.flood_km2 + x.flooded_vegetation_km2));
+  return `<div class="card"><header><b>Onde alagou no pico (${dm(m.date)})</b><span class="chip">${rows.length} ${rows.length === 1 ? 'município' : 'municípios'}</span></header>
+    <ul class="munis">${rows.slice(0, 8).map(x => `<li><b>${esc(x.name)} <small>${esc(x.uf)}</small></b><small>${km2Fmt(x.flood_km2 + x.flooded_vegetation_km2)} km²${x.population_2022 ? ` · ${fmt(x.population_2022)} hab.` : ''}</small>
+      <span class="bar"><i style="width:${x.flood_km2 / hi * 100}%;background:var(--flood)"></i><i style="width:${x.flooded_vegetation_km2 / hi * 100}%;background:var(--veg)"></i></span></li>`).join('')}</ul>
+    <p class="note">${esc(m.note)}. Exposição não é dano confirmado.</p></div>`;
+}
+function rainNote(a) {
+  const r = a.rain;
+  if (!r || !hasFlood(a)) return '';
+  if (r.status !== 'ok') return `<p class="note">Chuva indisponível: ${esc(r.reason || '')}.</p>`;
+  return `<p class="note">Chuva: ${esc(r.product)}, ${esc(r.spatial)}. Total no período: ${fmt(r.total_mm, 0)} mm. ${esc((r.limitations || []).join('; '))}.</p>`;
+}
+function techBox(a) {
+  const g = a.group || {}, v = a.optical_validation || {}, f = files(a.analysis_id);
+  const val = v.status === 'validated'
+    ? `Comparado com a água vista pelo Sentinel-2 em ${v.n_dates_validated} de ${v.n_dates} datas: IoU médio ${fmt(v.mean_iou, 2)}, precisão ${fmt(v.mean_precision, 2)}, recall ${fmt(v.mean_recall, 2)}. O óptico é uma referência independente, não a verdade de campo.`
+    : `Sem validação óptica: ${esc(v.reason || 'não executada')}.`;
+  return `<details class="box"><summary>Validação e dados técnicos</summary><div>
+    <p>${val}</p>
+    <p>Órbita ${g.track ?? '–'} ${esc(DIR[g.direction] || g.direction || '')}, frame ${g.frame ?? '–'} · ${esc(g.collection || 'local')} · limiar ${fmt(a.params.threshold_db, 2)} dB · versão ${esc(a.algorithm_version)}</p>
+    ${(a.warnings || []).length ? `<p class="note">${a.warnings.map(esc).join(' ')}</p>` : ''}
+    <div class="tablewrap"><table><thead><tr><th>Passagem</th><th>Água km²</th>${hasFlood(a) ? '<th>Cheia km²</th><th>Veg. km²</th>' : ''}<th>Chuva 7d</th><th>Válido</th><th>Confiança</th><th>CRID</th></tr></thead>
+      <tbody>${a.dates.map(d => `<tr><td>${isoBR(d.date)}${d.suspeita_vento ? ' · vento' : ''}</td><td>${d.water_km2 == null ? '–' : fmt(d.water_km2, 2)}</td>${hasFlood(a) ? `<td>${fmt(d.flood_km2 || 0, 2)}</td><td>${fmt(d.flooded_vegetation_km2 || 0, 2)}</td>` : ''}<td>${d.rain_7d_mm == null ? '–' : fmt(d.rain_7d_mm, 0)}</td><td>${fmt((d.valid_fraction_aoi || 0) * 100, 0)}%</td><td>${esc(confOf(d).level || '–')}</td><td>${esc(d.crid || '–')}</td></tr>`).join('')}</tbody></table></div>
+    ${(a.skipped_scenes || []).length ? `<p class="note">Passagens descartadas: ${a.skipped_scenes.map(s => `${isoBR(s.date)} (${esc(s.reason)})`).join('; ')}.</p>` : ''}
+    <div class="row"><a class="btn" href="${f.csv}" download>CSV desta análise</a>${ctx.kind === 'region' && !STATIC ? `<a class="btn" href="${API}/regions/${ctx.id}/history?format=csv" download title="Todas as passagens já medidas nesta região, guardadas no banco">Histórico completo (CSV)</a>` : ''}<a class="btn" href="estudo/index.html?id=${a.analysis_id}" target="_blank" rel="noopener">Estudo completo</a><a class="btn" href="${f.sources}" target="_blank" rel="noopener">Proveniência</a></div>
+  </div></details>`;
+}
+/* ================= avisos curtos sobre o mapa ================= */
+let flashT = null;
+function flash(msg) {
+  const d = $('#drawbar'); d.hidden = false; d.innerHTML = `<p>${esc(msg)}</p>`;
+  clearTimeout(flashT); flashT = setTimeout(() => { d.hidden = true; }, 4500);
+}
+
+/* ================= busca ================= */
+const q = $('#q'), results = $('#results');
+let hits = [], activeHit = -1;
+function parseCoord(s) {
+  const m = s.trim().match(/^(-?\d{1,3}(?:[.,]\d+)?)\s*[,;\s]\s*(-?\d{1,3}(?:[.,]\d+)?)$/);
+  if (!m) return null;
+  const lat = parseFloat(m[1].replace(',', '.')), lng = parseFloat(m[2].replace(',', '.'));
+  return isNaN(lat) || isNaN(lng) || Math.abs(lat) > 90 || Math.abs(lng) > 180 ? null : { lat, lng };
+}
+q.addEventListener('input', () => {
+  const raw = q.value.trim(), s = norm(raw), co = parseCoord(raw);
+  if (co) hits = [{ kind: 'coord', ...co, label: 'Ir para a coordenada', small: `${fmt(co.lat, 4)}, ${fmt(co.lng, 4)}` }];
+  else if (s.length >= 2) hits = searchIndex.filter(e => e.n.includes(s)).sort((a, b) => (a.n.startsWith(s) ? 0 : 1) - (b.n.startsWith(s) ? 0 : 1) || a.rank - b.rank).slice(0, 8);
+  else { results.hidden = true; return; }
+  activeHit = -1;
+  results.innerHTML = hits.length ? hits.map((h, i) => `<li><button type="button" data-i="${i}" role="option">${esc(h.label)}<small>${esc(h.small)}</small></button></li>`).join('')
+    : '<li class="hint">Nada encontrado. Também dá para digitar uma coordenada, como -29.45, -51.96.</li>';
+  results.hidden = false;
+});
+q.addEventListener('keydown', (e) => {
+  const btns = [...results.querySelectorAll('button[data-i]')];
+  if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); if (!btns.length) return; activeHit = (activeHit + (e.key === 'ArrowDown' ? 1 : -1) + btns.length) % btns.length; btns.forEach((b, i) => b.classList.toggle('active', i === activeHit)); }
+  else if (e.key === 'Enter') { const i = activeHit >= 0 ? activeHit : 0; if (hits[i]) pickHit(hits[i]); }
+  else if (e.key === 'Escape') results.hidden = true;
+});
+results.addEventListener('click', (e) => { const b = e.target.closest('button[data-i]'); if (b) pickHit(hits[+b.dataset.i]); });
+document.addEventListener('pointerdown', (e) => { if (!e.target.closest('.search')) results.hidden = true; });
+function pickHit(h) {
+  results.hidden = true; q.blur(); q.value = h.kind === 'coord' ? '' : h.label;
+  if (h.kind === 'region') return openPlace(h.p);
+  if (h.kind === 'mun') {
+    const reg = REGIONS.find(r => inFeature([h.m[2], h.m[3]], { geometry: r.geometry, __bb: r.b }));
+    if (reg) return openPlace(reg);
+    return goToBox(h.m[4], `${h.m[0]} (${h.m[1]}) fica fora das regiões monitoradas.`);
+  }
+  if (h.kind === 'coord') return goToBox([h.lng - 0.05, h.lat - 0.05, h.lng + 0.05, h.lat + 0.05]);
+  if (h.kind === 'state' || h.kind === 'country') { if (ctx) closePanel(); if (view === 'map') setView('globe', { fly: false }); const c = h.c; flyTo(c.lat, c.lng, h.kind === 'state' ? 0.35 : 0.9); }
+}
+fetch('sul.json').then(r => r.json()).then(j => {
+  southMun = j.municipios;
+  southMun.forEach(m => searchIndex.push({ kind: 'mun', m, n: norm(m[0]), label: m[0], small: `município · ${m[1]}`, rank: 1 }));
+}).catch(() => {});
+
+/* navegar até uma caixa (cidade fora das regiões, coordenada): só leva o mapa até lá */
+function goToBox(b, msg) {
+  if (ctx) closePanel();
+  if (view !== 'map') setView('map', { fly: false });
+  initMap2(); setTimeout(() => map2.flyToBounds([[b[1], b[0]], [b[3], b[2]]], { maxZoom: 13, duration: reduceMotion ? 0 : 0.9 }), 60);
+  if (msg) flash(msg);
+}
+
+/* ================= mapas de base do globo ================= */
+function tagPais(f) { const a2 = f.properties.a2; return Object.assign(f, { __lvl: 'pais', __a2: a2, __name: (a2 && ptRegion && ptRegion.of(a2)) || f.properties.n }); }
+fetch('geo.json').then(r => r.json()).then(geo => {
+  world = topojson.feature(geo.world, geo.world.objects.countries).features.filter(f => f.properties.n !== 'Antarctica').map(tagPais);
+  brStates = (geo.adm1.BR || []).map(f => Object.assign(f, { __lvl: 'estado', __uf: f.properties.pc, __name: f.properties.n, __c: { lat: f.properties.lat, lng: f.properties.lng } }));
+  world.forEach(f => { const b = bboxOf(f.geometry); searchIndex.push({ kind: 'country', n: norm(f.__name), label: f.__name, small: 'país', c: centerOfBox(b), rank: 3 }); });
+  brStates.forEach(f => searchIndex.push({ kind: 'state', n: norm(f.__name), label: f.__name, small: 'estado', c: f.__c, rank: 2 }));
+  setGlobePolygons(); refreshPins();
+  $('#loading').hidden = true;
+}).catch(() => { $('#loading').textContent = 'Não foi possível carregar os mapas. Recarregue a página.'; });
+
+/* ================= tamanho e teclado ================= */
+function resize() { if (view === 'map') { if (map2) map2.invalidateSize(); clipSwipe(); return; } globe.width(el.clientWidth).height(el.clientHeight); buildSky(); }
+window.addEventListener('resize', resize);
+try { new ResizeObserver(() => resize()).observe($('#stage')); } catch (e) { /* só a janela */ }
+document.addEventListener('keydown', (e) => {
+  const typing = e.target.closest && e.target.closest('input, select, textarea');
+  if (e.key === 'Escape') { if (compare) stopCompare(); else if (ctx) closePanel(); return; }
+  if (typing || !A) return;
+  if (e.key === 'ArrowRight') { e.preventDefault(); stopPlay(); select(sel + 1); }
+  else if (e.key === 'ArrowLeft') { e.preventDefault(); stopPlay(); select(sel - 1); }
+  else if (e.key === ' ' && !e.target.closest('button')) { e.preventDefault(); playing ? stopPlay() : startPlay(); }
+});
+
+findGlobe();
+// abrir direto uma região ou análise: ?regiao=guaiba ou ?id=<análise>
+const qs = new URLSearchParams(location.search);
+fetch('regioes.json').then(r => r.json()).then(j => {
+  setRegions(j);
+  REGIONS.forEach(p => searchIndex.push({ kind: 'region', p, n: norm(p.n + ' ' + p.who), label: p.n, small: `região monitorada · ${p.uf}`, rank: 0 }));
+  fillHome(); refreshPins(); if (world.length) setGlobePolygons(); map2dRefresh();
+  if (qs.get('regiao')) { const p = REGIONS.find(r => r.id === qs.get('regiao')); if (p) openPlace(p); }
+}).catch(() => { $('#regionList').innerHTML = '<li class="note">Não foi possível carregar a lista de regiões. Recarregue a página.</li>'; });
+if (qs.get('id')) setTimeout(() => api(`/analyses/${qs.get('id')}`).then(a => openAnalysisPlace(a)).catch(() => {}), 300);
+else if (!qs.get('regiao') && store.get('arara-view', 'globe') === 'map') setView('map');
+})();
+</script>
+</body>
+</html>
