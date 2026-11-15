@@ -7,6 +7,9 @@ import numpy as np
 import pytest
 
 matplotlib.use("Agg")
+# o cache dos testes nunca toca o cache de verdade (~/.cache/arara ou data/cache)
+import tempfile  # noqa: E402
+os.environ["ARARA_CACHE_DIR"] = tempfile.mkdtemp(prefix="arara-cache-teste-")
 RAIZ_PIPELINE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 sys.path.insert(0, RAIZ_PIPELINE)
 sys.path.insert(0, os.path.join(RAIZ_PIPELINE, "scripts"))

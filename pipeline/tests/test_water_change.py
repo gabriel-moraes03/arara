@@ -75,3 +75,20 @@ def test_comparacao_em_hectares():
     assert m["water_km2_before"] == round(a.sum() * 400 / 1e6, 3)
     assert (classes[-50:] == change.SEM_DADO).all() and classes[300, 300] == change.AGUA_ESTAVEL
     assert sum(m["pixels"].values()) == N * N
+
+
+def test_semente_adaptativa_acha_margem_com_agua_clara():
+    """Água perto de -17 dB (delta do Jacuí, trilha 53 D): a semente de -20 dB não acha margem; a de -16 acha
+    e o limiar fica entre água e terra, em vez de cair no Otsu da área toda."""
+    from arara_pipeline import water
+    rng = np.random.default_rng(3)
+    n = 600                                      # blocos de 2 km = 100 px; a margem cai no meio de um bloco
+    agua = np.zeros((n, n), bool)
+    agua[:, :250] = True
+    db = np.where(agua, -17.5, -7.0) + rng.normal(0, 0.8, (n, n))
+    lim, problemas, blocos, semente = water.limiar_da_data(db, np.ones((n, n), bool), 20.0)
+    assert semente == -16.0 and blocos >= 5 and not problemas
+    assert -14.0 < lim < -12.0
+    # água escura como em Furnas: continua na semente de -20 dB
+    db2 = np.where(agua, -23.0, -7.0) + rng.normal(0, 0.8, (n, n))
+    assert water.limiar_da_data(db2, np.ones((n, n), bool), 20.0)[3] == -20.0

@@ -12,7 +12,6 @@ também cortaria água real acima do nível do lago na época do DEM; ver docs/L
 import argparse
 import glob
 import json
-import math
 import os
 import sys
 
@@ -21,56 +20,12 @@ from scipy.ndimage import distance_transform_edt, uniform_filter
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), ".."))
 
-DEM_URL = ("https://copernicus-dem-30m.s3.amazonaws.com/Copernicus_DSM_COG_10_{lat}_00_{lon}_00_DEM/"
-           "Copernicus_DSM_COG_10_{lat}_00_{lon}_00_DEM.tif")
-HAND_URL = "https://glo-30-hand.s3.amazonaws.com/v1/2021/Copernicus_DSM_COG_10_{lat}_00_{lon}_00_HAND.tif"
+from arara_pipeline.terreno import DEM_URL, HAND_URL, ler_tiles_na_grade, nomes_de_tile  # noqa: E402
+
 DECLIVIDADE_MAX_GRAUS = 15.0
 HAND_MAX_M = 20.0
 DILATACAO_HAND_M = 300.0
 DECLIVIDADE_SUAVIZACAO_M = 90.0   # a declividade é tirada do DEM de 30 m, em janelas de ~3 px dele
-
-
-def nomes_de_tile(oeste, sul, leste, norte):
-    """Tiles de 1° (canto sudoeste) que cobrem a caixa lon/lat, no padrão N36/W115."""
-    out = []
-    for la in range(math.floor(sul), math.floor(norte - 1e-9) + 1):
-        for lo in range(math.floor(oeste), math.floor(leste - 1e-9) + 1):
-            out.append((f"{'N' if la >= 0 else 'S'}{abs(la):02d}", f"{'E' if lo >= 0 else 'W'}{abs(lo):03d}"))
-    return out
-
-
-def transformacao_da_grade(xs, ys):
-    from rasterio.transform import from_origin
-    dx, dy = float(xs[1] - xs[0]), float(ys[1] - ys[0])
-    y_topo = float(max(ys[0], ys[-1]))
-    return from_origin(float(xs[0]) - dx / 2, y_topo + abs(dy) / 2, dx, abs(dy)), dy > 0
-
-
-def ler_tiles_na_grade(urls, xs, ys, epsg, metodo="bilinear"):
-    """Mosaico dos COGs na grade (xs, ys = centros dos pixels); NaN onde nenhum tile cobre.
-    Tile que não existe (mar aberto) é pulado."""
-    import rasterio
-    from rasterio.enums import Resampling
-    from rasterio.errors import RasterioIOError
-    from rasterio.vrt import WarpedVRT
-    transf, inverter = transformacao_da_grade(xs, ys)
-    out = np.full((len(ys), len(xs)), np.nan, "float32")
-    lidos = []
-    with rasterio.Env(GDAL_DISABLE_READDIR_ON_OPEN="EMPTY_DIR", AWS_NO_SIGN_REQUEST="YES",
-                      GDAL_HTTP_MAX_RETRY="3", GDAL_HTTP_RETRY_DELAY="2", GDAL_HTTP_TIMEOUT="60"):
-        for url in urls:
-            try:
-                with rasterio.open(url) as src, WarpedVRT(src, crs=f"EPSG:{epsg}", transform=transf, width=len(xs),
-                                                          height=len(ys), resampling=getattr(Resampling, metodo),
-                                                          src_nodata=src.nodata, nodata=np.nan, dtype="float32") as vrt:
-                    a = vrt.read(1)
-            except RasterioIOError:
-                continue
-            a = a[::-1] if inverter else a
-            novo = np.isfinite(a) & ~np.isfinite(out)
-            out[novo] = a[novo]
-            lidos.append(url)
-    return out, lidos
 
 
 def declividade_graus(dem, pixel_m, suavizacao_m=DECLIVIDADE_SUAVIZACAO_M):

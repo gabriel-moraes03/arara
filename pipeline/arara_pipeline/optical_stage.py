@@ -1,10 +1,49 @@
-"""Etapas optical_s2 + validate_cross do orquestrador."""
+"""Etapas optical_s2 + validate_cross do orquestrador.
+
+As datas são consultadas em paralelo (S2_WORKERS) e cada referência óptica fica no cache, com a chave
+(data do radar, área, grade). "Com nuvem" só fica no cache para datas com mais de 10 dias: perto de
+hoje uma cena nova do Sentinel-2 ainda pode chegar. Falha de rede nunca fica no cache.
+"""
+import datetime
+import hashlib
 import sys
 import traceback
+from concurrent.futures import ThreadPoolExecutor
 
+import numpy as np
+from shapely import wkt as shapely_wkt
 from shapely.geometry import mapping
 
-from . import crossval, optical_s2, publish, quality
+from . import cache, crossval, optical_s2, publish, quality
+
+S2_WORKERS = 4
+DIAS_PARA_FIXAR = 10
+
+
+def referencia_com_cache(referencia, geo, data, xs, ys, epsg, aoi_mask, aoi_wkt):
+    usar = referencia is optical_s2.referencia          # nos testes a referência é falsa: sem cache
+    destino = None
+    if usar:
+        destino = cache.caminho("s2", cache.chave("s2", data, aoi_wkt, epsg, float(xs[0]), float(xs[-1]), len(xs),
+                                                  float(ys[0]), float(ys[-1]), len(ys),
+                                                  hashlib.md5(np.packbits(aoi_mask).tobytes()).hexdigest()))
+        lido = cache.ler_npz(destino)
+        if lido is not None:
+            meta, a = lido
+            return {**meta, **a, "cache": "hit"}
+    try:
+        ref = referencia(geo, data, xs, ys, epsg, aoi_mask)
+    except Exception:  # noqa: BLE001  (rede/serviço: a análise de radar continua; detalhe só no log)
+        traceback.print_exc(file=sys.stderr)
+        return {"status": "not_optically_validated", "reason": "Sentinel-2 indisponível (falha de rede ou do serviço)"}
+    if usar and (ref["status"] == "ok" or (datetime.date.today() - datetime.date.fromisoformat(data)).days > DIAS_PARA_FIXAR):
+        meta = {k: v for k, v in ref.items() if k not in ("water", "valid")}
+        arrays = {k: ref[k] for k in ("water", "valid") if k in ref}
+        try:
+            cache.salvar_npz(destino, meta, **arrays)
+        except (OSError, TypeError, ValueError):
+            traceback.print_exc(file=sys.stderr)
+    return {**ref, "cache": "miss"}
 
 COR_OPTICO = (64, 196, 160, 210)
 
@@ -17,13 +56,13 @@ def rodar(ctx, extras, progresso, referencia=optical_s2.referencia):
     aoi_mask = cls["common_valid"]
     geo = mapping(ctx["aoi"])
     por_data, fontes, motivos = [], [], []
-    for i, d in enumerate(datas):
-        progresso("optical_s2", 0.72 + 0.12 * i / len(datas), f"Sentinel-2 perto de {d['date']}")
-        try:
-            ref = referencia(geo, d["date"], ctx["xs"], ctx["ys"], ctx["epsg"], aoi_mask)
-        except Exception:  # noqa: BLE001  (rede/serviço: a análise de radar continua; detalhe só no log)
-            traceback.print_exc(file=sys.stderr)
-            ref = {"status": "not_optically_validated", "reason": "Sentinel-2 indisponível (falha de rede ou do serviço)"}
+    aoi_wkt = shapely_wkt.dumps(ctx["aoi"], rounding_precision=7)
+    progresso("optical_s2", 0.72, f"Sentinel-2 perto de {len(datas)} passagens ({S2_WORKERS} por vez)")
+    with ThreadPoolExecutor(S2_WORKERS) as ex:
+        refs = list(ex.map(lambda d: referencia_com_cache(referencia, geo, d["date"], ctx["xs"], ctx["ys"], ctx["epsg"],
+                                                          aoi_mask, aoi_wkt), datas))
+    for i, (d, ref) in enumerate(zip(datas, refs)):
+        progresso("optical_s2", 0.72 + 0.12 * (i + 1) / len(datas), f"Sentinel-2 perto de {d['date']}")
         if ref["status"] != "ok":
             motivos.append(ref["reason"])
             por_data.append({"date": d["date"], "status": "not_optically_validated", "reason": ref["reason"]})

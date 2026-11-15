@@ -18,10 +18,36 @@ VENTO_DELTA_DB = 1.75
 BLOCO_M = 2000.0          # lado do bloco de margem (em Furnas: 50 px de 40 m)
 
 
+# Semente da margem água/terra: a mais escura que acha blocos de margem suficientes. Em Furnas e Três
+# Marias a água fica abaixo de -20 dB; no delta do Jacuí (trilha 53 D, pixel de 10 m) a água tem mediana
+# perto de -16 dB e a semente de -20 dB não acha margem nenhuma (o limiar caía no Otsu, -9,4 dB, que
+# mistura cidade e campo). Começar pela mais escura mantém Furnas exatamente como era.
+SEMENTES_DB = (SEMENTE_DB, -18.0, -16.0)
+
+
+# Com a semente perto da mediana da água, blocos só de água também têm 20-80% de pixels "escuros". Nas
+# sementes de reserva o bloco precisa ter também terra nítida: >= 20% dos pixels 6 dB acima da semente.
+TERRA_ACIMA_DB = 6.0
+FRACAO_TERRA_MIN = 0.2
+
+
+def margem_adaptativa(db, valido, bloco):
+    """(blocos de margem, semente usada). Sem margem em nenhuma semente, devolve a da mais escura."""
+    primeira = None
+    for semente in SEMENTES_DB:
+        margem = blocos_de_margem(db, valido, bloco, semente, FRACAO_SEMENTE)
+        if semente != SEMENTES_DB[0] and len(margem):
+            margem = margem[(margem > semente + TERRA_ACIMA_DB).mean(1) >= FRACAO_TERRA_MIN]
+        primeira = primeira if primeira is not None else (margem, semente)
+        if len(margem) >= MIN_BLOCOS_MARGEM:
+            return margem, semente
+    return primeira
+
+
 def limiar_da_data(db, valido, pixel_m):
-    """Limiar bimodal de uma data e as checagens de qualidade. Devolve (limiar, problemas)."""
+    """Limiar bimodal de uma data e as checagens de qualidade. Devolve (limiar, problemas, n blocos, semente)."""
     bloco = max(10, int(round(BLOCO_M / pixel_m)))
-    margem = blocos_de_margem(db, valido, bloco, SEMENTE_DB, FRACAO_SEMENTE)
+    margem, semente = margem_adaptativa(db, valido, bloco)
     problemas = []
     if len(margem) < MIN_BLOCOS_MARGEM:
         problemas.append(f"só {len(margem)} blocos de margem água/terra (mínimo {MIN_BLOCOS_MARGEM}); "
@@ -32,7 +58,7 @@ def limiar_da_data(db, valido, pixel_m):
     if not LIMIAR_FAIXA_DB[0] <= limiar <= LIMIAR_FAIXA_DB[1]:
         problemas.append(f"limiar {limiar:.1f} dB fora da faixa esperada "
                          f"({LIMIAR_FAIXA_DB[0]:.0f} a {LIMIAR_FAIXA_DB[1]:.0f} dB)")
-    return limiar, problemas, int(len(margem))
+    return limiar, problemas, int(len(margem)), semente
 
 
 def zona_de_agua(brutas, pixel_m, aoi, fracao=FRACAO_DATAS_ZONA, dilatacao_m=DILATACAO_ZONA_M):
@@ -93,5 +119,6 @@ def classificar_serie(dbs, validos, aoi, pixel_m, limiar=None):
         "water_fraction": fracoes, "hh_water_db": brilhos, "hh_water_ref_db": brilho_ref, "wind": vento,
         "per_date_threshold_db": [round(c[0], 2) for c in candidatos],
         "margin_blocks": [c[2] for c in candidatos],
+        "seed_db": [c[3] for c in candidatos],
         "experimental": bool(motivos), "experimental_reasons": motivos,
     }

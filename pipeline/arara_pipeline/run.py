@@ -14,13 +14,13 @@ import datetime
 import json
 import os
 import sys
+import time
 import traceback
 
 import numpy as np
 
-from . import ALGORITHM_VERSION, catalog_nisar, change, gcov_read, patterns, publish, quality, water
+from . import ALGORITHM_VERSION, cache, catalog_nisar, change, gcov_read, leitura, passagens, patterns, publish, quality, water
 from .geom import aneis_do_geojson, mascara_do_poligono, reprojetar_aneis
-from .sar import db_filtrado
 
 AOI_MAX_KM2 = float(os.environ.get("ARARA_AOI_MAX_KM2", 2500))
 MAX_CENAS = int(os.environ.get("ARARA_MAX_SCENES", 12))
@@ -33,9 +33,23 @@ class Indisponivel(Exception):
     """A análise não pode ser feita com dados reais; o motivo vai para o usuário."""
 
 
+_TEMPOS = []
+
+
 def progresso(etapa, fracao, mensagem):
+    if not _TEMPOS or _TEMPOS[-1][0] != etapa:
+        _TEMPOS.append((etapa, time.monotonic()))
     print(json.dumps({"stage": etapa, "progress": round(float(fracao), 3), "message": mensagem},
                      ensure_ascii=False), flush=True)
+
+
+def tempos():
+    """Segundos gastos em cada etapa (soma das vezes em que ela esteve ativa)."""
+    out = {}
+    fim = _TEMPOS[1:] + [(None, time.monotonic())]
+    for (etapa, t0), (_, t1) in zip(_TEMPOS, fim):
+        out[etapa] = round(out.get(etapa, 0) + t1 - t0, 1)
+    return out
 
 
 def agora():
@@ -90,6 +104,7 @@ def alinhar(janelas):
 
 
 def executar(spec, saida):
+    _TEMPOS.clear()
     os.makedirs(saida, exist_ok=True)
     from shapely.geometry import mapping
     aoi = catalog_nisar.geometria(spec["aoi"])
@@ -126,22 +141,17 @@ def executar(spec, saida):
         avisos.append(f"{len(cenas)} datas disponíveis; usadas {maximo} (limite por análise), espaçadas no período")
         cenas = catalog_nisar.limitar(cenas, maximo)
 
-    # ---- acquire + validate: só a janela da AOI + 1 km de cada cena ----
-    janelas, usadas, caixa, fs = [], [], None, None
-    for i, c in enumerate(cenas):
-        progresso("acquire", 0.08 + 0.42 * i / len(cenas), f"lendo a janela da cena {i + 1}/{len(cenas)} ({c['date']})")
-        try:
-            if not c.get("local") and fs is None:
-                fs = gcov_read._sessao_earthdata()
-            with gcov_read.abrir(c["url"], fs) as h:
-                if caixa is None:
-                    caixa = gcov_read.caixa_da_aoi(aoi, gcov_read.validar_estrutura(h)["epsg"])
-                j = gcov_read.ler_janela(h, caixa, passo)
-        except gcov_read.CenaInvalida as e:
-            puladas.append({"granule": c["granule"], "date": c["date"], "reason": str(e)})
+    # ---- acquire + validate: só a janela da AOI + 1 km de cada cena (cache por passagem, leitura em paralelo) ----
+    progresso("acquire", 0.08, f"lendo {len(cenas)} passagens (as que já estão no cache não são relidas)")
+    try:
+        lidas = passagens.ler(cenas, aoi, passo, filtro, progresso)
+    except gcov_read.AcessoIndisponivel as e:
+        raise Indisponivel(str(e)) from e
+    janelas, usadas = [], []
+    for c, j in zip(cenas, lidas):
+        if isinstance(j, str):
+            puladas.append({"granule": c["granule"], "date": c["date"], "reason": j})
             continue
-        except gcov_read.AcessoIndisponivel as e:
-            raise Indisponivel(str(e)) from e
         if janelas and j["epsg"] != janelas[0]["epsg"]:
             puladas.append({"granule": c["granule"], "date": c["date"], "reason": "projeção diferente das demais cenas"})
             continue
@@ -151,7 +161,7 @@ def executar(spec, saida):
         raise Indisponivel("nenhuma cena válida sobre a área: " + "; ".join(p["reason"] for p in puladas))
 
     # ---- process: grade comum, máscara da AOI, dB (uma vez) com filtro 5x5 ----
-    progresso("process", 0.52, "alinhando as cenas e convertendo para dB")
+    progresso("process", 0.52, "alinhando as cenas na grade comum")
     xs, ys, fatias = alinhar(janelas)
     epsg, pixel_m, area_px = janelas[0]["epsg"], janelas[0]["pixel_m"], janelas[0]["pixel_area_m2"]
     mascara_aoi = mascara_do_poligono(reprojetar_aneis(aneis_do_geojson(mapping(aoi)), 4326, epsg), xs, ys)
@@ -166,11 +176,11 @@ def executar(spec, saida):
             puladas.append({"granule": c["granule"], "date": c["date"],
                             "reason": f"só {fracao:.0%} da área com dado válido (mínimo {VALIDO_MINIMO:.0%})"})
             continue
-        dbs.append(db_filtrado(j["bands"]["HHHH"][f], valido, filtro))
+        dbs.append(j["db"]["HHHH"][f])
         validos.append(valido)
-        hvs.append(db_filtrado(j["bands"]["HVHV"][f], j["valid"]["HVHV"][f], filtro) if "HVHV" in j["bands"] else None)
+        hvs.append(j["db"]["HVHV"][f] if "HVHV" in j["db"] else None)
         manter.append((j, c))
-    janelas.clear()                                  # as janelas brutas só existiram em memória
+    janelas.clear()
     if not dbs:
         raise Indisponivel("nenhuma cena com dado válido suficiente na área: " + "; ".join(p["reason"] for p in puladas))
     usadas = [c for _, c in manter]
@@ -187,7 +197,7 @@ def executar(spec, saida):
             "date": c["date"], "granule": c["granule"], "crid": c["crid"],
             "water_km2": round(n * area_px / 1e6, 3), "water_pct": round(100 * n / cls["n_common"], 3),
             "threshold_db": cls["threshold_db"], "date_threshold_db": cls["per_date_threshold_db"][i],
-            "margin_blocks": cls["margin_blocks"][i],
+            "margin_blocks": cls["margin_blocks"][i], "margin_seed_db": cls["seed_db"][i],
             "hh_water_median_db": None if np.isnan(cls["hh_water_db"][i]) else round(cls["hh_water_db"][i], 2),
             "suspeita_vento": cls["wind"][i], "valid_fraction_aoi": c["valid_fraction_aoi"],
             "has_hv": hvs[i] is not None,
@@ -225,7 +235,7 @@ def executar(spec, saida):
         padroes["event"] = {k: comparacao[k] for k in comparacao}
 
     contexto = {"spec": spec, "aoi": aoi, "xs": xs, "ys": ys, "epsg": epsg, "pixel_m": pixel_m, "area_px": area_px,
-                "cls": cls, "datas": datas, "comparacao": comparacao, "saida": saida, "avisos": avisos,
+                "cls": cls, "dbs": dbs, "datas": datas, "comparacao": comparacao, "saida": saida, "avisos": avisos,
                 "alerta": padroes["anomaly"]}
     extras = etapas_opcionais(contexto, ("optical_stage",))
 
@@ -239,6 +249,13 @@ def executar(spec, saida):
         extras["previsao"] = {"status": "unavailable", "experimental": True,
                               "reason": "análise experimental: sem projeção (" + "; ".join(q["reasons"]) + ")"}
         etapas_opcionais(contexto, ("insights",), extras)
+    if not sem_agua and spec.get("flood") is not False:
+        # modo cheia, chuva e municípios: contexto para interpretar; nenhuma falha aqui derruba a análise
+        etapas_opcionais(contexto, ("cheia", "chuva", "municipios"), extras)
+    elif spec.get("flood") is not False:
+        etapas_opcionais(contexto, ("chuva",), extras)
+    juntar_por_data(datas, extras.get("cheia"), extras.get("chuva"))
+    leitura.confianca(datas, q["quality"], extras.get("validacao"), extras.get("cheia"))
     if sem_agua:
         # o radar não separou água de terra: nenhum número de água sai daqui, só status, motivos, cenas e HH
         for d in datas:
@@ -247,6 +264,9 @@ def executar(spec, saida):
             p.pop("suspeita_vento", None)
         avisos[:] = [w for w in avisos if not w.startswith("datas com suspeita de vento")]
         comparacao, classes, classes_freq, classes_evento, padroes = None, None, None, None, None
+        for d in datas:
+            d["confidence"] = {"level": "baixa", "reasons": ["o radar não separou água de terra nesta área"]}
+    resumo = None if sem_agua else leitura.resumo(datas, km2_aoi, extras.get("cheia"), extras.get("chuva"), extras.get("municipios"))
 
     # ---- publish ----
     progresso("publish", 0.90, "gravando COGs, PNGs, tiles e métricas")
@@ -290,7 +310,8 @@ def executar(spec, saida):
         c["zooms"] = tiles["zooms"]
 
     with open(os.path.join(saida, "metrics.csv"), "w", newline="", encoding="utf-8") as f:
-        colunas = ["date", "water_km2", "water_pct", "threshold_db", "hh_water_median_db", "suspeita_vento",
+        colunas = ["date", "water_km2", "water_pct", "flood_km2", "flooded_vegetation_km2", "rain_7d_mm",
+                   "threshold_db", "hh_water_median_db", "suspeita_vento",
                    "valid_fraction_aoi", "crid", "granule"]
         w = csv.DictWriter(f, fieldnames=colunas, extrasaction="ignore")
         w.writeheader()
@@ -303,11 +324,13 @@ def executar(spec, saida):
                     "crid": c.get("crid"), "date": c["date"], "start_time": c.get("start_time"),
                     "track": c.get("track"), "direction": c.get("direction"), "frame": c.get("frame"),
                     "url": None if c.get("local") else c.get("url"), "size_bytes": c.get("size_bytes"),
-                    "access": j["source"]["access"] if "source" in j else ("local" if c.get("local") else "streaming"),
+                    "access": j["source"]["access"], "cache": j["source"].get("cache"), "read_at": j["source"].get("read_at"),
                     "checksum": "arquivo local, não conferido" if c.get("local") else gcov_read.LIMITACAO_CHECKSUM,
                     "window": j["window"]} for j, c in manter],
         "skipped_scenes": puladas, "optical": extras.get("fontes_opticas"),
-        "raw_data_policy": "janelas brutas lidas em memória e descartadas ao fim do job; ficam só os derivados",
+        "raw_data_policy": ("janelas lidas por streaming; a potência linear é descartada e só o radar em dB (média "
+                            "5x5) de cada passagem fica no cache local, com a chave (cena, CRID, área), para não "
+                            "reler a mesma passagem"),
     }
     with open(os.path.join(saida, "sources.json"), "w", encoding="utf-8") as f:
         json.dump(fontes, f, ensure_ascii=False, indent=1)
@@ -324,19 +347,45 @@ def executar(spec, saida):
         "optical_validation": extras.get("validacao", {"status": "not_optically_validated",
                                                        "reason": "validação óptica não executada nesta versão"}),
         "forecast": extras.get("previsao"), "insights": extras.get("insights"), "patterns": padroes,
+        "flood": extras.get("cheia"), "rain": extras.get("chuva"), "municipalities": extras.get("municipios"),
+        "summary_text": resumo,
+        "timings_s": tempos(),
+        "cache": {"scenes_from_cache": sum(1 for j, _ in manter if j["source"].get("cache") == "hit"),
+                  "scenes_read": sum(1 for j, _ in manter if j["source"].get("cache") == "miss")},
     }
+    try:
+        cache.limitar()
+    except OSError:
+        pass
     with open(os.path.join(saida, "metrics.json"), "w", encoding="utf-8") as f:
         json.dump({k: resultado[k] for k in ("analysis_id", "algorithm_version", "method", "sensor", "params", "group",
                                               "quality", "quality_reasons", "experimental", "experimental_reasons", "dates", "comparison",
-                                              "optical_validation", "forecast", "patterns", "warnings")}, f, ensure_ascii=False, indent=1)
+                                              "optical_validation", "forecast", "patterns", "flood", "rain", "municipalities",
+                                              "summary_text", "warnings")}, f, ensure_ascii=False, indent=1)
     return resultado
 
 
 FALHA_ETAPA = {
+    "cheia": "modo cheia indisponível nesta análise",
+    "chuva": "chuva GPM IMERG indisponível nesta análise",
+    "municipios": "cruzamento com os municípios do IBGE indisponível nesta análise",
     "optical_stage": "validação óptica indisponível nesta análise (erro ao comparar com o Sentinel-2)",
     "forecast": "projeção indisponível nesta análise",
     "insights": "leitura da mudança indisponível nesta análise",
 }
+
+
+def juntar_por_data(datas, cheia, chuva):
+    """Copia cheia e chuva de cada passagem para a linha da data (tabela, CSV e linha do tempo)."""
+    por = {}
+    if cheia and cheia.get("status") == "ok":
+        for p in cheia["per_date"]:
+            por.setdefault(p["date"], {}).update(flood_km2=p["flood_km2"], flooded_vegetation_km2=p["flooded_vegetation_km2"])
+    if chuva and chuva.get("status") == "ok":
+        for p in chuva["per_date"]:
+            por.setdefault(p["date"], {}).update(rain_3d_mm=p["rain_3d_mm"], rain_7d_mm=p["rain_7d_mm"])
+    for d in datas:
+        d.update(por.get(d["date"], {}))
 
 
 def etapas_opcionais(ctx, nomes, extras=None):
