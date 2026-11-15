@@ -30,7 +30,8 @@ Foco em cheias no Sul do Brasil, contexto para interpretar a água e desempenho.
   cache por data, HAND e chuva em cache. O filtro 5×5 passa a ser aplicado na janela inteira antes do
   recorte para a grade comum (muda só pixels a até 2 px da borda da janela, 1 km fora da área).
   `timings_s` e `cache` no resultado. Backend: monitor das regiões (`regioes.json`) que reanalisa quando
-  o catálogo tem passagem nova; `GET /api/arara/monitor`, `POST /api/arara/monitor/run`.
+  o catálogo tem passagem nova; relatório em `GET /api/arara/monitor`. A seleção de área no globo e o
+  `POST /api/arara/analysis` saíram (decisão do time): as análises das regiões vêm só do monitor.
 - **Banco PostgreSQL** (`docker-compose.yml`) no lugar do H2 em arquivo, com a tabela `observation`: uma
   linha por passagem de cada análise concluída, que sobrevive à limpeza dos arquivos e às análises
   superadas. `GET /api/arara/regions/{id}/history` (JSON ou CSV). O banco H2 antigo é importado na

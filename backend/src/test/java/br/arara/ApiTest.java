@@ -110,6 +110,21 @@ class ApiTest {
         return "{\"name\":\"Pantanal teste\",\"bbox\":\"" + PANTANAL + "\",\"start\":\"" + start + "\",\"end\":\"2026-11-14\"}";
     }
 
+    JsonNode submitAnalysis(String start) throws Exception {
+        var result = service.submit(json.readValue(analysisBody(start), AnalysisService.Request.class));
+        return json.createObjectNode().put("analysis_id", result.analysisId()).put("job_id", result.jobId())
+                .put("status", result.status().api()).put("reused", result.reused());
+    }
+
+    @Test
+    void customAreaCreationIsRemoved() throws Exception {
+        mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
+                .content(analysisBody("2026-06-01"))).andExpect(status().is4xxClientError());
+        String html = mvc.perform(get("/index.html")).andExpect(status().isOk())
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(html).doesNotContain("homeSelect", "areaBtn", "areaMenu", "startDraw", "startRect", "addArea", "coordArea", "runBtn", "arara-areas-v3");
+    }
+
     @Test
     void scenesFromRealCatalogResponseAreGroupedWithoutMixing() throws Exception {
         JsonNode r = body(mvc.perform(get("/api/arara/scenes").param("bbox", PANTANAL)
@@ -161,11 +176,11 @@ class ApiTest {
 
     @Test
     void regionHistoryComesFromTheDatabaseAndKeepsTheLatestMeasurementPerPass() throws Exception {
-        // mesma região do regioes.json (nome e retângulo): o histórico vem da tabela observation
+        // mesma região do regioes.json (nome e retângulo), pedida pelo serviço como o monitor faz: o histórico vem da tabela observation
         String guaiba = "{\"name\":\"Delta do Jacuí e Guaíba\",\"bbox\":\"-51.40,-30.15,-51.10,-29.90\",\"start\":\"2026-06-01\",\"end\":\"%s\"}";
         for (String end : new String[]{"2026-10-20", "2026-11-14"}) {
-            JsonNode c = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON).content(guaiba.formatted(end))));
-            assertThat(waitJob(c.get("job_id").asText()).get("status").asText()).isEqualTo("completed");
+            var c = service.submit(json.readValue(guaiba.formatted(end), AnalysisService.Request.class));   // como o monitor faz
+            assertThat(waitJob(c.jobId()).get("status").asText()).isEqualTo("completed");
         }
         // duas análises com as mesmas 2 passagens: uma linha por passagem, não quatro
         mvc.perform(get("/api/arara/regions/guaiba/history")).andExpect(status().isOk())
@@ -182,8 +197,7 @@ class ApiTest {
 
     @Test
     void analysisLifecycle() throws Exception {
-        JsonNode created = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
-                .content(analysisBody("2026-06-01"))).andExpect(status().isAccepted()));
+        JsonNode created = submitAnalysis("2026-06-01");
         String id = created.get("analysis_id").asText();
         assertThat(id).matches("[0-9a-f]{24}");
         JsonNode job = waitJob(created.get("job_id").asText());
@@ -214,16 +228,16 @@ class ApiTest {
         mvc.perform(get("/api/arara/analyses/" + id + "/png/change.png")).andExpect(status().isOk());
 
         // o mesmo pedido de novo: mesma identidade, resultado reaproveitado, sem novo job
-        mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON).content(analysisBody("2026-06-01")))
-                .andExpect(status().isOk()).andExpect(jsonPath("$.analysis_id").value(id))
-                .andExpect(jsonPath("$.reused").value(true)).andExpect(jsonPath("$.status").value("completed"));
+        JsonNode reused = submitAnalysis("2026-06-01");
+        assertThat(reused.get("analysis_id").asText()).isEqualTo(id);
+        assertThat(reused.get("reused").asBoolean()).isTrue();
+        assertThat(reused.get("status").asText()).isEqualTo("completed");
     }
 
     @Test
     void areaWithoutReliableWaterPublishesNoWaterNumbers() throws Exception {
         for (String start : java.util.List.of("2026-06-02", "2026-06-03")) {    // pipeline nova e resultado antigo sem 'quality'
-            JsonNode created = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
-                    .content(analysisBody(start))).andExpect(status().isAccepted()));
+            JsonNode created = submitAnalysis(start);
             String id = created.get("analysis_id").asText();
             assertThat(waitJob(created.get("job_id").asText()).get("status").asText()).isEqualTo("completed");
             String card = "$.analyses[?(@.analysis_id=='" + id + "')]";
@@ -253,8 +267,7 @@ class ApiTest {
     void redoneAnalysisSupersedesTheOldOneWithoutDeletingIt() throws Exception {
         String old = null, current = null;
         for (String start : java.util.List.of("2026-06-05", "2026-06-06")) {      // mesma área, refeita depois
-            JsonNode created = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
-                    .content(analysisBody(start))).andExpect(status().isAccepted()));
+            JsonNode created = submitAnalysis(start);
             assertThat(waitJob(created.get("job_id").asText()).get("status").asText()).isEqualTo("completed");
             old = current;
             current = created.get("analysis_id").asText();
@@ -272,8 +285,7 @@ class ApiTest {
 
     @Test
     void reliableAnalysisKeepsItsNumbersAndQuality() throws Exception {
-        JsonNode created = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
-                .content(analysisBody("2026-06-04"))).andExpect(status().isAccepted()));
+        JsonNode created = submitAnalysis("2026-06-04");
         String id = created.get("analysis_id").asText();
         waitJob(created.get("job_id").asText());
         mvc.perform(get("/api/arara/analyses/" + id)).andExpect(jsonPath("$.quality").value("reliable"))
@@ -282,8 +294,7 @@ class ApiTest {
 
     @Test
     void unavailableAndFailedJobsCarryTheReasonAndLeaveNothingOnDisk() throws Exception {
-        JsonNode created = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
-                .content(analysisBody("1999-01-01"))).andExpect(status().isAccepted()));
+        JsonNode created = submitAnalysis("1999-01-01");
         JsonNode job = waitJob(created.get("job_id").asText());
         assertThat(job.get("status").asText()).isEqualTo("unavailable");
         assertThat(job.get("reason").asText()).contains("nenhuma cena");
@@ -293,20 +304,17 @@ class ApiTest {
                 .andExpect(jsonPath("$.reason").isNotEmpty()).andExpect(jsonPath("$.dates").doesNotExist());
         mvc.perform(get("/api/arara/analyses/" + id + "/metrics")).andExpect(status().isNotFound());
 
-        JsonNode failed = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
-                .content(analysisBody("1998-01-01"))).andExpect(status().isAccepted()));
+        JsonNode failed = submitAnalysis("1998-01-01");
         assertThat(waitJob(failed.get("job_id").asText()).get("status").asText()).isEqualTo("failed");
     }
 
     @Test
     void invalidRequestsAreRejectedWithReason() throws Exception {
-        mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"bbox\":\"-58,-19,-56,-17\"}"))
-                .andExpect(status().isBadRequest()).andExpect(jsonPath("$.reason").value(org.hamcrest.Matchers.containsString("limite")));
-        mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON).content("{}"))
-                .andExpect(status().isBadRequest());
-        mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
-                        .content("{\"bbox\":\"" + PANTANAL + "\",\"start\":\"ontem\"}")).andExpect(status().isBadRequest());
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.submit(json.readValue(
+                "{\"bbox\":\"-58,-19,-56,-17\"}", AnalysisService.Request.class)))
+                .isInstanceOf(IllegalArgumentException.class).hasMessageContaining("limite");
+        org.assertj.core.api.Assertions.assertThatThrownBy(() -> service.submit(json.readValue("{}", AnalysisService.Request.class)))
+                .isInstanceOf(IllegalArgumentException.class);
         mvc.perform(get("/api/arara/scenes")).andExpect(status().isBadRequest());
         mvc.perform(get("/api/arara/jobs/nao-existe")).andExpect(status().isNotFound());
         mvc.perform(get("/api/arara/analyses/zzzz")).andExpect(status().isNotFound());
@@ -329,7 +337,7 @@ class ApiTest {
     @Test
     void configNeverLeaksCredentialsAndGlobeIsServed() throws Exception {
         String cfg = mvc.perform(get("/api/arara/config")).andExpect(status().isOk())
-                .andExpect(jsonPath("$.on_demand_available").value(true)).andReturn().getResponse().getContentAsString();
+                .andExpect(jsonPath("$.on_demand_available").value(false)).andReturn().getResponse().getContentAsString();
         assertThat(cfg).doesNotContain(SECRET_USER).doesNotContain(SECRET_PASS);
         mvc.perform(get("/index.html")).andExpect(status().isOk());
         mvc.perform(get("/furnas/index.html")).andExpect(status().isOk());

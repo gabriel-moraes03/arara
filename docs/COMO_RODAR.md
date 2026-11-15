@@ -35,19 +35,21 @@ intacto) e coloca no histórico as análises que ainda estão em `data/analyses/
 
 - Globo: http://localhost:8080/
 - Furnas: http://localhost:8080/furnas/
-- Estado do servidor: http://localhost:8080/api/arara/config (`on_demand_available` diz se há credenciais)
+- Estado do servidor: http://localhost:8080/api/arara/config (`on_demand_available` permanece `false`, pois a criação pública de análises foi removida)
 
-No globo: escolha uma das regiões do Sul na lista (ordenada pela maior cheia medida), busque uma cidade
-ou desenhe um retângulo de até 2.500 km². **Analisar cheias aqui** cria o job. Na região analisada, a linha
-do tempo embaixo do mapa troca de passagem (← → ou ▶), e **Comparar com a mais seca** abre a comparação
-deslizante. `?regiao=guaiba` abre uma região direto.
+No globo, escolha uma das regiões do Sul na lista (ordenada pela maior cheia medida) ou busque uma
+cidade. Na região analisada, a linha do tempo embaixo do mapa troca de passagem (← → ou ▶) e **Comparar
+com a mais seca** abre a comparação deslizante. `?regiao=guaiba` abre uma região direto. A seleção de
+áreas personalizadas (desenho, retângulo, importação e criação por coordenadas) e a criação de análises
+pela API pública foram removidas; a busca por cidade ou coordenada só leva o mapa até lá.
 
 ### Monitor das regiões e cache
 
 As regiões ficam em `frontend/globe/regioes.json` (o globo e o backend leem o mesmo arquivo). O monitor
-(`arara.monitor` no `application.yml`; `ARARA_MONITOR=false` desliga) consulta o catálogo a cada 6 h
-(`ARARA_MONITOR_INTERVAL_MIN`) e reanalisa a região que tem passagem mais nova que a última análise.
-Rodar na hora: `curl -X POST localhost:8080/api/arara/monitor/run`; relatório em `GET /api/arara/monitor`.
+(`arara.monitor` no `application.yml`; `ARARA_MONITOR=false` desliga) consulta o catálogo 2 min depois de
+subir e depois a cada 6 h (`ARARA_MONITOR_INTERVAL_MIN`), e analisa a região que tem passagem mais nova
+que a última análise. Relatório em `GET /api/arara/monitor` (só leitura). Para incluir uma região, edite
+`regioes.json` (recorte de até ~1.000 km² com terra dos dois lados da água) e reinicie o backend.
 
 O cache fica em `data/cache/` (`ARARA_CACHE_MAX_MB`, padrão 8192). Passagens lidas em paralelo:
 `ARARA_READ_WORKERS` (padrão 3). Cada resultado traz `timings_s` (segundos por etapa) e `cache`
@@ -72,7 +74,6 @@ Toda análise sai com `quality` e `quality_reasons` (em `/analyses`, `/analyses/
 |---|---|---|
 | GET | `/api/arara/scenes?bbox=o,s,l,n&start=&end=&maturity=` | cenas e grupos de geometria |
 | GET | `/api/arara/coverage?bbox=...` | há geometria que cobre 95% da área? |
-| POST | `/api/arara/analysis` | `{name, aoi \| bbox, start, end, group_id?, maturity?}` |
 | GET | `/api/arara/jobs/{id}` | queued, downloading, processing, completed, failed, unavailable |
 | GET | `/api/arara/analyses?status=completed` | cards (só a análise mais recente de cada área; `&include_superseded=true` lista as superadas) |
 | GET | `/api/arara/analyses/{id}` | resultado completo (uma análise superada continua aqui, com `superseded_by`) |
@@ -80,7 +81,7 @@ Toda análise sai com `quality` e `quality_reasons` (em `/analyses`, `/analyses/
 | GET | `/api/arara/analyses/{id}/layers`, `/sources` | camadas e proveniência |
 | GET | `/api/arara/tiles/{id}-{camada}/{z}/{x}/{y}.png` | tiles XYZ |
 | GET | `/api/arara/regions/{id}/history[?format=csv]` | histórico da região no banco: uma linha por passagem (a medição mais recente de cada data) |
-| GET / POST | `/api/arara/monitor`, `/api/arara/monitor/run` | relatório do monitor das regiões / rodar agora |
+| GET | `/api/arara/monitor` | relatório do monitor das regiões (só leitura) |
 
 ## Pipeline sem o backend
 
@@ -125,23 +126,14 @@ análise mediu: abertura com mapa e camadas, números principais, padrões (tend
 da última passagem, permanência da água, os 3 trechos que mais secaram), linha do tempo com reprodução,
 antes × depois, série e validação com o Sentinel-2, medido × hipótese, limitações e fontes (cenas, CRID).
 
-Para gerar vários de uma vez, liste as áreas em um JSON (veja `data/estudos_mg.json`) e rode, com o
-servidor no ar e as credenciais Earthdata no `.env`:
-
-```
-.venv/bin/python pipeline/scripts/estudar_lote.py data/estudos_mg.json --inicio 2026-06-01 --fim 2026-11-14
-```
-
-Cada área vira um job (um por vez no servidor, de 5 a 10 min); o script imprime o link de cada estudo.
-`--refazer` apaga o resultado anterior e roda de novo; `--so ID ...` roda só algumas. Áreas acima de 2.500 km²
-ou sem cenas NISAR saem como `unavailable`, com o motivo. A conferência das coordenadas de cada área é sua:
-um reservatório mal enquadrado aparece como "experimental" no estudo.
+O script legado `pipeline/scripts/estudar_lote.py` depende do endpoint de criação removido e não
+é compatível com esta versão. A pipeline pode ser executada diretamente conforme a seção acima.
 
 ## Vitrine estática (GitHub Pages)
 
 A vitrine é o mesmo `frontend/` (globo, estudo automático e Furnas) lendo análises já concluídas de
 arquivos, sem backend, pipeline ou credencial. Ela não consulta o catálogo da NASA: ao clicar numa área sem
-estudo, o painel explica que análises novas exigem o servidor.
+estudo, o painel informa que a vitrine exibe apenas estudos concluídos.
 
 1. Com o servidor no ar e as análises concluídas, gere a pasta (ids em `/api/arara/analyses`):
 
