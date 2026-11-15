@@ -123,3 +123,8 @@ td.l, th.l { border-left: 1px solid var(--rule); }
   .charts, .metrics { grid-template-columns: 1fr; }
   .instrument { display: none; }
 }
+
+@media (max-width: 520px) {
+  .hide-sm { display: none; }
+  .bar { gap: 10px; }
+}

@@ -80,5 +80,5 @@
   "src.mode": "modo",
   "src.cav": "Curvas cota × área e contornos dos reservatórios:",
   "src.level": "Cota e volume útil:",
-  "src.method": "Método (o mesmo de Furnas): HH em potência linear → dB uma vez → média 5×5 em dB → um limiar para a série inteira ({limiar} dB, no vale entre água e terra) → água contada só dentro do contorno oficial, sem buffer → manchas < 0,1 km² descartadas. Valores 0 e 255 da mask do GCOV tratados como inválidos. Código: pipeline/scripts/estudo_uruguai.py."
+  "src.method": "Método: Arara {algo}, o validado em Furnas (o monitor de cheias usa a versão 0.3.0): HH em potência linear → dB uma vez → média 5×5 em dB → um limiar para a série inteira ({limiar} dB, no vale entre água e terra) → água contada só dentro do contorno oficial, sem buffer → manchas < 0,1 km² descartadas. Valores 0 e 255 da mask do GCOV tratados como inválidos. Código: pipeline/scripts/estudo_uruguai.py."
 }

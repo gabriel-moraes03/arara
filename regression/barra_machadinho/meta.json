@@ -1,6 +1,8 @@
 {
  "projeto": "Arara (caso Barra Grande + Machadinho)",
  "licenca": "MIT",
+ "versao_algoritmo": "arara-water-0.2.1",
+ "versao_algoritmo_nota": "método validado em Furnas (0.2.1); o monitor de cheias usa a versão 0.3.0",
  "colecao": "NISAR_L2_GCOV_PROVISIONAL_V1",
  "arquivo_daac": "ASF DAAC",
  "trilha": 53,

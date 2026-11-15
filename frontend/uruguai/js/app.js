@@ -61,7 +61,7 @@
       r0: day(S.rise[0]), r1: day(S.rise[1]), days, limiar: fmt(meta.metodo.limiar_db, 1),
       track: meta.trilha, frame: meta.frame, crid: meta.crid.join(', '), px: fmt(meta.pixel_processado_m, 0),
       wind: [...new Set(RES.flatMap((k) => meta.reservatorios[k].datas_suspeita_vento))].map(day).join(', ') || S.dict[S.lang]['none'],
-      erro_max: fmt(5, 0),
+      erro_max: fmt(5, 0), algo: meta.versao_algoritmo,
       bright_date: day(S.serie.barra_grande.reduce((a, b) => (b.brilho_agua_hh_db > a.brilho_agua_hh_db ? b : a)).data),
     });
     S.V = V;

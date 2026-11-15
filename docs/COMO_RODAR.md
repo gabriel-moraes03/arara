@@ -35,6 +35,7 @@ intacto) e coloca no histórico as análises que ainda estão em `data/analyses/
 
 - Globo: http://localhost:8080/
 - Furnas: http://localhost:8080/furnas/
+- Barra Grande e Machadinho (estudo experimental, método 0.2.1): http://localhost:8080/uruguai/
 - Estado do servidor: http://localhost:8080/api/arara/config (`on_demand_available` permanece `false`, pois a criação pública de análises foi removida)
 
 No globo, escolha uma das regiões do Sul na lista (ordenada pela maior cheia medida) ou busque uma

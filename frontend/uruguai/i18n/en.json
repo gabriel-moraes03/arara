@@ -80,5 +80,5 @@
   "src.mode": "mode",
   "src.cav": "Level–area curves and reservoir outlines:",
   "src.level": "Water level and storage:",
-  "src.method": "Method (same as Furnas): HH linear power → dB once → 5×5 mean in dB → one threshold for the whole series ({limiar} dB, valley between water and land) → water counted only inside the official outline, no buffer → patches < 0.1 km² removed. GCOV mask values 0 and 255 treated as invalid. Code: pipeline/scripts/estudo_uruguai.py."
+  "src.method": "Method: Arara {algo}, the method validated at Furnas (the flood monitor uses version 0.3.0): HH linear power → dB once → 5×5 mean in dB → one threshold for the whole series ({limiar} dB, valley between water and land) → water counted only inside the official outline, no buffer → patches < 0.1 km² removed. GCOV mask values 0 and 255 treated as invalid. Code: pipeline/scripts/estudo_uruguai.py."
 }

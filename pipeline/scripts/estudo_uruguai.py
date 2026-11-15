@@ -251,6 +251,8 @@ def main():
 
     meta = {
         "projeto": "Arara (caso Barra Grande + Machadinho)", "licenca": "MIT",
+        "versao_algoritmo": "arara-water-0.2.1",
+        "versao_algoritmo_nota": "método validado em Furnas (0.2.1); o monitor de cheias usa a versão 0.3.0",
         "colecao": "NISAR_L2_GCOV_PROVISIONAL_V1", "arquivo_daac": "ASF DAAC",
         "trilha": cenas[0]["trackNumber"], "direcao": "D", "frame": cenas[0]["frameNumber"], "modo": "2005",
         "banda": "L", "polarizacoes": ["HH", "HV"], "crid": sorted(crids),
