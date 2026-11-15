@@ -48,6 +48,7 @@ def exportar(servidor, ids, saida):
     shutil.copytree(os.path.join(front, "globe"), saida)
     shutil.copytree(os.path.join(front, "estudo"), os.path.join(saida, "estudo"))
     shutil.copytree(os.path.join(front, "furnas"), os.path.join(saida, "furnas"))
+    shutil.copytree(os.path.join(front, "uruguai"), os.path.join(saida, "uruguai"))
     marcar_estatico(os.path.join(saida, "index.html"))
     marcar_estatico(os.path.join(saida, "estudo", "index.html"))
 

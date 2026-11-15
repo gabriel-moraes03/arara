@@ -30,3 +30,6 @@ desktop.ini
 # metadados do Windows/WSL (nomes com ":" quebram o checkout no Windows)
 *:Zone.Identifier
 *Zone.Identifier
+
+# insumos brutos temporários do estudo do Uruguai (~13,5 GB; os derivados ficam em data/ana, regression e frontend)
+baixados_temp/

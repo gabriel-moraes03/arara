@@ -1,0 +1,51 @@
+limiar único da série: -14.61 dB (vale água/terra dos blocos de margem das 7 datas e dos 2 reservatórios); conferência: {'n_blocos_margem': 3, 'minimo_blocos_metodo': 5, 'vale_dentro_poligonos_db': 3.92, 'otsu_dentro_poligonos_db': -15.05}
+
+== Barra Grande (ANA 19067, cota: sistema local (coluna A da CAV; a coluna B, SGB, é +0,14 m))
+polígono: 90.18 km² (ficha ANA 90.736 km² a 647.0 m); fonte: ANA/SNIRH, Barra Grande.gdb, camada Isóbatas, curva de 647,00 m (a camada Reservatório é a curva de 651,14 m, o máximo maximorum)
+dado válido por data: {'20260617': 0.9755, '20260629': 0.9676, '20260711': 0.9853, '20260723': 0.9707, '20260816': 0.9719, '20260828': 0.9861, '20261015': 0.9707}; em todas as datas: 96.7%; fora da passagem (mask 255): 3.3%
+encostas mascaradas: sombra 3.0%, layover 1.4%; fração usada 92.3% (83.22 km²); máscara de sombra no produto: False
+datas com suspeita de vento: nenhuma
+[todas] n=7 erro abs médio 15.3 km² (20.0%), viés -15.3 km², ruído (dp) 5.2 km², r(cota, área) +0.98, inclinação NISAR 0.68 km²/m × CAV 1.33 km²/m, r(Δ entre datas) +0.89, Δ NISAR/Δ CAV 0.57
+[sem_vento] n=7 erro abs médio 15.3 km² (20.0%), viés -15.3 km², ruído (dp) 5.2 km², r(cota, área) +0.98, inclinação NISAR 0.68 km²/m × CAV 1.33 km²/m, r(Δ entre datas) +0.89, Δ NISAR/Δ CAV 0.57
+subida 20260629 -> 20260711: água nova 10.67 km², perdida 0.11 km², Δ NISAR +10.56 km² × Δ CAV +18.01 km²
+2026-06-17 cota 628.96 vol 34.58% esp  58.9 nisar  51.68 Δ   -7.2 (-12.2%) brilho -18.36 vento não
+2026-06-29 cota 629.64 vol 36.75% esp  59.3 nisar  50.53 Δ   -8.8 (-14.8%) brilho -18.4 vento não
+2026-07-11 cota 643.90 vol 86.78% esp  77.4 nisar  61.09 Δ  -16.3 (-21.1%) brilho -18.12 vento não
+2026-07-23 cota 646.17 vol 96.36% esp  82.1 nisar  63.14 Δ  -19.0 (-23.1%) brilho -18.42 vento não
+2026-08-16 cota 645.93 vol 95.32% esp  81.6 nisar  60.53 Δ  -21.1 (-25.9%) brilho -17.66 vento não
+2026-08-28 cota 645.02 vol 91.43% esp  79.7 nisar  63.33 Δ  -16.4 (-20.6%) brilho -18.61 vento não
+2026-10-15 cota 645.18 vol 92.11% esp  80.0 nisar  61.96 Δ  -18.0 (-22.5%) brilho -18.51 vento não
+
+== Machadinho (ANA 19069, cota: cota de operação (coluna A da CAV; a coluna B, SGB, é +0,21 m))
+polígono: 79.72 km² (ficha ANA 80.494 km² a 480.0 m); fonte: ANA/SNIRH, Machadinho.gdb, camada Reservatório (linhas a 480,00 m)
+dado válido por data: {'20260617': 1.0, '20260629': 1.0, '20260711': 1.0, '20260723': 1.0, '20260816': 1.0, '20260828': 1.0, '20261015': 1.0}; em todas as datas: 100.0%; fora da passagem (mask 255): 0.0%
+encostas mascaradas: sombra 2.3%, layover 1.4%; fração usada 96.3% (76.76 km²); máscara de sombra no produto: False
+datas com suspeita de vento: nenhuma
+[todas] n=7 erro abs médio 18.3 km² (25.7%), viés -18.3 km², ruído (dp) 2.9 km², r(cota, área) +0.85, inclinação NISAR 0.54 km²/m × CAV 1.1 km²/m, r(Δ entre datas) +0.64, Δ NISAR/Δ CAV 0.44
+[sem_vento] n=7 erro abs médio 18.3 km² (25.7%), viés -18.3 km², ruído (dp) 2.9 km², r(cota, área) +0.85, inclinação NISAR 0.54 km²/m × CAV 1.1 km²/m, r(Δ entre datas) +0.64, Δ NISAR/Δ CAV 0.44
+subida 20260629 -> 20260711: água nova 5.16 km², perdida 0.36 km², Δ NISAR +4.79 km² × Δ CAV +10.34 km²
+2026-06-17 cota 468.21 vol 19.38% esp  63.3 nisar  49.36 Δ  -13.9 (-22.0%) brilho -19.35 vento não
+2026-06-29 cota 469.33 vol 26.43% esp  64.5 nisar  48.26 Δ  -16.2 (-25.1%) brilho -19.41 vento não
+2026-07-11 cota 478.63 vol 89.79% esp  74.8 nisar  53.05 Δ  -21.8 (-29.1%) brilho -19.27 vento não
+2026-07-23 cota 479.04 vol 92.81% esp  75.4 nisar  55.12 Δ  -20.3 (-26.9%) brilho -19.51 vento não
+2026-08-16 cota 477.49 vol 81.51% esp  73.4 nisar  52.09 Δ  -21.3 (-29.0%) brilho -18.01 vento não
+2026-08-28 cota 476.47 vol 74.23% esp  72.2 nisar  55.55 Δ  -16.7 (-23.1%) brilho -19.87 vento não
+2026-10-15 cota 476.20 vol 72.32% esp  71.9 nisar  54.07 Δ  -17.8 (-24.8%) brilho -19.56 vento não
+
+== DIAGNÓSTICO (não é o resultado): mesmo limiar e mesmas regras, pixel de 20 m em vez de 40 m
+barra_grande 20260617 frac 0.923 nisar20 58.52 esp 58.8 -0.6%
+barra_grande 20260629 frac 0.923 nisar20 57.9 esp 59.3 -2.4%
+barra_grande 20260711 frac 0.923 nisar20 69.2 esp 77.3 -10.5%
+barra_grande 20260723 frac 0.923 nisar20 70.69 esp 82.0 -13.8%
+barra_grande 20260816 frac 0.923 nisar20 69.36 esp 81.6 -15.0%
+barra_grande 20260828 frac 0.923 nisar20 70.96 esp 79.7 -10.9%
+barra_grande 20261015 frac 0.923 nisar20 69.5 esp 80.0 -13.1%
+barra_grande erro abs médio 20 m 9.5 %
+machadinho 20260617 frac 0.963 nisar20 55.56 esp 63.3 -12.2%
+machadinho 20260629 frac 0.963 nisar20 54.96 esp 64.5 -14.8%
+machadinho 20260711 frac 0.963 nisar20 60.71 esp 74.8 -18.9%
+machadinho 20260723 frac 0.963 nisar20 61.92 esp 75.4 -17.9%
+machadinho 20260816 frac 0.963 nisar20 60.46 esp 73.4 -17.6%
+machadinho 20260828 frac 0.963 nisar20 62.06 esp 72.2 -14.0%
+machadinho 20261015 frac 0.963 nisar20 60.67 esp 71.9 -15.6%
+machadinho erro abs médio 20 m 15.9 %

@@ -1,0 +1,15 @@
+reservatorio,data,area_km2,area_com_encostas_km2,limiar_db,brilho_agua_hh_db,suspeita_vento
+barra_grande,20260617,51.68,51.71,-14.61,-18.36,False
+barra_grande,20260629,50.53,50.56,-14.61,-18.4,False
+barra_grande,20260711,61.09,61.22,-14.61,-18.12,False
+barra_grande,20260723,63.14,63.38,-14.61,-18.42,False
+barra_grande,20260816,60.53,60.73,-14.61,-17.66,False
+barra_grande,20260828,63.33,63.59,-14.61,-18.61,False
+barra_grande,20261015,61.96,62.07,-14.61,-18.51,False
+machadinho,20260617,49.36,49.36,-14.61,-19.35,False
+machadinho,20260629,48.26,48.26,-14.61,-19.41,False
+machadinho,20260711,53.05,53.06,-14.61,-19.27,False
+machadinho,20260723,55.12,55.14,-14.61,-19.51,False
+machadinho,20260816,52.09,52.1,-14.61,-18.01,False
+machadinho,20260828,55.55,55.58,-14.61,-19.87,False
+machadinho,20261015,54.07,54.08,-14.61,-19.56,False

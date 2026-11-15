@@ -1,0 +1,121 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Arara · Barra Grande and Machadinho seen by NISAR</title>
+<meta name="description" content="NISAR L-band radar followed the winter refill of the Barra Grande and Machadinho reservoirs (Pelotas/Uruguay rivers, Brazil), day or night and regardless of clouds, checked against official ANA water levels.">
+<meta name="theme-color" content="#04060c">
+<link rel="icon" href="../favicon.ico" sizes="any">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;600&family=IBM+Plex+Mono:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="vendor/leaflet/leaflet.css">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<header class="bar">
+  <a class="brand" href="#top" aria-label="Arara"><img src="../img/arara-marca.png" alt="" width="32" height="31">Arara</a>
+  <span class="instrument" data-i18n="nav.instrument"></span>
+  <div class="bar-actions">
+    <a class="btn" href="../index.html" data-i18n="nav.globe">← Globe</a>
+    <a class="btn" href="../furnas/index.html" data-i18n="nav.furnas">Furnas</a>
+    <button class="btn btn-accent" id="lang" type="button" data-i18n="nav.switch">PT</button>
+  </div>
+</header>
+
+<main id="top">
+
+<section class="sec hero">
+  <div class="wrap">
+    <p class="kicker" data-i18n="hero.kicker"></p>
+    <h1 data-i18n="hero.title"></h1>
+    <p class="dek" data-i18n="hero.dek"></p>
+    <p class="badge" id="badge"></p>
+    <div class="stats" id="stats"></div>
+  </div>
+</section>
+
+<section class="sec" id="timeline">
+  <div class="wrap">
+    <p class="kicker" data-i18n="time.kicker"></p>
+    <h2 data-i18n="time.title"></h2>
+    <p data-i18n="time.p1"></p>
+    <div class="tl">
+      <div class="map tl-map" id="map" aria-label="NISAR radar map of the two reservoirs"></div>
+      <aside class="tl-panel">
+        <div>
+          <div class="tl-date" id="tl-date">—</div>
+          <div class="tl-flag" id="tl-flag"></div>
+        </div>
+        <div class="res" id="res-barra_grande"></div>
+        <div class="res" id="res-machadinho"></div>
+        <label class="check"><input type="checkbox" id="tl-mask" checked><span data-i18n="time.mask"></span></label>
+        <label class="check"><input type="checkbox" id="tl-rise"><span data-i18n="time.rise"></span></label>
+      </aside>
+    </div>
+    <div class="controls">
+      <button class="btn btn-accent" id="play" type="button" data-i18n="time.play">▶ Play</button>
+      <div class="slider">
+        <input type="range" id="slider" min="0" max="6" step="1" value="0" aria-label="Date">
+        <div class="ticks" id="ticks"></div>
+      </div>
+    </div>
+    <p class="rise-note"><i></i><span data-i18n="time.legend"></span></p>
+  </div>
+</section>
+
+<section class="sec" id="chart">
+  <div class="wrap">
+    <p class="kicker" data-i18n="chart.kicker"></p>
+    <h2 data-i18n="chart.title"></h2>
+    <p data-i18n="chart.p1"></p>
+    <div class="legend">
+      <span class="nisar"><i></i><span data-i18n="chart.nisar"></span></span>
+      <span class="cav"><i></i><span data-i18n="chart.cav"></span></span>
+      <span class="band"><i></i><span data-i18n="chart.band"></span></span>
+    </div>
+    <div class="charts">
+      <figure class="chart" id="chart-barra_grande"></figure>
+      <figure class="chart" id="chart-machadinho"></figure>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="table">
+  <div class="wrap">
+    <p class="kicker" data-i18n="table.kicker"></p>
+    <h2 data-i18n="table.title"></h2>
+    <p data-i18n="table.p1"></p>
+    <div class="tbl-wrap"><table id="tbl"></table></div>
+    <div class="metrics" id="metrics"></div>
+  </div>
+</section>
+
+<section class="sec" id="limits">
+  <div class="wrap">
+    <p class="kicker" data-i18n="lim.kicker"></p>
+    <h2 data-i18n="lim.title"></h2>
+    <div class="limits">
+      <div><h3 data-i18n="lim.h1"></h3><p data-i18n="lim.p1"></p></div>
+      <div><h3 data-i18n="lim.h2"></h3><p data-i18n="lim.p2"></p></div>
+      <div><h3 data-i18n="lim.h3"></h3><p data-i18n="lim.p3"></p></div>
+      <div><h3 data-i18n="lim.h4"></h3><p data-i18n="lim.p4"></p></div>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="sources">
+  <div class="wrap">
+    <p class="kicker" data-i18n="src.kicker"></p>
+    <ul class="sources" id="src"></ul>
+  </div>
+</section>
+
+</main>
+
+<script src="vendor/leaflet/leaflet.js"></script>
+<script src="js/app.js"></script>
+</body>
+</html>
