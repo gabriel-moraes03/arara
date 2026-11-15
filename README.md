@@ -30,6 +30,21 @@ reason. Measurement is kept separate from cause: the radar says where there is e
 
 Details: [regression/furnas/RESUMO.md](regression/furnas/RESUMO.md) and the story page `frontend/furnas/`.
 
+**Flood check: Delta do Jacuí and Guaíba vs. the official ANA gauge 87450020** (Usina do Gasômetro, Porto
+Alegre). For each NISAR pass, the mean gauge level in a ±1 h window (passes at 18:33 Brasília time; ANA
+telemetry is in UTC−3) was compared with the region's flood water (`flood_km2`), over the 6 passes from
+16 August to 15 October 2026.
+- r = 0.63 with all 6 passes, and r = 0.95 without 21 September (about 1 km² of flood per cm of level).
+- The highest level (155 cm) and the largest flood area (109.8 km²) fall on the same pass, 3 October.
+- **21 September diverges:** the river was at its lowest (100 cm), yet NISAR measured 91.8 km², 35 km² above
+  the trend of the other passes. The gauge recorded 85 mm of rain in the 3 days before, the most before any
+  pass, which fits water pooling from local rain before the river rose. This is not verified: it is a
+  single rain gauge, and 48 mm before 28 August caused no divergence.
+- The gauge series only starts in mid-August 2026, so the June and July passes are not covered.
+
+Details: [regression/guaiba_regua/resumo.txt](regression/guaiba_regua/resumo.txt), gauge data in
+`data/ana/guaiba_gasometro_87450020.csv`.
+
 **Second study (experimental): Barra Grande and Machadinho (Pelotas/Uruguay rivers, RS/SC).** Between
 29 June and 11 July 2026, winter rains raised Barra Grande by 14.3 m and Machadinho by 9.3 m. Seven NISAR
 passes (track 53 D, frame 102) were measured with the Furnas-validated method (`arara-water-0.2.1`) and
@@ -70,6 +85,7 @@ Full list (in Portuguese): [docs/LIMITACOES.md](docs/LIMITACOES.md).
 |---|---|---|
 | NISAR L2 GCOV (provisional collection `NISAR_L2_GCOV_PROVISIONAL_V1`) | radar backscatter (HH, HV) | [ASF DAAC](https://nisar-docs.asf.alaska.edu/), [ASF search API](https://api.daac.asf.alaska.edu/services/search/param) |
 | ANA SAR (MedicaoSin) | official daily reservoir water level and storage | [ANA SAR](https://www.ana.gov.br/sar/) |
+| ANA telemetry, station 87450020 (Usina do Gasômetro) | water level for the Guaíba flood check | [ServiceANA](https://telemetriaws1.ana.gov.br/ServiceANA.asmx) |
 | ANA CAV (SNIRH) | official level–area–volume curves and reservoir outlines | [ANA/SNIRH metadata](https://metadados.snirh.gov.br/geonetwork/srv/api/records/b8f0487a-df73-4f8d-8b22-bb49cf9f3683) |
 | ANA/ONS reservoir bulletins | Furnas water level | [ANA situation room](https://www.gov.br/ana/pt-br/sala-de-situacao/sistemas-hidricos-dos-rios-grande-e-paranaiba), [ONS](https://www.ons.org.br/) |
 | GPM IMERG Late (daily) | rainfall before each pass | [NASA GES DISC](https://gpm1.gesdisc.eosdis.nasa.gov/opendap/) |

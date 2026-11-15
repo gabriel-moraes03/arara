@@ -49,6 +49,18 @@ O que o Arara não faz, onde ele erra e o que já foi verificado. O que mudou em
 - **Delta do Jacuí (trilha 53 D, pixel de 10 m)**: água com mediana perto de −16 dB e terra lisa (banhado,
   arroz, campo) até −12 dB. O melhor corte contra o Sentinel-2 dá IoU ~0,7: separar água de terra ali é
   mais difícil que em Furnas, e a análise tende a sair `experimental`.
+- **Delta do Jacuí × régua da ANA 87450020 (Usina do Gasômetro, Porto Alegre)**. Nível médio da régua
+  numa janela de ±1 h em torno de cada passagem (18:33 em Brasília; a telemetria da ANA vem em UTC−3)
+  comparado com a água de cheia (`flood_km2`) da região, nas 6 passagens de 16/08 a 15/10/2026:
+  - r = 0,63 com as 6 passagens e r = 0,95 sem 21/09 (5 passagens, ~1 km² de cheia por cm de nível);
+  - o maior nível (155 cm) e a maior cheia (109,8 km²) caem na mesma passagem, 03/10;
+  - **21/09 diverge**: é o nível mais baixo (100 cm), mas o radar mede 91,8 km², 35 km² acima da reta das
+    outras passagens. A régua registrou 85 mm de chuva nos 3 dias anteriores, a maior soma antes de
+    qualquer passagem. Isso é compatível com água acumulada pela chuva local antes de o rio subir, mas não
+    foi verificado: é um único pluviômetro, e em 28/08 (48 mm) não houve divergência;
+  - a régua só tem dados a partir de 15/08/2026, então as passagens de junho e julho ficam de fora.
+  Dados em `data/ana/guaiba_gasometro_87450020.csv` e `regression/guaiba_regua/`
+  (`pipeline/scripts/validar_regua_guaiba.py`).
 - **Chuva**: IMERG Late é estimativa de satélite, célula de ~11 km, sai com ~1 dia de atraso. É contexto
   para a leitura; não entra na medida da água nem prova a causa.
 - **Municípios**: a população é a do município inteiro (Censo 2022). Exposição não é dano.
