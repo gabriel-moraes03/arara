@@ -1674,6 +1674,7 @@ function placeOf(lat, lng) {
   return { parent, country: country.__name };
 }
 function makeAreaFeature(rec) {
+  if (!rec.name || /^Minha área \d+$/.test(rec.name)) rec.name = 'Área de estudo';
   const f = { type: 'Feature', properties: {}, geometry: { type: 'Polygon', coordinates: [rec.ring] } };
   const c = centerOf(f), pl = placeOf(c.lat, c.lng);
   const ha = hectares(rec.ring);
@@ -1684,8 +1685,7 @@ const MAX_AREA_DEG = 5;   // maior lado aceito (~550 km); acima disso o polígon
 const ringSpan = (ring) => Math.max(Math.max(...ring.map(p => p[0])) - Math.min(...ring.map(p => p[0])), Math.max(...ring.map(p => p[1])) - Math.min(...ring.map(p => p[1])));
 function addArea(ring, name, open) {
   if (ringSpan(ring) > MAX_AREA_DEG) { flash('Essa área é grande demais (mais de 5° de lado). Aproxime do mapa e marque só o trecho de rio, represa ou várzea.'); return null; }
-  const n = areas.length + 1;
-  const rec = { id: 'area-' + Date.now().toString(36), name: name || `Minha área ${n}`, ring: ring.map(p => [+p[0].toFixed(6), +p[1].toFixed(6)]) };
+  const rec = { id: 'area-' + Date.now().toString(36), name: name || 'Área de estudo', ring: ring.map(p => [+p[0].toFixed(6), +p[1].toFixed(6)]) };
   const f = makeAreaFeature(rec);
   areas.push(f); saveAreas(); updateLOD(true);
   if (open) { stopSpin(); selectFeature(f, { fly: true }); }
