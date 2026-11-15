@@ -62,6 +62,19 @@
     'persistência amortecida': 'damped persistence',
     'Sem validação óptica.': 'No optical validation.',
     'sem validação óptica': 'no optical validation',
+    /* leitura da análise (pipeline/arara_pipeline/insights.py) */
+    'nível ou vazão de uma estação próxima (ANA Hidroweb / SNIRH), chuva acumulada no período (GPM IMERG ou CHIRPS) e uma imagem óptica sem nuvem':
+      'water level or discharge at a nearby gauge (ANA Hidroweb / SNIRH), rainfall accumulated over the period (GPM IMERG or CHIRPS) and a cloud-free optical image',
+    'Uma única passagem válida: há área de água medida, mas não há mudança para descrever.':
+      'A single valid pass: there is a measured water area, but no change to describe.',
+    'Uma das duas datas tem suspeita de vento: a água encrespada fica mais clara no radar e parte dela deixa de ser classificada. A diferença pode ser, no todo ou em parte, efeito do vento e não mudança real.':
+      'One of the two dates has suspected wind: rough water looks brighter to the radar and part of it is no longer classified as water. The difference may be, wholly or partly, a wind effect rather than a real change.',
+    'A diferença é do tamanho da variação normal entre passagens desta série; não há indício de mudança além do ruído da medida.':
+      'The difference is the size of the normal variation between passes in this series; there is no sign of change beyond the measurement noise.',
+    "Recuo da lâmina d'água. As causas mais comuns são estiagem, vazante sazonal ou retirada de água (operação de reservatório, irrigação). Vegetação aquática cobrindo a superfície também faz a água aberta sumir do radar. Só com a área não dá para separar essas causas.":
+      'Water surface retreat. The most common causes are drought, seasonal low water or water withdrawal (reservoir operation, irrigation). Aquatic vegetation covering the surface also makes open water disappear from the radar. The area alone cannot separate these causes.',
+    "Avanço da lâmina d'água. As causas mais comuns são chuva na bacia, cheia sazonal ou enchimento de reservatório. Solo muito liso ou encharcado também pode parecer água para o radar. Só com a área não dá para separar essas causas.":
+      'Water surface advance. The most common causes are rainfall in the basin, seasonal flooding or reservoir filling. Very smooth or waterlogged soil can also look like water to the radar. The area alone cannot separate these causes.',
   };
   /* frases com números (PT -> EN) */
   var MODELOS = [
@@ -93,6 +106,11 @@
     [/^frequência de água precisa de (\d+) datas sem suspeita de vento \(há (\d+)\)$/, 'water frequency needs $1 dates without suspected wind (there are $2)'],
     [/^projeção precisa de pelo menos (\d+) datas sem suspeita de vento \(há (\d+)\)$/, 'the projection needs at least $1 dates without suspected wind (there are $2)'],
     [/^análise experimental: sem projeção \((.*)\)$/, 'experimental analysis: no projection ($1)'],
+    /* insights.py: o medido e a hipótese com alerta (direção e nível do alerta em inglês) */
+    [/^Entre (\S+) e (\S+) a água passou de ([\d.]+) para ([\d.]+) km² \(([+-][\d.]+)%\): ([\d.]+) ha de água nova e ([\d.]+) ha que deixaram de ser água\.$/,
+      'Between $1 and $2 the water went from $3 to $4 km² ($5%): $6 ha of new water and $7 ha that stopped being water.'],
+    [/^Entre a primeira e a última data a diferença é do tamanho da variação normal da série, mas a última passagem ficou (abaixo|acima) da faixa normal \(alerta: (atenção|alerta)\); vale conferir as próximas passagens antes de tomar como mudança real\.$/,
+      function (_, dir, nivel) { return 'Between the first and last dates the difference is the size of the normal variation of the series, but the last pass fell ' + (dir === 'abaixo' ? 'below' : 'above') + ' the normal range (alert: ' + (nivel === 'alerta' ? 'alert' : 'attention') + '); check the next passes before taking it as a real change.'; }],
   ];
   /* frase da pipeline em inglês; o que não está na tabela fica como veio (português) */
   function dados(s) {

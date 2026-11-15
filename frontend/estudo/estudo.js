@@ -5,6 +5,8 @@ const $ = (s, r = document) => r.querySelector(s);
 /* idioma (../arara-i18n.js): inglês por padrão; PT com ?lang=pt ou o seletor. tx(pt, en) */
 const I18N = window.ARARA_I18N, EN = I18N.en, tx = I18N.tr, dados = I18N.dados;
 const ORIG_PT = EN ? ' <i class="aside">(original text in Portuguese)</i>' : '';
+/* frase da pipeline: em inglês pela tabela; o aviso só aparece se ela não estiver lá */
+const leiaPT = (x) => { const t = dados(x); return esc(t) + (EN && t === x ? ORIG_PT : ''); };
 const ENUM = { ganhando: 'gaining', perdendo: 'losing', 'estável': 'stable', abaixo: 'below', acima: 'above', normal: 'normal', 'atenção': 'attention', alerta: 'alert', alta: 'high', 'média': 'medium', baixa: 'low' };
 const en_ = (v) => (EN && ENUM[v]) || v;
 const esc = (s) => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -75,7 +77,7 @@ function renderNoWater(a) {
     <p class="kicker">${tx('Por quê', 'Why')}</p><h2>${tx('Motivos', 'Reasons')}</h2>
     <ol class="lim">${reasons.map(r => `<li>${esc(dados(r))}.</li>`).join('')}</ol>
     <p class="kicker" style="margin-top:28px">${tx('O que tentar', 'What to try')}</p>
-    <p>${esc(dados(a.what_to_try || ''))}.</p>
+    <p>${tx('Esta região precisa de outra área ou de outra geometria de radar para ser medida com confiança; ela fica sem medida em vez de mostrar um número errado.', 'This region needs a different area or radar geometry to be measured reliably; it stays unmeasured rather than showing a wrong number.')}</p>
     <p class="aside">${tx('As camadas abaixo são o retroespalhamento HH de cada data, para inspeção: água calma aparece escura.', 'The layers below are the HH backscatter of each date, for inspection: calm water looks dark.')} ${op.length ? tx('A camada Sentinel-2 mostra onde o óptico vê água (MNDWI > 0).', 'The Sentinel-2 layer shows where optical data sees water (MNDWI > 0).') : ''}</p>
     <div class="chips" id="hero-layers"></div>
   </div></section>
@@ -175,8 +177,8 @@ function render(a) {
   </div></section>
 
   <section class="sec" id="hipotese"><div class="split wrap wide">
-    <div><p class="kicker">${tx('Medido', 'Measured')}</p><h2>${tx('O que o radar viu', 'What the radar saw')}</h2><p>${esc(ins.measured || '')}${ins.measured ? ORIG_PT : ''}</p></div>
-    <div><p class="kicker">${tx('Hipótese', 'Hypothesis')}</p><h2>${tx('Causa provável', 'Probable cause')}${ins.confidence ? ` · ${tx('confiança', 'confidence')} ${esc(en_(ins.confidence))}` : ''}</h2><p>${ins.hypothesis ? esc(ins.hypothesis) + ORIG_PT : tx('O radar mede a mudança, não a causa. Nenhuma hipótese foi gerada.', 'The radar measures the change, not the cause. No hypothesis was generated.')}</p>${ins.check ? `<p class="aside">${tx('Para conferir:', 'To check:')} ${esc(ins.check)}.${ORIG_PT}</p>` : ''}
+    <div><p class="kicker">${tx('Medido', 'Measured')}</p><h2>${tx('O que o radar viu', 'What the radar saw')}</h2><p>${ins.measured ? leiaPT(ins.measured) : ''}</p></div>
+    <div><p class="kicker">${tx('Hipótese', 'Hypothesis')}</p><h2>${tx('Causa provável', 'Probable cause')}${ins.confidence ? ` · ${tx('confiança', 'confidence')} ${esc(en_(ins.confidence))}` : ''}</h2><p>${ins.hypothesis ? leiaPT(ins.hypothesis) : tx('O radar mede a mudança, não a causa. Nenhuma hipótese foi gerada.', 'The radar measures the change, not the cause. No hypothesis was generated.')}</p>${ins.check ? `<p class="aside">${tx('Para conferir:', 'To check:')} ${leiaPT(ins.check)}.</p>` : ''}
       ${a.forecast && a.forecast.status === 'ok' ? `<p class="aside"><b>${tx('Projeção experimental:', 'Experimental projection:')}</b> ${a.forecast.points.map(p => `${dm(p.date)} ${fmt(p.water_km2, 2)} km² (${fmt(p.p10, 2)}–${fmt(p.p90, 2)})`).join(' · ')}. ${esc(dados(a.forecast.note || ''))}</p>` : ''}</div>
   </div></section>
 

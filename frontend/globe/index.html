@@ -1103,7 +1103,8 @@ function renderSide() {
       <div class="card"><header><b>${tr('O radar não separou água de terra aqui', 'The radar did not separate water from land here')}</b></header>
         <p class="lead">${tr('Sem contraste nítido entre água e terra nesta área, o Arara não publica área de água nem de cheia.', 'Without a sharp contrast between water and land in this area, Arara publishes no water or flood area.')}</p>
         <ul class="reasons">${(a.quality_reasons || []).map(r => `<li>${esc(dados(r))}</li>`).join('')}</ul>
-        <p class="note">${esc(dados(a.what_to_try || 'desenhe uma área com um rio ou lago largo e terra dos dois lados'))}.</p></div>
+        <p class="note">${tr('Esta região precisa de outra área ou de outra geometria de radar para ser medida com confiança; ela fica sem medida em vez de mostrar um número errado.',
+          'This region needs a different area or radar geometry to be measured reliably; it stays unmeasured rather than showing a wrong number.')}</p></div>
       ${techBox(a)}`);
     return;
   }
