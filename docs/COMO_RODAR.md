@@ -27,22 +27,11 @@ no `.env`. A porta muda com `ARARA_PORT` (ex.: `ARARA_PORT=8081`).
 
 - Globo: http://localhost:8080/
 - Furnas: http://localhost:8080/furnas/
-- Estado do servidor: http://localhost:8080/api/arara/config (`on_demand_available` diz se há credenciais)
+- Estado do servidor: http://localhost:8080/api/arara/config (`on_demand_available` permanece `false`, pois a criação pública de análises foi removida)
 
-No globo: busque um lugar ou use **Minha área** para desenhar um polígono de até 2.500 km². O painel
-mostra as cenas disponíveis; **Analisar água nesta área** cria o job. Ao terminar, a área vira um card.
-
-## Qualidade de cada análise
-
-Toda análise sai com `quality` e `quality_reasons` (em `/analyses`, `/analyses/{id}` e nas métricas):
-
-- `reliable`: números, padrões e projeção experimental publicados.
-- `experimental`: números publicados com o motivo ao lado; **sem projeção**.
-- `no_reliable_water`: o radar não separou água de terra (menos de 5 blocos de margem, limiar fora de
-  −22 a −12 dB, fração de água fora de 0,5–90% na maioria das datas, ou o Sentinel-2 sem água onde o
-  radar vê água). Não sai área, saldo, tendência, alerta, permanência, trechos, projeção nem vento: só o
-  status, os motivos, `what_to_try`, as cenas e o radar HH para inspeção. Resultados antigos, sem o campo,
-  são reavaliados pelo backend a partir dos números gravados, sempre para baixo.
+No globo, explore as regiões e abra os estudos concluídos. A seleção de áreas personalizadas
+(desenho, retângulo, importação e criação por coordenadas) e a criação de análises pela API pública
+foram removidas. A busca por coordenadas continua disponível apenas para navegar no mapa.
 
 ## API
 
@@ -50,7 +39,6 @@ Toda análise sai com `quality` e `quality_reasons` (em `/analyses`, `/analyses/
 |---|---|---|
 | GET | `/api/arara/scenes?bbox=o,s,l,n&start=&end=&maturity=` | cenas e grupos de geometria |
 | GET | `/api/arara/coverage?bbox=...` | há geometria que cobre 95% da área? |
-| POST | `/api/arara/analysis` | `{name, aoi \| bbox, start, end, group_id?, maturity?}` |
 | GET | `/api/arara/jobs/{id}` | queued, downloading, processing, completed, failed, unavailable |
 | GET | `/api/arara/analyses?status=completed` | cards (só a análise mais recente de cada área; `&include_superseded=true` lista as superadas) |
 | GET | `/api/arara/analyses/{id}` | resultado completo (uma análise superada continua aqui, com `superseded_by`) |
@@ -101,23 +89,14 @@ análise mediu: abertura com mapa e camadas, números principais, padrões (tend
 da última passagem, permanência da água, os 3 trechos que mais secaram), linha do tempo com reprodução,
 antes × depois, série e validação com o Sentinel-2, medido × hipótese, limitações e fontes (cenas, CRID).
 
-Para gerar vários de uma vez, liste as áreas em um JSON (veja `data/estudos_mg.json`) e rode, com o
-servidor no ar e as credenciais Earthdata no `.env`:
-
-```
-.venv/bin/python pipeline/scripts/estudar_lote.py data/estudos_mg.json --inicio 2026-06-01 --fim 2026-11-14
-```
-
-Cada área vira um job (um por vez no servidor, de 5 a 10 min); o script imprime o link de cada estudo.
-`--refazer` apaga o resultado anterior e roda de novo; `--so ID ...` roda só algumas. Áreas acima de 2.500 km²
-ou sem cenas NISAR saem como `unavailable`, com o motivo. A conferência das coordenadas de cada área é sua:
-um reservatório mal enquadrado aparece como "experimental" no estudo.
+O script legado `pipeline/scripts/estudar_lote.py` depende do endpoint de criação removido e não
+é compatível com esta versão. A pipeline pode ser executada diretamente conforme a seção acima.
 
 ## Vitrine estática (GitHub Pages)
 
 A vitrine é o mesmo `frontend/` (globo, estudo automático e Furnas) lendo análises já concluídas de
 arquivos, sem backend, pipeline ou credencial. Ela não consulta o catálogo da NASA: ao clicar numa área sem
-estudo, o painel explica que análises novas exigem o servidor.
+estudo, o painel informa que a vitrine exibe apenas estudos concluídos.
 
 1. Com o servidor no ar e as análises concluídas, gere a pasta (ids em `/api/arara/analyses`):
 

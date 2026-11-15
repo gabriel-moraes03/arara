@@ -27,13 +27,10 @@ import org.locationtech.jts.geom.Geometry;
 import org.springframework.core.io.FileSystemResource;
 import org.springframework.core.io.Resource;
 import org.springframework.http.CacheControl;
-import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
@@ -43,15 +40,13 @@ import org.springframework.web.bind.annotation.RestController;
 public class AraraController {
     private static final ObjectMapper JSON = new ObjectMapper();
     private final SceneService scenes;
-    private final AnalysisService analyses;
     private final AnalysisRepository repo;
     private final AnalysisStorage storage;
     private final AraraProperties props;
 
-    public AraraController(SceneService scenes, AnalysisService analyses, AnalysisRepository repo,
+    public AraraController(SceneService scenes, AnalysisRepository repo,
                            AnalysisStorage storage, AraraProperties props) {
         this.scenes = scenes;
-        this.analyses = analyses;
         this.repo = repo;
         this.storage = storage;
         this.props = props;
@@ -65,11 +60,8 @@ public class AraraController {
         m.put("aoi_max_km2", props.aoiMaxKm2());
         m.put("max_scenes", props.maxScenes());
         m.put("retention_days", props.retentionDays());
-        m.put("on_demand_available", props.earthdataConfigured());
-        if (!props.earthdataConfigured()) {
-            m.put("on_demand_reason", "servidor sem credenciais Earthdata (EARTHDATA_USERNAME / EARTHDATA_PASSWORD): "
-                    + "o catálogo funciona, mas novas análises ficam indisponíveis");
-        }
+        m.put("on_demand_available", false);
+        m.put("on_demand_reason", "a criação de análises por seleção de área foi removida; consulte os estudos concluídos");
         return m;
     }
 
@@ -109,17 +101,6 @@ public class AraraController {
         m.put("min_coverage", SceneService.MIN_COVERAGE);
         m.put("groups", groups.stream().map(AraraController::groupView).toList());
         return m;
-    }
-
-    @PostMapping("/analysis")
-    public ResponseEntity<Map<String, Object>> create(@RequestBody AnalysisService.Request rq) {
-        var s = analyses.submit(rq);
-        Map<String, Object> m = new LinkedHashMap<>();
-        m.put("analysis_id", s.analysisId());
-        m.put("job_id", s.jobId());
-        m.put("status", s.status().api());
-        m.put("reused", s.reused());
-        return ResponseEntity.status(s.status() == JobStatus.COMPLETED ? HttpStatus.OK : HttpStatus.ACCEPTED).body(m);
     }
 
     @GetMapping("/jobs/{id}")

@@ -2,9 +2,9 @@
 
 # Arara
 
-Onde a água avançou ou recuou, vista pelo radar NISAR (banda L). O usuário escolhe uma área no globo, o
-Arara consulta o catálogo da NASA ao vivo, lê só a janela daquela área em cada cena, classifica a água,
-compara as datas, confere com o Sentinel-2 e publica o resultado no globo.
+Onde a água avançou ou recuou, vista pelo radar NISAR (banda L). O globo permite explorar regiões e consultar estudos concluídos. A seleção de áreas personalizadas
+e a criação de análises pela API pública foram removidas. A pipeline de processamento e os resultados
+existentes continuam disponíveis.
 
 Escopo: **só água**. Tudo o que aparece é medido; quando o dado real não pode ser obtido, a resposta é
 `unavailable` com o motivo.
