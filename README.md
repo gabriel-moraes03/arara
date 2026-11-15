@@ -18,7 +18,7 @@ Everything shown is measured. When real data cannot be obtained, the answer is `
 reason. Measurement is kept separate from cause: the radar says where there is extra water, not why.
 
 - Live app: https://arara.gabrielmoraes.tech
-- Video: `<VIDEO_URL>`
+- Demo video (30 s): https://www.youtube.com/watch?v=QIAv4xKA5V8
 
 ## Validation
 
@@ -177,6 +177,10 @@ idea behind Arara are our own: the choice of tracking water with radar, the focu
 reservoirs in southern Brazil, and the decision to validate against official ANA data. AI-assisted
 outputs were reviewed and tested by the team, and all reported results come from real NISAR data
 processed by our pipeline.
+
+The demo video was edited with AI assistance and carries an 'AI-assisted edit' watermark; its
+background music and sound effects were generated with AI-assisted code; the narration is our
+own. The ARARA logo was created with AI assistance.
 
 ## Team
 
