@@ -1266,7 +1266,11 @@ function validationText(a) {
 }
 function stateChips(a) {
   const g = a.group || {};
-  return `<span class="example real">Analisado · dados reais · ${esc(MAT[g.maturity] || g.maturity || 'NISAR')}</span>`
+  const vd = ((a.optical_validation || {}).per_date || []).filter(p => p.status === 'validated' && p.optical_water_km2 > 0);
+  const nd = vd.filter(p => Math.abs(p.sar_water_km2 - p.optical_water_km2) / p.optical_water_km2 > 0.3).length;
+  const diverge = vd.length >= 3 && (nd >= 2 || ((a.optical_validation || {}).mean_iou < 0.7));
+  return (diverge ? `<span class="example warn" title="Em ${nd} de ${vd.length} datas a água do radar difere mais de 30% da vista pelo Sentinel-2">Radar diverge do Sentinel-2</span>` : '')
+    + `<span class="example real">Analisado · dados reais · ${esc(MAT[g.maturity] || g.maturity || 'NISAR')}</span>`
     + (a.experimental ? `<span class="example warn" title="${esc((a.experimental_reasons || []).join('; '))}">Experimental</span>` : '');
 }
 function renderAnalysisPanel(ctx, a) {

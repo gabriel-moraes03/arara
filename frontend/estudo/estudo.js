@@ -38,6 +38,10 @@ function render(a) {
   const wind = S.filter(p => p.suspeita_vento);
   const tr = P.trend && P.trend.status === 'ok' ? P.trend : null, an = P.anomaly && P.anomaly.status === 'ok' ? P.anomaly : null, fq = P.frequency && P.frequency.permanent_km2 != null ? P.frequency : null;
   const hot = (P.retraction_hotspots || []);
+  // o radar e o óptico devem concordar; quando não concordam, a série de radar não pode ser tomada como mudança real
+  const vd = (v.per_date || []).filter(p => p.status === 'validated' && p.optical_water_km2 > 0);
+  const div = vd.filter(p => Math.abs(p.sar_water_km2 - p.optical_water_km2) / p.optical_water_km2 > 0.3);
+  const diverge = vd.length >= 3 && (div.length >= 2 || (v.mean_iou != null && v.mean_iou < 0.7));
   const ins = a.insights || {}, antes = 'Esta análise é anterior aos padrões medidos; refaça a análise (estudar_lote.py --refazer) para calculá-los.';
 
   main.innerHTML = `
@@ -47,7 +51,7 @@ function render(a) {
       <p class="kicker">Estudo automático · ${esc(a.sensor)}</p>
       <h1>${esc(a.name || 'Área analisada')}: ${fmt(last.water_km2, last.water_km2 < 100 ? 1 : 0)} km² de água</h1>
       <p class="dek">${S.length > 1 ? `Em ${S.length} passagens do NISAR, de ${br(first.date)} a ${br(last.date)}, a água ${pct < 0 ? 'diminuiu' : 'aumentou'} ${fmt(Math.abs(pct), 1)}% (${sg(last.water_km2 - first.water_km2, 1)} km²).` : `Uma passagem válida, em ${br(first.date)}.`} Cada número abaixo foi medido pelo radar sobre esta área e pode ser conferido nas cenas listadas no fim.</p>
-      <div class="chips"><span class="chip ok">${esc(MAT[g.maturity] || 'NISAR')}</span>${a.experimental ? '<span class="chip warn">experimental</span>' : ''}${v.status === 'validated' ? `<span class="chip ok">validado com Sentinel-2 · IoU ${fmt(v.mean_iou, 2)}</span>` : '<span class="chip warn">sem validação óptica</span>'}${wind.length ? `<span class="chip warn">vento em ${wind.map(p => dm(p.date)).join(', ')}</span>` : ''}</div>
+      <div class="chips"><span class="chip ok">${esc(MAT[g.maturity] || 'NISAR')}</span>${a.experimental ? '<span class="chip warn">experimental</span>' : ''}${v.status === 'validated' ? `<span class="chip ok">validado com Sentinel-2 · IoU ${fmt(v.mean_iou, 2)}</span>` : '<span class="chip warn">sem validação óptica</span>'}${diverge ? `<span class="chip warn">radar diverge do óptico em ${div.length} de ${vd.length} datas</span>` : ''}${wind.length ? `<span class="chip warn">vento em ${wind.map(p => dm(p.date)).join(', ')}</span>` : ''}</div>
     </div>
   </section>
 
@@ -59,8 +63,9 @@ function render(a) {
 
   <section class="sec" id="padroes"><div class="wrap wide">
     <p class="kicker">O que a série mostra</p><h2>Padrões medidos</h2>
+    ${diverge ? `<div class="card warn" style="margin-top:22px"><h3>Atenção: o radar não concorda com o Sentinel-2</h3><p>Em ${div.length} de ${vd.length} datas a área de água do radar difere mais de 30% da vista pelo Sentinel-2 (IoU médio ${fmt(v.mean_iou, 2)}). Isso costuma indicar solo muito úmido, irrigação ou vegetação sendo contados como água. <b>Não tome a tendência e a variação abaixo como mudança real do corpo d'água</b> antes de conferir a camada "Sentinel-2" e a tabela de validação.</p></div>` : ''}
     <div class="cards">
-      <div class="card"><h3>Tendência</h3>${tr ? `<div class="v">${sg(tr.km2_per_week, 2)}<small>km²/semana</small></div><p>${fmt(Math.abs(tr.pct_per_month), 1)}% ao mês, ${tr.direction}, desde ${br(tr.since)} (${tr.n_dates} datas, ${esc(tr.method)}). ${esc(tr.note)}.</p>` : `<p>${esc((P.trend || {}).reason || antes)}</p>`}</div>
+      <div class="card ${diverge ? 'warn' : ''}"><h3>Tendência${diverge ? ' · não confiável' : ''}</h3>${tr ? `<div class="v">${sg(tr.km2_per_week, 2)}<small>km²/semana</small></div><p>${fmt(Math.abs(tr.pct_per_month), 1)}% ao mês, ${tr.direction}, desde ${br(tr.since)} (${tr.n_dates} datas, ${esc(tr.method)}). ${esc(tr.note)}.</p>` : `<p>${esc((P.trend || {}).reason || antes)}</p>`}</div>
       <div class="card ${an && an.level === 'alerta' ? 'alert' : an && an.level === 'atenção' ? 'warn' : ''}"><h3>Alerta da última passagem</h3>${an ? `<div class="v">${an.level}<small>${sg(an.pct_vs_normal, 1)}% vs normal</small></div><p>Em ${br(an.last_date)} havia ${fmt(an.last_km2, 2)} km², ${an.direction} do normal da série (${fmt(an.normal_km2, 2)} km²). ${esc(an.note || '')}</p>` : `<p>${esc((P.anomaly || {}).reason || antes)}</p>`}</div>
       <div class="card"><h3>Permanência da água</h3>${fq ? `<div class="v">${fmt(fq.permanent_km2, 1)}<small>km² permanente</small></div><p>${fmt(fq.seasonal_km2, 1)} km² sazonal e ${fmt(fq.occasional_km2, 1)} km² ocasional, em ${fq.n_dates} datas. Permanente: água em 90% ou mais das datas.</p>` : `<p>${esc((P.frequency || {}).reason || antes)}</p>`}</div>
       <div class="card"><h3>Trechos que mais secaram</h3>${hot.length ? `<ul class="top3">${hot.map((h, i) => `<li><button type="button" data-i="${i}">#${h.rank} · ${fmt(h.area_ha, 1)} ha<small>${fmt(h.lat, 4)}, ${fmt(h.lon, 4)}</small></button></li>`).join('')}</ul>` : `<p>${a.patterns ? 'Nenhum trecho contíguo perdeu água acima de 1 ha.' : antes}</p>`}</div>
@@ -108,6 +113,7 @@ function render(a) {
       ${(a.skipped_scenes || []).length ? `<li><b>Cenas descartadas.</b> ${a.skipped_scenes.map(s => `${br(s.date)} (${esc(s.reason)})`).join('; ')}.</li>` : ''}
       <li><b>Vegetação alagada e plantas aquáticas</b> não aparecem como água aberta em HH; solo muito liso e sombra de radar podem parecer água.</li>
       <li><b>Produto ${MAT[g.maturity] ? MAT[g.maturity].replace('produto ', '') : 'do NISAR'}.</b> Os valores podem mudar quando a NASA reprocessar; o CRID de cada cena está na tabela abaixo.</li>
+      ${diverge ? `<li><b>Divergência com o óptico.</b> O radar e o Sentinel-2 discordam em ${div.length} de ${vd.length} datas; as áreas de água do radar nessas datas não devem ser usadas como medida do reservatório.</li>` : ''}
       <li><b>Validação.</b> ${v.status === 'validated' ? 'O óptico pode estar a até 7 dias do radar e não enxerga água sob nuvem.' : 'Não houve validação óptica; não há conferência independente.'}</li>
       ${(a.warnings || []).map(w => `<li>${esc(w)}</li>`).join('')}
     </ol>
