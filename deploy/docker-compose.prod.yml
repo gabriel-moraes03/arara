@@ -1,0 +1,67 @@
+# Arara na VPS: Postgres + backend (que também serve o frontend) + Caddy na frente.
+#   cd deploy && cp .env.example .env   (preencha ARARA_DB_PASSWORD; DOMAIN é opcional)
+#   docker compose -f docker-compose.prod.yml up -d --build
+#   ./restore.sh                        (carrega os seeds na primeira vez)
+# Só o Caddy publica portas (80/443). Banco e backend ficam na rede interna do compose.
+name: arara-prod   # diferente do compose de desenvolvimento (projeto "arara"): volumes separados
+
+services:
+  db:
+    image: postgres:16.4-alpine
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: arara
+      POSTGRES_USER: ${ARARA_DB_USER:-arara}
+      POSTGRES_PASSWORD: ${ARARA_DB_PASSWORD:?defina ARARA_DB_PASSWORD em deploy/.env}
+    volumes:
+      - arara-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d arara"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+    mem_limit: 512m
+
+  backend:
+    build:
+      context: ..
+      dockerfile: deploy/Dockerfile.backend
+    image: arara-backend:event
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: event
+      ARARA_DB_URL: jdbc:postgresql://db:5432/arara
+      ARARA_DB_USER: ${ARARA_DB_USER:-arara}
+      ARARA_DB_PASSWORD: ${ARARA_DB_PASSWORD:?defina ARARA_DB_PASSWORD em deploy/.env}
+      ARARA_MONITOR: ${ARARA_MONITOR:-false}
+      ARARA_RETENTION_DAYS: ${ARARA_RETENTION_DAYS:-36500}
+    volumes:
+      - arara-data:/data
+    depends_on:
+      db:
+        condition: service_healthy
+    mem_limit: 1g
+
+  caddy:
+    image: caddy:2.8.4-alpine
+    restart: unless-stopped
+    environment:
+      DOMAIN: ${DOMAIN:-:80}
+    ports:
+      - "${HTTP_PORT:-80}:80"
+      - "${HTTPS_PORT:-443}:443"
+      - "${HTTPS_PORT:-443}:443/udp"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy-data:/data
+      - caddy-config:/config
+    depends_on:
+      backend:
+        condition: service_healthy
+    mem_limit: 256m
+
+volumes:
+  arara-pg:
+  arara-data:
+  caddy-data:
+  caddy-config:

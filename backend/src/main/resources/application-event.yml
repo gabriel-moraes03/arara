@@ -1,0 +1,15 @@
+# Modo evento (SPRING_PROFILES_ACTIVE=event): só exibe as análises já feitas, sem processar nada.
+# Só configuração; a lógica do backend e o algoritmo são os mesmos. Cada valor ainda pode ser trocado
+# pela variável de ambiente indicada.
+
+arara:
+  monitor:
+    enabled: ${ARARA_MONITOR:false}          # sem monitor, sem jobs: a VPS não precisa de Earthdata nem de Python
+  retention-days: ${ARARA_RETENTION_DAYS:36500}   # a limpeza agendada (AnalysisService.cleanup) não alcança nada
+
+server:
+  error:                                     # erros sem stack trace, mensagem interna ou nome da exceção
+    include-stacktrace: never
+    include-message: never
+    include-binding-errors: never
+    include-exception: false

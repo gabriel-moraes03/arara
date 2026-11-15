@@ -33,3 +33,6 @@ desktop.ini
 
 # insumos brutos temporários do estudo do Uruguai (~13,5 GB; os derivados ficam em data/ana, regression e frontend)
 baixados_temp/
+
+# seeds da VPS (gerados por deploy/gerar_seeds.py; vão por scp, não pelo Git)
+deploy/seed/*.gz

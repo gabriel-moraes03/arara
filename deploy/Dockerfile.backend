@@ -1,0 +1,35 @@
+# Backend + frontend do Arara para a VPS (modo evento: só exibição, sem pipeline Python na imagem).
+# Build a partir da raiz do repositório:  docker build -f deploy/Dockerfile.backend .
+
+# ---- build: JDK 21 + Maven wrapper ----
+FROM eclipse-temurin:21.0.5_11-jdk AS build
+WORKDIR /src/backend
+COPY backend/mvnw backend/pom.xml ./
+COPY backend/.mvn .mvn
+# checkout no Windows (core.autocrlf) deixa o mvnw com CRLF; no Linux ele não rodaria
+RUN sed -i 's/\r$//' mvnw && chmod +x mvnw && ./mvnw -q -B dependency:go-offline
+COPY backend/src src
+RUN ./mvnw -q -B -DskipTests package && cp target/arara-backend-*.jar /src/arara.jar
+
+# ---- runtime: JRE 21, usuário sem privilégios ----
+FROM eclipse-temurin:21.0.5_11-jre
+RUN useradd --system --uid 10001 --home /app arara \
+ && mkdir -p /app /data/analyses \
+ && chown -R arara:arara /data
+WORKDIR /app
+COPY --from=build /src/arara.jar /app/arara.jar
+COPY frontend /app/frontend
+# a pipeline não entra: com o monitor desligado nenhum job roda (ARARA_PYTHON aponta para nada de propósito)
+ENV SPRING_PROFILES_ACTIVE=event \
+    ARARA_PORT=8080 \
+    ARARA_DATA_DIR=/data \
+    ARARA_FRONTEND_DIR=/app/frontend \
+    ARARA_PIPELINE_DIR=/app \
+    ARARA_PYTHON=/nonexistent/python \
+    JAVA_TOOL_OPTIONS="-XX:MaxRAMPercentage=75 -XX:+ExitOnOutOfMemoryError"
+USER arara
+VOLUME /data
+EXPOSE 8080
+HEALTHCHECK --interval=15s --timeout=5s --start-period=60s --retries=5 \
+  CMD curl -fsS http://localhost:8080/api/arara/config >/dev/null || exit 1
+ENTRYPOINT ["java", "-jar", "/app/arara.jar"]
