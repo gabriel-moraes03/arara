@@ -573,9 +573,13 @@ buildSky();
 
 /* ================= cards: só casos reais (Furnas + análises concluídas vindas da API) ================= */
 const HOTSPOTS = [
-  { id: 'furnas', real: true, lat: -20.85, lng: -45.95, place: 'Lago de Furnas, MG · caso validado', title: 'NISAR mede o lago de Furnas com 1% de erro', delta: -1.9, unit: '%', var: 'agua', select: { lake: true },
+  { id: 'furnas', real: true, name: 'Lago de Furnas', tag: 'estudo completo · validado com a ANA', lat: -20.85, lng: -45.95, place: 'Lago de Furnas, MG · caso validado', title: 'NISAR mede o lago de Furnas com 1% de erro', delta: -1.9, unit: '%', var: 'agua', select: { lake: true },
+    detected: '', cause: '', check: '' },
+  { id: 'uruguai', real: true, name: 'Barra Grande e Machadinho', tag: 'estudo completo · experimental (ANA)', lat: -27.64, lng: -51.45,
+    place: 'Rios Pelotas e Uruguai, RS/SC · caso experimental', title: 'NISAR vê dois reservatórios encherem em 12 dias', var: 'agua', select: {},
     detected: '', cause: '', check: '' },
 ];
+const STUDY = (h) => !!h.api || !!h.real;   // estudos completos (Furnas, Uruguai) e análises concluídas
 
 /* ================= datas ================= */
 const DAY = 864e5;
@@ -1034,7 +1038,7 @@ function renderBasinPanel(ctx) {
   clearOverlay(); clearInterval(live.poll); clearTimeout(live.timer); const token = ++live.token;
   const f = ctx.f, P = f.properties, km2 = P.area_km2;
   const inside = HOTSPOTS.filter(h => h.lat != null && inFeature([h.lng, h.lat], f));
-  const studies = inside.length ? `<ul class="studies">${inside.map((h, i) => `<li><button type="button" data-h="${i}">${esc(h.api ? (h.api.name || 'Área analisada') : 'Lago de Furnas')}<small>${h.api ? 'análise de radar concluída' : 'estudo completo validado com a ANA'}</small></button></li>`).join('')}</ul>`
+  const studies = inside.length ? `<ul class="studies">${inside.map((h, i) => `<li><button type="button" data-h="${i}">${esc(h.api ? (h.api.name || 'Área analisada') : h.name)}<small>${h.api ? 'análise de radar concluída' : h.tag}</small></button></li>`).join('')}</ul>`
     : '<p class="note" style="margin:0">Nenhum estudo de radar dentro desta bacia ainda.</p>';
   const head = panelHead(ctx, `${esc(P.uge || P.n)} · ${fmt(km2)} km² · ${esc(P.federal || '')}`);
   setPanel(`${head}
@@ -1130,6 +1134,7 @@ function renderPanel() {
   const ctx = activeCtx; if (!ctx) return;
   clearOverlay();
   if (ctx.hot && ctx.hot.id === 'furnas') return renderFurnasPanel(ctx);
+  if (ctx.hot && ctx.hot.id === 'uruguai') return renderUruguaiPanel(ctx);
   if (ctx.lvl === 'bacia') return renderBasinPanel(ctx);
   clearInterval(live.poll); clearTimeout(live.timer); live.token++;
   const link = links[ctx.key] || {};
@@ -1418,6 +1423,31 @@ function furnasChart() {
     <path d="${line('esp')}" fill="none" stroke="rgba(255,255,255,.55)" stroke-width="1.6" stroke-dasharray="4 4"/>
     <path d="${line('nisar')}" fill="none" stroke="var(--vc)" stroke-width="2"/>${dots}</svg>`;
 }
+/* ================= caso experimental: Barra Grande + Machadinho (lê os dados do próprio estudo) ================= */
+function renderUruguaiPanel(ctx) {
+  panel.innerHTML = `<div class="ph"><div><p class="crumb">Brasil › RS/SC › Reservatórios</p><h2>Barra Grande e Machadinho</h2><p class="sub">Radar NISAR, banda L · carregando…</p></div><button class="close" type="button" aria-label="Fechar painel">×</button></div>`;
+  panel.querySelector('.close').addEventListener('click', closePanel);
+  Promise.all(['uruguai/data/serie.json', 'uruguai/data/meta.json'].map(u => fetch(u).then(r => { if (!r.ok) throw new Error(u); return r.json(); })))
+    .then(([serie, meta]) => {
+      if (activeCtx !== ctx) return;
+      const M = meta.metricas, nomes = { barra_grande: 'Barra Grande', machadinho: 'Machadinho' };
+      const dd = (s) => `${s.slice(6, 8)}/${s.slice(4, 6)}`, d0 = M.barra_grande.subida.de, d1 = M.barra_grande.subida.para;
+      const at = (k, d) => serie[k].find(s => s.data.replace(/-/g, '') === d);
+      const linhas = Object.keys(nomes).map(k => {
+        const a = at(k, d0), b = at(k, d1), m = M[k].todas;
+        return `<section class="fact detected"><h3>${nomes[k]} <span class="chip">medido</span></h3><p>De ${dd(d0)} a ${dd(d1)} a cota subiu ${fmt(b.cota_ana_m - a.cota_ana_m, 1)} m (${fmt(a.volume_util_pct, 0)}% → ${fmt(b.volume_util_pct, 0)}% do volume útil). O radar viu +${fmt(M[k].subida.delta_nisar_km2, 1)} km² de água; a curva da ANA esperava +${fmt(M[k].subida.delta_cav_km2, 1)} km². Erro médio ${fmt(m.erro_abs_medio_pct, 1)}%, r(cota, área) ${fmt(m.r_cota_area, 2)}.</p></section>`;
+      }).join('');
+      panel.innerHTML = `<div class="ph"><div><p class="crumb">Brasil › RS/SC › Reservatórios</p><h2>Barra Grande e Machadinho</h2>
+          <p class="sub">Radar NISAR, banda L · ${serie.barra_grande.length} passagens de ${dd(serie.barra_grande[0].data.replace(/-/g, ''))} a ${dd(serie.barra_grande.at(-1).data.replace(/-/g, ''))}/2026</p></div>
+          <button class="close" type="button" aria-label="Fechar painel">×</button></div>
+        <span class="example real">Dados reais · caso ${esc(meta.rotulo.status)}</span>
+        <div class="facts">${linhas}<section class="fact cause"><h3>Por que é experimental <span class="chip">validação</span></h3><p>${meta.rotulo.motivos.map(esc).join(' ')} Nos cânions estreitos, o pixel de ${fmt(meta.pixel_processado_m, 0)} m perde margens e braços: o radar acerta o momento e o sentido da subida, mas não a área absoluta.</p></section></div>
+        <a class="more" href="uruguai/index.html?lang=pt">Abrir estudo completo <span aria-hidden="true">→</span></a>
+        <p class="note">Fonte: pipeline do Arara sobre NISAR L2 GCOV (trilha ${meta.trilha} D, frame ${meta.frame}, CRID ${esc(meta.crid.join(', '))}) e cota × área da ANA/SNIRH.</p>`;
+      panel.querySelector('.close').addEventListener('click', closePanel);
+    })
+    .catch(() => { if (activeCtx === ctx) panel.querySelector('.sub').textContent = 'Dados do estudo indisponíveis.'; });
+}
 function renderFurnasPanel(ctx) {
   const F = FURNAS, S = F.serie, last = S[S.length - 1], first = S[0];
   panel.innerHTML = `
@@ -1598,8 +1628,8 @@ function openPlace(name, b) {
   stopSpin(); setSelected(null); focusFeature(f, null); openPanel(ctxOf(f, null));
 }
 function fillHome() {
-  const st = HOTSPOTS.filter(h => h.api || h.id === 'furnas').sort((a, b) => (a.id === 'furnas' ? -1 : b.id === 'furnas' ? 1 : 0));
-  $('#homeStudies').innerHTML = st.length ? st.map((h, i) => `<li><button type="button" data-i="${i}">${esc(h.api ? (h.api.name || 'Área analisada') : 'Lago de Furnas')}<small>${h.api ? cardMetric(h.api) : 'estudo completo · validado com a ANA'}</small></button></li>`).join('') : '<li class="note" style="list-style:none">Nenhum estudo concluído ainda.</li>';
+  const st = HOTSPOTS.filter(STUDY).sort((a, b) => (b.real ? 1 : 0) - (a.real ? 1 : 0));
+  $('#homeStudies').innerHTML = st.length ? st.map((h, i) => `<li><button type="button" data-i="${i}">${esc(h.api ? (h.api.name || 'Área analisada') : h.name)}<small>${h.api ? cardMetric(h.api) : h.tag}</small></button></li>`).join('') : '<li class="note" style="list-style:none">Nenhum estudo concluído ainda.</li>';
   $('#homeStudies').querySelectorAll('button').forEach(b => b.addEventListener('click', () => { stopSpin(); openHotspot(st[+b.dataset.i]); }));
   const sel = $('#homeBasin');
   if (basins.length && sel.options.length <= 1) {
@@ -1775,9 +1805,9 @@ function map2dRefresh() {
     } }).addTo(L2.basins);
   });
   areas.forEach(f => L.geoJSON(f, { style: { color: '#f4b63f', weight: 2, dashArray: '6 4', fillOpacity: 0.05 }, onEachFeature: (ft, ly) => { ly.bindTooltip(f.__name, { sticky: true }); ly.on('click', () => { if (!drawMode) selectFeature(f, { fly: true }); }); } }).addTo(L2.areas));
-  HOTSPOTS.filter(h => h.api || h.id === 'furnas').forEach(h => {
+  HOTSPOTS.filter(STUDY).forEach(h => {
     L.circleMarker([h.lat, h.lng], { radius: 9, color: '#04060c', weight: 2, fillColor: '#4fb6ee', fillOpacity: 1 })
-      .bindTooltip(h.api ? (h.api.name || 'Área analisada') : 'Lago de Furnas', { direction: 'top' }).on('click', () => { if (!drawMode) openHotspot(h); }).addTo(L2.marks);
+      .bindTooltip(h.api ? (h.api.name || 'Área analisada') : h.name, { direction: 'top' }).on('click', () => { if (!drawMode) openHotspot(h); }).addTo(L2.marks);
   });
 }
 function map2dHighlight(f) {

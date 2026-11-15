@@ -38,11 +38,12 @@ public class AppConfig implements WebMvcConfigurer {
                 Path.of(props.pipelineDir()).toAbsolutePath().normalize(), props);
     }
 
-    /** O globo é servido em "/" e o site de Furnas em "/furnas/", direto das pastas do frontend. */
+    /** O globo é servido em "/", os estudos de Furnas e do Uruguai em "/furnas/" e "/uruguai/", direto das pastas do frontend. */
     @Override
     public void addResourceHandlers(ResourceHandlerRegistry registry) {
         String base = Path.of(props.frontendDir()).toAbsolutePath().normalize().toUri().toString();
         registry.addResourceHandler("/furnas/**").addResourceLocations(base + "furnas/").setCacheControl(CacheControl.noCache());
+        registry.addResourceHandler("/uruguai/**").addResourceLocations(base + "uruguai/").setCacheControl(CacheControl.noCache());
         registry.addResourceHandler("/estudo/**").addResourceLocations(base + "estudo/").setCacheControl(CacheControl.noCache());
         // bibliotecas com versão fixa e mapas de base mudam raramente: o navegador guarda; o HTML sempre revalida
         registry.addResourceHandler("/vendor/**").addResourceLocations(base + "globe/vendor/")
@@ -57,6 +58,8 @@ public class AppConfig implements WebMvcConfigurer {
         registry.addViewController("/").setViewName("forward:/index.html");
         registry.addRedirectViewController("/furnas", "/furnas/index.html");
         registry.addRedirectViewController("/furnas/", "/furnas/index.html");
+        registry.addRedirectViewController("/uruguai", "/uruguai/index.html");
+        registry.addRedirectViewController("/uruguai/", "/uruguai/index.html");
         registry.addViewController("/estudo").setViewName("forward:/estudo/index.html");   // forward: o redirect perderia o ?id=
         registry.addViewController("/estudo/").setViewName("forward:/estudo/index.html");
     }
