@@ -37,6 +37,37 @@ O que o Arara não faz, onde ele erra e o que já foi verificado. O que mudou em
   manual em celular.
 - O estudo de Furnas não aparece como análise da API; ele é servido em `/furnas/`.
 
+## Modo cheia, chuva e municípios (0.3.0)
+
+- **Referência = passagem mais seca do período** (sem vento). Uma cheia que durou o período inteiro não
+  aparece como cheia; o NISAR sobre o Sul só tem dados desde 17/06/2026, então a cheia de maio de 2024
+  está fora.
+- **HAND ≤ 15 m** só entra no modo cheia (não na água dos reservatórios, ver a seção abaixo). Sem HAND
+  (rede, mar aberto), a cheia roda sem corte por terreno, com aviso, e a confiança das datas cai para média.
+- **Vegetação alagada é "possível"**: solo encharcado, irrigação e mudança de cultura também clareiam o HH.
+  Arroz irrigado no RS aparece como água aberta ou vegetação alagada dependendo da fase da lavoura.
+- **Delta do Jacuí (trilha 53 D, pixel de 10 m)**: água com mediana perto de −16 dB e terra lisa (banhado,
+  arroz, campo) até −12 dB. O melhor corte contra o Sentinel-2 dá IoU ~0,7: separar água de terra ali é
+  mais difícil que em Furnas, e a análise tende a sair `experimental`.
+- **Chuva**: IMERG Late é estimativa de satélite, célula de ~11 km, sai com ~1 dia de atraso. É contexto
+  para a leitura; não entra na medida da água nem prova a causa.
+- **Municípios**: a população é a do município inteiro (Censo 2022). Exposição não é dano.
+- **Confiança por passagem** é um resumo das marcas que já existiam (vento, cobertura, Sentinel-2,
+  qualidade, terreno); não é uma probabilidade.
+
+## Cache, monitor e banco
+
+- O cache (`data/cache/`, limite `ARARA_CACHE_MAX_MB`, padrão 8 GB, sai primeiro o menos usado) guarda o
+  radar em dB filtrado de cada passagem, não o GCOV em potência linear. A chave inclui o CRID: produto
+  provisório reprocessado pela NASA é relido.
+- "Sentinel-2 com nuvem" só fica no cache para datas com mais de 10 dias; falha de rede nunca fica.
+- O monitor não tenta de novo a mesma passagem que já falhou até o backend reiniciar.
+- O histórico (tabela `observation` no PostgreSQL) guarda os números de cada passagem com a análise e a
+  versão de origem; os arquivos (mapas, camadas) continuam expirando em 7 dias. Para cada data, vale a
+  medição mais recente: números de versões diferentes do algoritmo podem aparecer na mesma série, e a
+  coluna `algorithm_version` diz qual é qual.
+- Os testes do backend rodam em H2 no modo PostgreSQL (mesmas migrações), não no Postgres real.
+
 ## Máscara de terreno: medida, não ligada
 
 Falsos positivos em terra seca (Lake Mead). Com HAND (GLO-30 HAND, ASF) e declividade (Copernicus

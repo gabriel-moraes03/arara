@@ -4,6 +4,41 @@ O que mudou em cada versão do algoritmo (`ALGORITHM_VERSION` na pipeline, `arar
 backend). A versão entra no id da análise: mudar de versão gera análises novas, e as antigas ficam
 superadas, sem ser apagadas.
 
+## `arara-water-0.3.0` (15/11/2026)
+
+Foco em cheias no Sul do Brasil, contexto para interpretar a água e desempenho.
+
+- **Modo cheia** (`cheia.py`): a zona de água dos reservatórios (núcleo recorrente dilatado 1 km) apaga
+  inundação, que é água não recorrente. Agora toda análise também mede, por passagem, a **água além da
+  passagem mais seca sem vento** (referência dilatada 2 px), só em terreno baixo (HAND ≤ 15 m, GLO-30 HAND),
+  sem manchas < 0,1 km², e a **possível vegetação alagada** (HH ≥ 3 dB acima da mediana da série, HAND ≤ 10 m,
+  ≥ 4 passagens). Camadas `flood_AAAAMMDD`. A área de água dos reservatórios continua igual.
+- **Semente adaptativa da margem água/terra**: tenta −20, −18 e −16 dB e fica com a mais escura que acha
+  ≥ 5 blocos de margem; nas sementes de reserva o bloco precisa ter ≥ 20% de pixels 6 dB acima da semente
+  (terra nítida). No delta do Jacuí (trilha 53 D, pixel de 10 m) a água tem mediana de −16 dB e 10% da
+  terra fica abaixo de −12 dB: com −20 dB fixo não havia margem e o limiar caía no Otsu (−9,4 dB,
+  `no_reliable_water`); agora sai entre −12,3 e −13,9 dB, onde o corte bate melhor com o Sentinel-2
+  (IoU 0,66–0,72 medido em 16/08 e 15/10). Furnas e Três Marias acham margem em −20 dB e não mudam.
+- **Chuva** (`chuva.py`): GPM IMERG Late diário (0,1°) por OPeNDAP, soma de 3 e 7 dias antes de cada
+  passagem. Sem autorização do GES DISC na conta Earthdata, sai `unavailable` com o motivo.
+- **Municípios** (`municipios.py`): km² de cheia por município no pico, com a população do Censo 2022
+  (IBGE). É a população do município inteiro, não de pessoas atingidas.
+- **Confiança por passagem** (alta, média, baixa, com os motivos) e **resumo em linguagem simples**
+  (`leitura.py`), montados por regras a partir dos números, sem IA.
+- **Desempenho**: cache local por passagem (radar em dB da janela, chave cena + CRID + área + passo +
+  filtro), leitura das passagens que faltam em 3 processos paralelos, Sentinel-2 com 4 datas por vez e
+  cache por data, HAND e chuva em cache. O filtro 5×5 passa a ser aplicado na janela inteira antes do
+  recorte para a grade comum (muda só pixels a até 2 px da borda da janela, 1 km fora da área).
+  `timings_s` e `cache` no resultado. Backend: monitor das regiões (`regioes.json`) que reanalisa quando
+  o catálogo tem passagem nova; `GET /api/arara/monitor`, `POST /api/arara/monitor/run`.
+- **Banco PostgreSQL** (`docker-compose.yml`) no lugar do H2 em arquivo, com a tabela `observation`: uma
+  linha por passagem de cada análise concluída, que sobrevive à limpeza dos arquivos e às análises
+  superadas. `GET /api/arara/regions/{id}/history` (JSON ou CSV). O banco H2 antigo é importado na
+  primeira subida; os testes seguem em H2 no modo PostgreSQL.
+- **Globo** refeito para as cheias do Sul: lista de regiões ordenada pela cheia, mapa de satélite com a
+  camada de cheia, linha do tempo das passagens (cheia, chuva, confiança, vento), comparação deslizante
+  com a passagem mais seca.
+
 ## `arara-water-0.2.1` (15/11/2026)
 
 - **Permanência sem datas de vento**, como a tendência. Antes, um único dia de vento em 9 deixava cada

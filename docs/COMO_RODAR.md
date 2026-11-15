@@ -4,6 +4,7 @@
 
 - Python 3.11+ e JDK 21 ou mais novo (testado com Python 3.14 e JDK 25; o Maven vem pelo `mvnw`).
 - Conta Earthdata (https://urs.earthdata.nasa.gov) para ler as cenas NISAR. O catálogo funciona sem ela.
+- Docker (com Compose) para o banco PostgreSQL.
 
 ## Instalação
 
@@ -13,7 +14,9 @@ python3 -m venv .venv
 cp .env.example .env
 ```
 
-Preencha `EARTHDATA_USERNAME` e `EARTHDATA_PASSWORD` no `.env`. O arquivo não é versionado e as
+Preencha `EARTHDATA_USERNAME` e `EARTHDATA_PASSWORD` no `.env`. Para a chuva (GPM IMERG), a mesma conta
+precisa autorizar o aplicativo **NASA GESDISC DATA ARCHIVE** em urs.earthdata.nasa.gov → Applications →
+Authorized Apps (um clique, uma vez); sem isso a análise sai normal e a chuva aparece como indisponível. O arquivo não é versionado e as
 credenciais só existem no backend, que as repassa à pipeline pelo ambiente do processo.
 
 No Windows o Python da venv fica em `.venv\Scripts\python.exe`: ponha `ARARA_PYTHON=../.venv/Scripts/python.exe`
@@ -22,15 +25,34 @@ no `.env`. A porta muda com `ARARA_PORT` (ex.: `ARARA_PORT=8081`).
 ## Subir a aplicação
 
 ```
+docker compose up -d                          # PostgreSQL em 127.0.0.1:5432 (volume arara-pg)
 ./backend/mvnw -f backend spring-boot:run
 ```
+
+O banco usa `ARARA_DB_USER` e `ARARA_DB_PASSWORD` do `.env` (o Compose e o backend leem o mesmo arquivo).
+Na primeira subida com o Postgres vazio, o backend importa o banco antigo (H2 em `data/db/`, que fica
+intacto) e coloca no histórico as análises que ainda estão em `data/analyses/`.
 
 - Globo: http://localhost:8080/
 - Furnas: http://localhost:8080/furnas/
 - Estado do servidor: http://localhost:8080/api/arara/config (`on_demand_available` diz se há credenciais)
 
-No globo: busque um lugar ou use **Minha área** para desenhar um polígono de até 2.500 km². O painel
-mostra as cenas disponíveis; **Analisar água nesta área** cria o job. Ao terminar, a área vira um card.
+No globo: escolha uma das regiões do Sul na lista (ordenada pela maior cheia medida), busque uma cidade
+ou desenhe um retângulo de até 2.500 km². **Analisar cheias aqui** cria o job. Na região analisada, a linha
+do tempo embaixo do mapa troca de passagem (← → ou ▶), e **Comparar com a mais seca** abre a comparação
+deslizante. `?regiao=guaiba` abre uma região direto.
+
+### Monitor das regiões e cache
+
+As regiões ficam em `frontend/globe/regioes.json` (o globo e o backend leem o mesmo arquivo). O monitor
+(`arara.monitor` no `application.yml`; `ARARA_MONITOR=false` desliga) consulta o catálogo a cada 6 h
+(`ARARA_MONITOR_INTERVAL_MIN`) e reanalisa a região que tem passagem mais nova que a última análise.
+Rodar na hora: `curl -X POST localhost:8080/api/arara/monitor/run`; relatório em `GET /api/arara/monitor`.
+
+O cache fica em `data/cache/` (`ARARA_CACHE_MAX_MB`, padrão 8192). Passagens lidas em paralelo:
+`ARARA_READ_WORKERS` (padrão 3). Cada resultado traz `timings_s` (segundos por etapa) e `cache`
+(passagens vindas do cache × lidas na NASA). Os municípios do Sul para a busca saem de
+`scripts/gerar_municipios_sul.py`.
 
 ## Qualidade de cada análise
 
@@ -57,6 +79,8 @@ Toda análise sai com `quality` e `quality_reasons` (em `/analyses`, `/analyses/
 | GET | `/api/arara/analyses/{id}/metrics?format=csv` | métricas |
 | GET | `/api/arara/analyses/{id}/layers`, `/sources` | camadas e proveniência |
 | GET | `/api/arara/tiles/{id}-{camada}/{z}/{x}/{y}.png` | tiles XYZ |
+| GET | `/api/arara/regions/{id}/history[?format=csv]` | histórico da região no banco: uma linha por passagem (a medição mais recente de cada data) |
+| GET / POST | `/api/arara/monitor`, `/api/arara/monitor/run` | relatório do monitor das regiões / rodar agora |
 
 ## Pipeline sem o backend
 

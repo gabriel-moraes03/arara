@@ -2,12 +2,16 @@
 
 # Arara
 
-Onde a água avançou ou recuou, vista pelo radar NISAR (banda L). O usuário escolhe uma área no globo, o
-Arara consulta o catálogo da NASA ao vivo, lê só a janela daquela área em cada cena, classifica a água,
-compara as datas, confere com o Sentinel-2 e publica o resultado no globo.
+Onde a água saiu do leito no Sul do Brasil, vista pelo radar NISAR (banda L), que enxerga através de
+nuvem e chuva. Para cada região monitorada (Guaíba, Taquari, Sinos, Caí, Jacuí, Pelotas, Uruguaiana,
+Itajaí, Iguaçu) ou área desenhada, o Arara lê só a janela daquela área em cada passagem do satélite,
+separa água de terra, mede a **água além da passagem mais seca** (cheia) e a possível vegetação
+alagada, soma a **chuva** do GPM antes de cada passagem, cruza com os **municípios** do IBGE, confere
+com o Sentinel-2 e dá uma **confiança** a cada número. Um monitor no servidor reanalisa as regiões quando
+o NISAR passa de novo; o cache faz cada atualização ler na NASA só a passagem nova.
 
-Escopo: **só água**. Tudo o que aparece é medido; quando o dado real não pode ser obtido, a resposta é
-`unavailable` com o motivo.
+Tudo o que aparece é medido; quando o dado real não pode ser obtido, a resposta é `unavailable` com o
+motivo. Medida separada de causa: o radar diz onde há água a mais, não por quê.
 
 ## Como funciona
 

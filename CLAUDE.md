@@ -8,6 +8,7 @@ limites em `docs/LIMITACOES.md`, mudanças por versão em `docs/HISTORICO.md`.
 ```
 .venv/bin/python -m pytest pipeline/tests -q      # pipeline
 ./backend/mvnw -f backend test                    # backend
+docker compose up -d                              # PostgreSQL (antes do backend)
 ./backend/mvnw -f backend spring-boot:run         # app em :8080 (roda de dentro de backend/)
 ```
 
