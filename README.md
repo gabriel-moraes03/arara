@@ -17,7 +17,7 @@ analyses through the public API were removed. The pipeline and the existing resu
 Everything shown is measured. When real data cannot be obtained, the answer is `unavailable`, with the
 reason. Measurement is kept separate from cause: the radar says where there is extra water, not why.
 
-- Live showcase (static, GitHub Pages): `<VITRINE_URL>`
+- Live app: https://arara.gabrielmoraes.tech
 - Video: `<VIDEO_URL>`
 
 ## Validation
@@ -180,7 +180,15 @@ processed by our pipeline.
 
 ## Team
 
-`<TEAM>`
+Team **ARARA** — NASA Space Apps Challenge 2026, challenge *Dancing with the SARs*, local event
+Uberlândia, Brazil. Team page: https://www.spaceappschallenge.org/2026/find-a-team/arara/
+
+| Member | GitHub | LinkedIn |
+|---|---|---|
+| Gabriel Moraes de Oliveira (team owner) | [gabriel-moraes03](https://github.com/gabriel-moraes03) | [LinkedIn](https://www.linkedin.com/in/gabriel-moraes-de-oliveira/) |
+| Lara Ramos Linhares | [LaraLinhares](https://github.com/LaraLinhares) | [LinkedIn](https://www.linkedin.com/in/lara-linhares-613b70218/) |
+| Bruno Henrique Firmino | [Bruno7k](https://github.com/Bruno7k) | [LinkedIn](https://www.linkedin.com/in/bruno-henriquef/) |
+| Danilo Chagas Clemente | [danilochagasc](https://github.com/danilochagasc) | [LinkedIn](https://www.linkedin.com/in/danilo-clemente-94880a232/) |
 
 ## License
 
