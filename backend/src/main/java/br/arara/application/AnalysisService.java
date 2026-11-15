@@ -49,13 +49,16 @@ public class AnalysisService {
     private final AnalysisStorage storage;
     private final PipelineRunner pipeline;
     private final AraraProperties props;
+    private final ObservationService observations;
     private final ExecutorService worker = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "arara-pipeline");
         t.setDaemon(true);
         return t;
     });
 
-    public AnalysisService(AnalysisRepository repo, AnalysisStorage storage, PipelineRunner pipeline, AraraProperties props) {
+    public AnalysisService(AnalysisRepository repo, AnalysisStorage storage, PipelineRunner pipeline, AraraProperties props,
+                           ObservationService observations) {
+        this.observations = observations;
         this.repo = repo;
         this.storage = storage;
         this.pipeline = pipeline;
@@ -146,7 +149,10 @@ public class AnalysisService {
         repo.finish(id, status, reason, status == JobStatus.COMPLETED ? !Quality.RELIABLE.equals(Quality.of(result).quality()) : null,
                 status == JobStatus.COMPLETED ? summary(result).toString() : null);
         repo.finishJob(jobId, status, reason);
-        if (status == JobStatus.COMPLETED) repo.markSuperseded();
+        if (status == JobStatus.COMPLETED) {
+            repo.markSuperseded();
+            observations.record(id, result);           // histórico por passagem, que sobrevive à limpeza dos arquivos
+        }
     }
 
     /** Resumo para os cards do globo (só números que a pipeline mediu; sem água confiável, nenhum). */
@@ -173,6 +179,29 @@ public class AnalysisService {
             if (d.path("suspeita_vento").asBoolean(false)) wind.add(d.path("date").asText());
         });
         if (r.hasNonNull("comparison")) s.set("net_change_ha", r.get("comparison").path("net_change_ha"));
+        // modo cheia: pico e série por passagem (cards, ranking e mini-gráfico do globo)
+        JsonNode flood = r.path("flood");
+        if (!noWater && "ok".equals(flood.path("status").asText())) {
+            s.set("flood_peak_km2", flood.path("peak_flood_km2"));
+            s.set("flood_peak_vegetation_km2", flood.path("peak_flooded_vegetation_km2"));
+            s.set("flood_peak_date", flood.path("peak_date"));
+            s.set("flood_reference_date", flood.path("reference_date"));
+            ArrayNode series = s.putArray("flood_series");
+            flood.path("per_date").forEach(p -> {
+                ObjectNode o = series.addObject();
+                o.set("date", p.path("date"));
+                o.set("flood_km2", p.path("flood_km2"));
+                o.set("flooded_vegetation_km2", p.path("flooded_vegetation_km2"));
+            });
+            dates.forEach(d -> {
+                for (JsonNode o : series) {
+                    if (o.path("date").asText().equals(d.path("date").asText()) && d.has("confidence")) {
+                        ((ObjectNode) o).set("confidence", d.path("confidence").path("level"));
+                    }
+                }
+            });
+        }
+        if (!noWater && r.path("summary_text").hasNonNull("text")) s.set("summary_text", r.path("summary_text").path("text"));
         s.put("validation_status", r.path("optical_validation").path("status").asText("not_optically_validated"));
         if (r.path("optical_validation").hasNonNull("mean_iou")) s.set("mean_iou", r.get("optical_validation").get("mean_iou"));
         s.set("group", r.path("group"));

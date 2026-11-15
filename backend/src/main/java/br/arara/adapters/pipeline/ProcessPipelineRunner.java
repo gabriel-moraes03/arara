@@ -1,6 +1,7 @@
 package br.arara.adapters.pipeline;
 
 import br.arara.config.AraraProperties;
+import br.arara.config.MonitorProperties;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import java.io.BufferedReader;
@@ -21,12 +22,18 @@ public class ProcessPipelineRunner implements PipelineRunner {
     private final List<String> baseCommand;
     private final Path workDir;
     private final AraraProperties props;
+    private final MonitorProperties perf;
     private final ObjectMapper json = new ObjectMapper();
 
     public ProcessPipelineRunner(List<String> baseCommand, Path workDir, AraraProperties props) {
+        this(baseCommand, workDir, props, MonitorProperties.defaults());
+    }
+
+    public ProcessPipelineRunner(List<String> baseCommand, Path workDir, AraraProperties props, MonitorProperties perf) {
         this.baseCommand = baseCommand;
         this.workDir = workDir;
         this.props = props;
+        this.perf = perf;
     }
 
     @Override
@@ -41,6 +48,10 @@ public class ProcessPipelineRunner implements PipelineRunner {
         env.put("PYTHONUTF8", "1");
         env.put("ARARA_AOI_MAX_KM2", String.valueOf(props.aoiMaxKm2()));
         env.put("ARARA_MAX_SCENES", String.valueOf(props.maxScenes()));
+        // cache por passagem (data/cache) e leitura em paralelo: reanalisar a mesma área relê só o que é novo
+        env.put("ARARA_CACHE_DIR", Path.of(props.dataDir(), "cache").toAbsolutePath().normalize().toString());
+        env.put("ARARA_CACHE_MAX_MB", String.valueOf(perf.cacheMaxMb()));
+        env.put("ARARA_READ_WORKERS", String.valueOf(perf.readWorkers()));
         // credenciais Earthdata: só no ambiente do processo filho; nunca em argumento, log ou arquivo
         if (props.earthdataConfigured()) {
             env.put("EARTHDATA_USERNAME", props.earthdataUsername());

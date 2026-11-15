@@ -105,8 +105,12 @@ public final class Quality {
                 o.putNull("water_pct");
                 o.putNull("hh_water_median_db");
                 o.putNull("suspeita_vento");
+                o.remove(List.of("flood_km2", "flooded_vegetation_km2"));
             }
             r.putNull("comparison");
+            r.putNull("flood");
+            r.putNull("municipalities");
+            r.putNull("summary_text");
             r.putNull("patterns");
             r.putNull("forecast");
             r.putNull("insights");

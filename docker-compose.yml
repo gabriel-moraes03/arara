@@ -1,0 +1,24 @@
+# Banco do Arara: PostgreSQL local, só na interface de loopback (127.0.0.1:5432).
+#   docker compose up -d          sobe o banco (os dados ficam no volume arara-pg)
+#   docker compose down           para (o volume continua; `down -v` apaga os dados)
+# Usuário e senha vêm do .env da raiz (ARARA_DB_USER, ARARA_DB_PASSWORD), o mesmo que o backend lê.
+services:
+  db:
+    image: postgres:16.4-alpine
+    container_name: arara-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: arara
+      POSTGRES_USER: ${ARARA_DB_USER:-arara}
+      POSTGRES_PASSWORD: ${ARARA_DB_PASSWORD:?defina ARARA_DB_PASSWORD no .env}
+    ports:
+      - "127.0.0.1:${ARARA_DB_PORT:-5432}:5432"
+    volumes:
+      - arara-pg:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U $${POSTGRES_USER} -d arara"]
+      interval: 5s
+      timeout: 3s
+      retries: 20
+volumes:
+  arara-pg:

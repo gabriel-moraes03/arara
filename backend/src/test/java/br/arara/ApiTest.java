@@ -61,6 +61,10 @@ class ApiTest {
         dataDir = Files.createTempDirectory("arara-test");
         r.add("arara.asf-url", () -> ASF.baseUrl() + "/services/search/param");
         r.add("arara.data-dir", () -> dataDir.toString());
+        // produção usa o PostgreSQL do docker-compose; os testes, H2 em memória no modo PostgreSQL (mesmas migrações)
+        r.add("spring.datasource.url", () -> "jdbc:h2:mem:arara-" + System.nanoTime() + ";MODE=PostgreSQL;DATABASE_TO_LOWER=TRUE;DB_CLOSE_DELAY=-1");
+        r.add("spring.datasource.username", () -> "sa");
+        r.add("spring.datasource.password", () -> "");
         r.add("arara.frontend-dir", () -> "../frontend");
         r.add("arara.earthdata-username", () -> SECRET_USER);
         r.add("arara.earthdata-password", () -> SECRET_PASS);
@@ -153,6 +157,27 @@ class ApiTest {
                 .andExpect(status().isServiceUnavailable()).andExpect(jsonPath("$.status").value("unavailable"))
                 .andExpect(jsonPath("$.reason").isNotEmpty()).andExpect(jsonPath("$.scenes").doesNotExist());
         ASF.verify(3, getRequestedFor(urlPathEqualTo("/services/search/param")));     // 3 tentativas
+    }
+
+    @Test
+    void regionHistoryComesFromTheDatabaseAndKeepsTheLatestMeasurementPerPass() throws Exception {
+        // mesma região do regioes.json (nome e retângulo): o histórico vem da tabela observation
+        String guaiba = "{\"name\":\"Delta do Jacuí e Guaíba\",\"bbox\":\"-51.40,-30.15,-51.10,-29.90\",\"start\":\"2026-06-01\",\"end\":\"%s\"}";
+        for (String end : new String[]{"2026-10-20", "2026-11-14"}) {
+            JsonNode c = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON).content(guaiba.formatted(end))));
+            assertThat(waitJob(c.get("job_id").asText()).get("status").asText()).isEqualTo("completed");
+        }
+        // duas análises com as mesmas 2 passagens: uma linha por passagem, não quatro
+        mvc.perform(get("/api/arara/regions/guaiba/history")).andExpect(status().isOk())
+                .andExpect(jsonPath("$.count").value(2))
+                .andExpect(jsonPath("$.observations[0].pass_date").value("2026-07-05"))
+                .andExpect(jsonPath("$.observations[0].water_km2").value(120.5))
+                .andExpect(jsonPath("$.observations[1].wind").value(true));
+        mvc.perform(get("/api/arara/regions/guaiba/history").param("format", "csv")).andExpect(status().isOk())
+                .andExpect(content().contentTypeCompatibleWith("text/csv"))
+                .andExpect(content().string(org.hamcrest.Matchers.startsWith("date,water_km2,flood_km2")))
+                .andExpect(content().string(org.hamcrest.Matchers.containsString("2026-10-09,98.25")));
+        mvc.perform(get("/api/arara/regions/nao-existe/history")).andExpect(status().isNotFound());
     }
 
     @Test
@@ -316,10 +341,12 @@ class ApiTest {
                 .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-cache")))
                 .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
         assertThat(html).contains("vendor/globe.gl/globe.gl.min.js").doesNotContain("cdn.jsdelivr.net/npm/globe.gl")
-                .contains("function loadBasins()");   // bacias de Minas só sob demanda
+                .contains("fetch('regioes.json')");   // as regiões vêm do mesmo arquivo que o monitor lê
         mvc.perform(get("/vendor/globe.gl/globe.gl.min.js")).andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("max-age=604800")));
         mvc.perform(get("/vendor/three/three.core.min.js")).andExpect(status().isOk());
+        mvc.perform(get("/regioes.json")).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("max-age=86400")));
         mvc.perform(get("/geo.json")).andExpect(status().isOk())
                 .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("max-age=86400")));
         mvc.perform(get("/favicon.ico")).andExpect(status().isOk())          // sem 404 de favicon no app

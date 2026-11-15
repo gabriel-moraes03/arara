@@ -9,10 +9,11 @@ spring:
     name: arara
   config:
     import: "optional:file:.env[.properties],optional:file:../.env[.properties]"
+  # PostgreSQL do docker-compose.yml (docker compose up -d). Usuário e senha só no .env.
   datasource:
-    url: jdbc:h2:file:${arara.data-dir}/db/arara;AUTO_SERVER=FALSE
-    username: sa
-    password: ""
+    url: ${ARARA_DB_URL:jdbc:postgresql://localhost:${ARARA_DB_PORT:5432}/arara}
+    username: ${ARARA_DB_USER:arara}
+    password: ${ARARA_DB_PASSWORD:}
   flyway:
     enabled: true
   jackson:
@@ -29,13 +30,20 @@ arara:
   pipeline-dir: ${ARARA_PIPELINE_DIR:../pipeline}
   frontend-dir: ${ARARA_FRONTEND_DIR:../frontend}
   python: ${ARARA_PYTHON:../.venv/bin/python}
-  algorithm-version: arara-water-0.2.1
+  algorithm-version: arara-water-0.3.0
   asf-url: https://api.daac.asf.alaska.edu/services/search/param
   aoi-max-km2: ${ARARA_AOI_MAX_KM2:2500}
   max-scenes: ${ARARA_MAX_SCENES:12}
   retention-days: ${ARARA_RETENTION_DAYS:7}
   disk-limit-mb: ${ARARA_DISK_LIMIT_MB:4096}
   pipeline-timeout-minutes: ${ARARA_PIPELINE_TIMEOUT_MIN:60}
+  # monitor das regiões (frontend/globe/regioes.json) e desempenho da pipeline
+  monitor:
+    enabled: ${ARARA_MONITOR:true}
+    interval-minutes: ${ARARA_MONITOR_INTERVAL_MIN:360}
+    regions-file: globe/regioes.json
+    cache-max-mb: ${ARARA_CACHE_MAX_MB:8192}
+    read-workers: ${ARARA_READ_WORKERS:3}
   # credenciais: só do ambiente / .env; nunca vão para log, resposta da API ou repositório
   earthdata-username: ${EARTHDATA_USERNAME:}
   earthdata-password: ${EARTHDATA_PASSWORD:}

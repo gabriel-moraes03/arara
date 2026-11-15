@@ -18,9 +18,11 @@ import org.springframework.web.servlet.config.annotation.WebMvcConfigurer;
 @Configuration
 public class AppConfig implements WebMvcConfigurer {
     private final AraraProperties props;
+    private final MonitorProperties monitor;
 
-    public AppConfig(AraraProperties props) {
+    public AppConfig(AraraProperties props, MonitorProperties monitor) {
         this.props = props;
+        this.monitor = monitor;
     }
 
     @Bean
@@ -35,7 +37,7 @@ public class AppConfig implements WebMvcConfigurer {
     PipelineRunner pipelineRunner() {
         return new ProcessPipelineRunner(
                 List.of(Path.of(props.python()).toAbsolutePath().normalize().toString(), "-m", "arara_pipeline.run"),
-                Path.of(props.pipelineDir()).toAbsolutePath().normalize(), props);
+                Path.of(props.pipelineDir()).toAbsolutePath().normalize(), props, monitor);
     }
 
     /** O globo é servido em "/" e o site de Furnas em "/furnas/", direto das pastas do frontend. */
@@ -47,7 +49,7 @@ public class AppConfig implements WebMvcConfigurer {
         // bibliotecas com versão fixa e mapas de base mudam raramente: o navegador guarda; o HTML sempre revalida
         registry.addResourceHandler("/vendor/**").addResourceLocations(base + "globe/vendor/")
                 .setCacheControl(CacheControl.maxAge(7, TimeUnit.DAYS));
-        registry.addResourceHandler("/geo.json", "/bacias_mg.json", "/furnas_globe.json", "/favicon.ico").addResourceLocations(base + "globe/")
+        registry.addResourceHandler("/geo.json", "/sul.json", "/regioes.json", "/bacias_mg.json", "/furnas_globe.json", "/favicon.ico").addResourceLocations(base + "globe/")
                 .setCacheControl(CacheControl.maxAge(1, TimeUnit.DAYS));
         registry.addResourceHandler("/**").addResourceLocations(base + "globe/").setCacheControl(CacheControl.noCache());
     }

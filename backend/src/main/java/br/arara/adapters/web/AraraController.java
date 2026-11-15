@@ -4,6 +4,9 @@ import br.arara.adapters.persistence.AnalysisRepository;
 import br.arara.adapters.persistence.AnalysisRepository.Analysis;
 import br.arara.adapters.storage.AnalysisStorage;
 import br.arara.application.AnalysisService;
+import br.arara.application.RegionCatalog;
+import br.arara.application.RegionMonitor;
+import br.arara.adapters.persistence.ObservationRepository;
 import br.arara.application.Quality;
 import br.arara.application.SceneService;
 import br.arara.config.AraraProperties;
@@ -47,9 +50,16 @@ public class AraraController {
     private final AnalysisRepository repo;
     private final AnalysisStorage storage;
     private final AraraProperties props;
+    private final RegionMonitor monitor;
+    private final RegionCatalog regions;
+    private final ObservationRepository observations;
 
     public AraraController(SceneService scenes, AnalysisService analyses, AnalysisRepository repo,
-                           AnalysisStorage storage, AraraProperties props) {
+                           AnalysisStorage storage, AraraProperties props, RegionMonitor monitor,
+                           RegionCatalog regions, ObservationRepository observations) {
+        this.monitor = monitor;
+        this.regions = regions;
+        this.observations = observations;
         this.scenes = scenes;
         this.analyses = analyses;
         this.repo = repo;
@@ -71,6 +81,56 @@ public class AraraController {
                     + "o catálogo funciona, mas novas análises ficam indisponíveis");
         }
         return m;
+    }
+
+    /** Monitor das regiões: último relatório (o que foi reanalisado, o que está em dia). */
+    @GetMapping("/monitor")
+    public Map<String, Object> monitorStatus() {
+        return monitor.status();
+    }
+
+    /** Roda o monitor agora (consulta o catálogo de cada região e pede as análises com passagem nova). */
+    @PostMapping("/monitor/run")
+    public Map<String, Object> monitorRun() {
+        monitor.check(java.time.LocalDate.now());
+        return monitor.status();
+    }
+
+    /**
+     * Histórico de uma região monitorada: uma linha por passagem, a medição mais recente de cada data,
+     * vindo do banco (sobrevive à limpeza dos arquivos e às análises superadas). ?format=csv para planilha.
+     */
+    @GetMapping("/regions/{id}/history")
+    public ResponseEntity<?> regionHistory(@PathVariable String id, @RequestParam(defaultValue = "json") String format) throws IOException {
+        var r = regions.find(id).orElseThrow(() -> new NoSuchElementException("região não encontrada"));
+        double[] b = r.bbox();
+        var rows = observations.history(r.name(), b[0], b[1], b[2], b[3]);
+        if ("csv".equalsIgnoreCase(format)) {
+            StringBuilder csv = new StringBuilder("date,water_km2,flood_km2,flooded_vegetation_km2,reference_date,rain_3d_mm,rain_7d_mm,"
+                    + "wind,confidence,confidence_reasons,quality,threshold_db,crid,granule,algorithm_version,analysis_id\n");
+            for (var o : rows) {
+                csv.append(String.join(",", o.passDate(), s(o.waterKm2()), s(o.floodKm2()), s(o.floodedVegetationKm2()), s(o.referenceDate()),
+                        s(o.rain3dMm()), s(o.rain7dMm()), s(o.wind()), s(o.confidence()), quote(o.confidenceReasons()), s(o.quality()),
+                        s(o.thresholdDb()), s(o.crid()), s(o.granule()), s(o.algorithmVersion()), o.analysisId())).append('\n');
+            }
+            return ResponseEntity.ok().contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
+                    .header("Content-Disposition", "attachment; filename=\"arara_" + r.id() + "_historico.csv\"").body(csv.toString());
+        }
+        Map<String, Object> m = new LinkedHashMap<>();
+        m.put("region", r.id());
+        m.put("name", r.name());
+        m.put("source", "banco do Arara (tabela observation): a medição mais recente de cada passagem");
+        m.put("count", rows.size());
+        m.put("observations", rows);
+        return ResponseEntity.ok(m);
+    }
+
+    private static String s(Object v) {
+        return v == null ? "" : v.toString();
+    }
+
+    private static String quote(String v) {
+        return v == null ? "" : "\"" + v.replace("\"", "\"\"") + "\"";
     }
 
     @GetMapping("/scenes")
