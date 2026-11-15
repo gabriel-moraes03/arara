@@ -162,7 +162,7 @@ def main():
     todas_c = np.array([s["cota_ana_m"] for s in serie])
     m_px = pixel_m
     meta = {
-        "projeto": "Arara (caso Furnas, pipeline TerraPulse)", "licenca": "MIT",
+        "projeto": "Arara (caso Furnas)", "licenca": "MIT",
         "colecao": "NISAR_L2_GCOV_PROVISIONAL_V1", "arquivo_daac": "ASF DAAC",
         "trilha": 24, "direcao": "D", "frame": 99, "modo": "2005", "banda": "L", "polarizacoes": ["HH", "HV"],
         "pixel_original_m": 20, "pixel_processado_m": m_px,

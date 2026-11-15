@@ -1,3 +1,5 @@
+<p align="center"><img src="frontend/globe/img/arara-marca.png" alt="Arara" width="96"></p>
+
 # Arara
 
 Onde a água avançou ou recuou, vista pelo radar NISAR (banda L). O usuário escolhe uma área no globo, o
@@ -18,15 +20,25 @@ globo (frontend/globe)  ──►  API Spring Boot (backend)  ──►  pipelin
 | Pasta | O que tem |
 |---|---|
 | `backend/` | Spring Boot 3.5, Java 21. API `/api/arara`, fila de um job pesado, H2 + Flyway |
-| `pipeline/arara_pipeline/` | catálogo, leitura de janelas, classificação, comparação, óptico, projeção, publicação |
-| `pipeline/scripts/` | scripts do estudo de Furnas |
-| `frontend/globe/` | globo, servido em `/` |
+| `pipeline/arara_pipeline/` | catálogo, leitura de janelas, classificação, qualidade, comparação, óptico, padrões, projeção, publicação |
+| `pipeline/scripts/` | ferramentas de linha de comando: estudo de Furnas, estudos em lote, bacias de MG, medição de terreno |
+| `pipeline/tests/` | testes da pipeline (a regressão de Furnas com cenas reais roda com `FURNAS_H5_DIR`) |
+| `frontend/globe/` | globo, servido em `/` (logo e favicon em `img/` e `favicon.ico`) |
+| `frontend/estudo/` | estudo automático de qualquer análise concluída, em `/estudo/index.html?id=<id>` |
 | `frontend/furnas/` | estudo validado de Furnas, servido em `/furnas/` |
+| `scripts/exportar_vitrine.py` | vitrine estática (o mesmo frontend, sem servidor) para GitHub Pages |
 | `data/ana/`, `regression/furnas/` | cota × área da ANA e números de referência de Furnas |
+
+## Documentação
+
+- [docs/COMO_RODAR.md](docs/COMO_RODAR.md): instalação, servidor, API, qualidade das análises, testes, vitrine.
+- [docs/LIMITACOES.md](docs/LIMITACOES.md): o que foi verificado, onde o método erra e o que não faz.
+- [docs/HISTORICO.md](docs/HISTORICO.md): o que mudou em cada versão do algoritmo.
+- [regression/furnas/RESUMO.md](regression/furnas/RESUMO.md): o estudo de Furnas contra a ANA.
 
 ## Rodar
 
-Ver [docs/COMO_RODAR.md](docs/COMO_RODAR.md). Em resumo:
+Em resumo (detalhes e Windows em [docs/COMO_RODAR.md](docs/COMO_RODAR.md)):
 
 ```
 python3 -m venv .venv && .venv/bin/pip install -r pipeline/requirements-dev.txt
@@ -39,7 +51,9 @@ cp .env.example .env            # preencha EARTHDATA_USERNAME e EARTHDATA_PASSWO
 Canal HH em potência linear → dB uma única vez → média 5×5 em dB → limiar no vale água/terra dos blocos
 de margem (um limiar por série) → água recorrente dilatada 1 km ∩ área pedida → manchas < 0,1 km² fora.
 Uma análise usa uma única coleção e uma única geometria (trilha, direção, frame). Datas com suspeita de
-vento ficam marcadas, sem correção. Validado em Furnas contra a cota × área da ANA: erro médio de 1,0%
-nas 7 datas calmas.
+vento ficam marcadas, sem correção. Cada análise sai `reliable`, `experimental` ou `no_reliable_water`,
+com os motivos. Validado em Furnas contra a cota × área da ANA: erro médio de 1,0% nas 7 datas calmas.
 
-Limitações conhecidas: [docs/LIMITACOES.md](docs/LIMITACOES.md).
+## Licença
+
+MIT, ver [LICENSE](LICENSE).

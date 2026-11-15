@@ -29,7 +29,7 @@ def test_ponta_a_ponta(analise, capsys):
     linhas = [json.loads(l) for l in capsys.readouterr().out.splitlines()]
     assert {"stage", "progress", "message"} <= set(linhas[0]) and linhas[-1]["progress"] == 1.0
     assert [l["stage"] for l in linhas if l["stage"] in ("acquire", "classify", "compare", "publish")]
-    r = json.loads((saida / "result.json").read_text())
+    r = json.loads((saida / "result.json").read_text(encoding="utf-8"))
     assert r["status"] == "completed" and not r["experimental"]
     assert [d["date"] for d in r["dates"]] == ["2026-06-27", "2026-07-09", "2026-07-21", "2026-08-02"]
     for d, raio in zip(r["dates"], RAIOS):
@@ -46,16 +46,16 @@ def test_ponta_a_ponta(analise, capsys):
         assert (saida / sub).exists(), sub
     camada = next(l for l in r["layers"] if l["id"] == "change")
     assert camada["bounds"]["west"] < camada["bounds"]["east"] and list((saida / "tiles" / "change").rglob("*.png"))
-    fontes = json.loads((saida / "sources.json").read_text())
+    fontes = json.loads((saida / "sources.json").read_text(encoding="utf-8"))
     assert len(fontes["scenes"]) == 4 and fontes["scenes"][0]["window"]["row_stop"] <= N
-    assert "EARTHDATA" not in (saida / "sources.json").read_text()
+    assert "EARTHDATA" not in (saida / "sources.json").read_text(encoding="utf-8")
 
 
 def test_area_grande_demais_fica_indisponivel(tmp_path):
     spec = {"analysis_id": "x", "aoi": {"type": "Polygon", "coordinates": [[[-58, -19], [-56, -19], [-56, -17], [-58, -17], [-58, -19]]]}}
     (tmp_path / "spec.json").write_text(json.dumps(spec))
     assert run.main(["--spec", str(tmp_path / "spec.json"), "--out", str(tmp_path)]) == 0
-    r = json.loads((tmp_path / "result.json").read_text())
+    r = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
     assert r["status"] == "unavailable" and "limite" in r["reason"]
 
 
@@ -64,5 +64,5 @@ def test_area_fora_das_cenas_fica_indisponivel(analise, tmp_path):
     fora = dict(spec, aoi={"type": "Polygon", "coordinates": [[[10, 45], [10.1, 45], [10.1, 45.1], [10, 45.1], [10, 45]]]})
     (tmp_path / "spec.json").write_text(json.dumps(fora))
     run.main(["--spec", str(tmp_path / "spec.json"), "--out", str(tmp_path)])
-    r = json.loads((tmp_path / "result.json").read_text())
+    r = json.loads((tmp_path / "result.json").read_text(encoding="utf-8"))
     assert r["status"] == "unavailable" and "fora da grade" in r["reason"]

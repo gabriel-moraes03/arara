@@ -16,6 +16,9 @@ cp .env.example .env
 Preencha `EARTHDATA_USERNAME` e `EARTHDATA_PASSWORD` no `.env`. O arquivo não é versionado e as
 credenciais só existem no backend, que as repassa à pipeline pelo ambiente do processo.
 
+No Windows o Python da venv fica em `.venv\Scripts\python.exe`: ponha `ARARA_PYTHON=../.venv/Scripts/python.exe`
+no `.env`. A porta muda com `ARARA_PORT` (ex.: `ARARA_PORT=8081`).
+
 ## Subir a aplicação
 
 ```
@@ -29,6 +32,18 @@ credenciais só existem no backend, que as repassa à pipeline pelo ambiente do 
 No globo: busque um lugar ou use **Minha área** para desenhar um polígono de até 2.500 km². O painel
 mostra as cenas disponíveis; **Analisar água nesta área** cria o job. Ao terminar, a área vira um card.
 
+## Qualidade de cada análise
+
+Toda análise sai com `quality` e `quality_reasons` (em `/analyses`, `/analyses/{id}` e nas métricas):
+
+- `reliable`: números, padrões e projeção experimental publicados.
+- `experimental`: números publicados com o motivo ao lado; **sem projeção**.
+- `no_reliable_water`: o radar não separou água de terra (menos de 5 blocos de margem, limiar fora de
+  −22 a −12 dB, fração de água fora de 0,5–90% na maioria das datas, ou o Sentinel-2 sem água onde o
+  radar vê água). Não sai área, saldo, tendência, alerta, permanência, trechos, projeção nem vento: só o
+  status, os motivos, `what_to_try`, as cenas e o radar HH para inspeção. Resultados antigos, sem o campo,
+  são reavaliados pelo backend a partir dos números gravados, sempre para baixo.
+
 ## API
 
 | Método | Caminho | Para quê |
@@ -37,8 +52,8 @@ mostra as cenas disponíveis; **Analisar água nesta área** cria o job. Ao term
 | GET | `/api/arara/coverage?bbox=...` | há geometria que cobre 95% da área? |
 | POST | `/api/arara/analysis` | `{name, aoi \| bbox, start, end, group_id?, maturity?}` |
 | GET | `/api/arara/jobs/{id}` | queued, downloading, processing, completed, failed, unavailable |
-| GET | `/api/arara/analyses?status=completed` | cards |
-| GET | `/api/arara/analyses/{id}` | resultado completo |
+| GET | `/api/arara/analyses?status=completed` | cards (só a análise mais recente de cada área; `&include_superseded=true` lista as superadas) |
+| GET | `/api/arara/analyses/{id}` | resultado completo (uma análise superada continua aqui, com `superseded_by`) |
 | GET | `/api/arara/analyses/{id}/metrics?format=csv` | métricas |
 | GET | `/api/arara/analyses/{id}/layers`, `/sources` | camadas e proveniência |
 | GET | `/api/arara/tiles/{id}-{camada}/{z}/{x}/{y}.png` | tiles XYZ |
@@ -67,6 +82,11 @@ A regressão de Furnas com as cenas reais só roda com `FURNAS_H5_DIR` (pasta do
 Derivados ficam em `data/analyses/{id}/` e são apagados após 7 dias (`ARARA_RETENTION_DAYS`). As
 janelas brutas só existem em memória durante o job. Limites em `.env.example`.
 
+Quando a mesma área (mesmo retângulo) é analisada de novo, a análise anterior não é apagada: fica marcada
+como superada (`superseded_by`), sai dos cards e do globo e continua aberta pelo id, com um aviso e um link
+para a atual. O espaço total das análises é limitado por `ARARA_DISK_LIMIT_MB` (padrão 4096); acima
+dele, novos pedidos respondem `unavailable`.
+
 ## Bacias de Minas
 
 `pipeline/scripts/exportar_bacias.py` baixa as 43 Circunscrições Hidrográficas do GeoServer da IDE-Sisema/IGAM e
@@ -92,3 +112,28 @@ Cada área vira um job (um por vez no servidor, de 5 a 10 min); o script imprime
 `--refazer` apaga o resultado anterior e roda de novo; `--so ID ...` roda só algumas. Áreas acima de 2.500 km²
 ou sem cenas NISAR saem como `unavailable`, com o motivo. A conferência das coordenadas de cada área é sua:
 um reservatório mal enquadrado aparece como "experimental" no estudo.
+
+## Vitrine estática (GitHub Pages)
+
+A vitrine é o mesmo `frontend/` (globo, estudo automático e Furnas) lendo análises já concluídas de
+arquivos, sem backend, pipeline ou credencial. Ela não consulta o catálogo da NASA: ao clicar numa área sem
+estudo, o painel explica que análises novas exigem o servidor.
+
+1. Com o servidor no ar e as análises concluídas, gere a pasta (ids em `/api/arara/analyses`):
+
+   ```
+   .venv/bin/python scripts/exportar_vitrine.py --servidor http://localhost:8080 --ids <id1> <id2> ...
+   ```
+
+   Sai em `dist/vitrine/` (fora do Git): páginas copiadas com `window.ARARA_STATIC = true`, e para cada
+   análise `data/analyses/<id>/` com `analysis.json`, `sources.json`, `metrics.json`, `metrics.csv` e os
+   PNG das camadas.
+2. Teste sem backend: `python -m http.server 8090 -d dist/vitrine` e abra `http://localhost:8090/`.
+   Numa página do servidor, `?static=1` também liga o modo (útil para depurar).
+3. Publique o conteúdo de `dist/vitrine/` no GitHub Pages, por exemplo:
+   - branch `gh-pages` com o conteúdo da pasta na raiz (Settings → Pages → Deploy from a branch →
+     `gh-pages` / `root`); ou
+   - um workflow com `actions/upload-pages-artifact` apontando para `dist/vitrine` e `actions/deploy-pages`.
+
+   A pasta já tem `.nojekyll`, e todos os links são relativos, então funciona em
+   `https://<usuario>.github.io/<repositorio>/`. O link é público, sem senha nem cadastro.

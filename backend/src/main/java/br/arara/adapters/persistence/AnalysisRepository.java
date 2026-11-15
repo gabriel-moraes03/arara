@@ -5,7 +5,11 @@ import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Timestamp;
 import java.time.Instant;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
+import java.util.Map;
+import java.util.Objects;
 import java.util.Optional;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.stereotype.Repository;
@@ -16,7 +20,7 @@ public class AnalysisRepository {
                            double west, double south, double east, double north, double areaKm2,
                            String startDate, String endDate, String groupId, String maturity, String algorithmVersion,
                            String reason, Boolean experimental, String summaryJson,
-                           Instant createdAt, Instant updatedAt, Instant completedAt) {
+                           Instant createdAt, Instant updatedAt, Instant completedAt, String supersededBy) {
     }
 
     public record Job(String id, String analysisId, JobStatus status, String stage, double progress,
@@ -56,6 +60,25 @@ public class AnalysisRepository {
         return status == null
                 ? jdbc.query("select * from analysis order by updated_at desc", this::analysis)
                 : jdbc.query("select * from analysis where status = ? order by updated_at desc", this::analysis, status.name());
+    }
+
+    /**
+     * Marca como superada cada análise concluída que tem outra concluída mais recente para a mesma área
+     * (mesmo retângulo, a 1e-4 grau). Nada é apagado; a mais recente de cada área fica sem marca.
+     */
+    public void markSuperseded() {
+        Map<String, String> latest = new HashMap<>();
+        for (Analysis a : jdbc.query("select * from analysis where status = 'COMPLETED' "
+                + "order by coalesce(completed_at, updated_at) desc, id", this::analysis)) {
+            String newer = latest.putIfAbsent(areaKey(a), a.id());
+            if (!Objects.equals(newer, a.supersededBy())) {
+                jdbc.update("update analysis set superseded_by = ? where id = ?", newer, a.id());
+            }
+        }
+    }
+
+    static String areaKey(Analysis a) {
+        return String.format(Locale.ROOT, "%.4f,%.4f,%.4f,%.4f", a.west(), a.south(), a.east(), a.north());
     }
 
     public List<Analysis> olderThan(Instant limit) {
@@ -105,7 +128,7 @@ public class AnalysisRepository {
                 r.getDouble("area_km2"), r.getString("start_date"), r.getString("end_date"), r.getString("group_id"),
                 r.getString("maturity"), r.getString("algorithm_version"), r.getString("reason"), experimental,
                 r.getString("summary_json"), r.getTimestamp("created_at").toInstant(), r.getTimestamp("updated_at").toInstant(),
-                done == null ? null : done.toInstant());
+                done == null ? null : done.toInstant(), r.getString("superseded_by"));
     }
 
     private Job job(ResultSet r, int i) throws SQLException {

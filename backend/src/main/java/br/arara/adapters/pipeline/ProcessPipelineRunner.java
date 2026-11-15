@@ -37,6 +37,8 @@ public class ProcessPipelineRunner implements PipelineRunner {
         pb.redirectError(outDir.resolve("pipeline.log").toFile());
         Map<String, String> env = pb.environment();
         env.put("PYTHONUNBUFFERED", "1");
+        env.put("PYTHONIOENCODING", "utf-8");     // progresso com acento chega inteiro (o pipe no Windows seria cp1252)
+        env.put("PYTHONUTF8", "1");
         env.put("ARARA_AOI_MAX_KM2", String.valueOf(props.aoiMaxKm2()));
         env.put("ARARA_MAX_SCENES", String.valueOf(props.maxScenes()));
         // credenciais Earthdata: só no ambiente do processo filho; nunca em argumento, log ou arquivo

@@ -1,4 +1,4 @@
-"""Série de área de água com o método validado em Furnas (migrado de terrapulse/scripts/area_agua.py).
+"""Série de área de água com o método validado em Furnas.
 
 Sem polígono, a zona do lago é derivada das próprias datas; com polígono, conta-se só dentro dele.
 Nenhum caminho, limiar ou coordenada de Furnas é fixo aqui: tudo entra por argumento.

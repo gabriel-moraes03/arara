@@ -2,6 +2,7 @@
 PROMPT_ARARA_COMPLETO.md
 
 # ambiente e build
+dist/
 .venv/
 __pycache__/
 .pytest_cache/

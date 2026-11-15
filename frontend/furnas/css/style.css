@@ -71,9 +71,7 @@ p b, li b, dd b { color: var(--ink); font-weight: 600; }
   background: rgba(4, 6, 12, .92); border-bottom: 1px solid var(--rule);
 }
 .brand { display: inline-flex; align-items: center; gap: 9px; font: 700 22px/1 var(--serif); letter-spacing: -.02em; text-decoration: none; color: var(--ink); }
-.feather { display: inline-flex; gap: 3px; }
-.feather i { width: 5px; height: 17px; border-radius: 6px 6px 1px 1px; display: block; transform: skewX(-14deg); }
-.feather i:nth-child(1) { background: var(--macaw-red); } .feather i:nth-child(2) { background: var(--macaw-yellow); } .feather i:nth-child(3) { background: var(--macaw-blue); }
+.brand .mark { width: 32px; height: auto; display: block; }
 .brand span { color: var(--accent); }
 .instrument { font: 400 13px/1 var(--mono); letter-spacing: .1em; text-transform: uppercase; color: var(--ink-3); border-left: 1px solid var(--rule-2); padding-left: 18px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bar-actions { margin-left: auto; display: flex; gap: 8px; }

@@ -2,6 +2,7 @@ import json
 import os
 
 import numpy as np
+import pytest
 
 from arara_pipeline import patterns
 
@@ -59,3 +60,73 @@ def test_trechos_que_mais_secaram_com_coordenadas():
     t = patterns.trechos_secos(ret, xs, ys, 32723, 400.0)
     assert [x["rank"] for x in t] == [1, 2] and t[0]["area_ha"] == 800 * 400 / 1e4
     assert -70 < t[0]["lon"] < -30 and -40 < t[0]["lat"] < 0 and t[0]["bbox"][0] < t[0]["lon"] < t[0]["bbox"][2]
+
+
+# ---------- rodada 2: permanência sem datas de vento, alerta preso ao ruído da série ----------
+
+def test_permanencia_ignora_data_com_vento():
+    n = 40
+    lago = np.zeros((n, n), bool)
+    lago[:, :20] = True
+    aguas = [lago.copy() for _ in range(9)]
+    aguas[2] = np.zeros((n, n), bool)                          # dia de vento: a água some do radar
+    vento = [i == 2 for i in range(9)]
+    cls, info = patterns.permanencia(aguas, np.ones((n, n), bool), vento)
+    assert (cls[:, :20] == patterns.PERMANENTE).all() and info["n_dates"] == 8 and info["n_wind_excluded"] == 1
+    assert info["note"] == patterns.VENTO_FORA
+    sem_excluir, _ = patterns.permanencia(aguas, np.ones((n, n), bool))
+    assert not (sem_excluir == patterns.PERMANENTE).any()     # o bug: 8/9 < 90% derrubava tudo para sazonal
+    assert patterns.permanencia(aguas[:3], np.ones((n, n), bool), [True, False, False])[0] is None
+
+
+FURNAS_2E7B = os.path.join(RAIZ, "data", "analyses", "2e7b08493f2ac033578b8a88")
+
+
+@pytest.mark.skipif(not os.path.isdir(os.path.join(FURNAS_2E7B, "cog")), reason="análise 2e7b0849 de Furnas não está no disco")
+def test_furnas_2e7b0849_tem_agua_permanente():
+    import rasterio
+    r = json.load(open(os.path.join(FURNAS_2E7B, "result.json"), encoding="utf-8"))
+    aguas = []
+    for d in r["dates"]:
+        with rasterio.open(os.path.join(FURNAS_2E7B, "cog", f"water_{d['date'].replace('-', '')}.tif")) as src:
+            aguas.append(src.read(1) == 1)
+    vento = [d["suspeita_vento"] for d in r["dates"]]
+    assert vento.count(True) == 1                                # 18/07
+    cls, _ = patterns.permanencia(aguas, np.ones(aguas[0].shape, bool), vento)
+    resumo = patterns.resumo_permanencia(cls, r["pixel_area_m2"])
+    assert resumo["permanent_km2"] > 100                         # a lâmina principal (~150 km²) é permanente
+
+
+# série real da análise 2e7b0849 (Furnas): a última passagem fica 12,9 km² abaixo do normal, menos que o
+# ruído entre passagens (15,1 km²); o alerta dizia "atenção" e a leitura dizia "dentro do ruído"
+FURNAS_DATAS = ["2026-06-24", "2026-07-06", "2026-07-18", "2026-08-11", "2026-08-23", "2026-09-04", "2026-09-16", "2026-09-28", "2026-10-10"]
+FURNAS_AREAS = [161.546, 165.821, 7.004, 165.279, 188.47, 160.941, 151.586, 167.547, 152.421]
+FURNAS_VENTO = [False, False, True, False, False, False, False, False, False]
+
+
+def test_alerta_dentro_do_ruido_e_normal_e_nao_contradiz_a_leitura():
+    from arara_pipeline import insights
+    a = patterns.anomalia(FURNAS_DATAS, FURNAS_AREAS, FURNAS_VENTO)
+    assert a["level"] == "normal" and a["within_noise"] and abs(a["z"]) >= 2      # z alto, mas dentro do ruído
+    assert abs(a["deviation_km2"]) < a["series_noise_km2"]
+    datas = [{"date": d, "water_km2": x, "suspeita_vento": v} for d, x, v in zip(FURNAS_DATAS, FURNAS_AREAS, FURNAS_VENTO)]
+    comp = {"before": FURNAS_DATAS[0], "after": FURNAS_DATAS[-1], "water_km2_before": 161.546, "water_km2_after": 152.421,
+            "expansion_ha": 470.3, "retraction_ha": 1382.9, "net_change_ha": -912.5, "wind_caveat": False}
+    leitura = insights.interpretar(datas, comp, alerta=a)
+    assert "within_noise" in leitura["flags"] and leitura["series_noise_km2"] == a["series_noise_km2"]
+
+
+def test_alerta_fora_do_ruido_continua_alertando_e_a_leitura_admite():
+    from arara_pipeline import insights
+    d = [f"2026-0{i + 1}-01" for i in range(7)]
+    a = patterns.anomalia(d, [100, 101, 99, 100.5, 99.5, 100, 93.8])   # última: -6 km², ruído ~1
+    assert a["level"] in ("atenção", "alerta") and not a["within_noise"]
+    datas = [{"date": x, "water_km2": v, "suspeita_vento": False} for x, v in zip(d, [100, 101, 99, 100.5, 99.5, 100, 93.8])]
+    comp = {"before": d[0], "after": d[-1], "water_km2_before": 100, "water_km2_after": 93.8, "expansion_ha": 0,
+            "retraction_ha": 620, "net_change_ha": -620, "wind_caveat": False}
+    assert "Recuo" in insights.interpretar(datas, comp, alerta=a)["hypothesis"]
+    # primeira x última dentro do ruído, mas a última fora da faixa: a leitura não pode dizer só "sem mudança"
+    falso = dict(a, level="atenção", direction="abaixo")
+    ruido = insights.interpretar([dict(x, water_km2=v) for x, v in zip(datas, [94, 101, 99, 100.5, 99.5, 100, 93.8])],
+                                 dict(comp, water_km2_before=94, net_change_ha=-20, retraction_ha=20), alerta=falso)
+    assert "within_noise" in ruido["flags"] and "faixa normal" in ruido["hypothesis"]

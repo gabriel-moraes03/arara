@@ -4,6 +4,7 @@ import br.arara.adapters.persistence.AnalysisRepository;
 import br.arara.adapters.persistence.AnalysisRepository.Analysis;
 import br.arara.adapters.storage.AnalysisStorage;
 import br.arara.application.AnalysisService;
+import br.arara.application.Quality;
 import br.arara.application.SceneService;
 import br.arara.config.AraraProperties;
 import br.arara.domain.Geo;
@@ -138,10 +139,13 @@ public class AraraController {
     }
 
     @GetMapping("/analyses")
-    public Map<String, Object> list(@RequestParam(required = false) String status) {
+    public Map<String, Object> list(@RequestParam(required = false) String status,
+                                    @RequestParam(name = "include_superseded", defaultValue = "false") boolean includeSuperseded) {
         JobStatus st = status == null || status.isBlank() ? null : JobStatus.of(status);
         List<Map<String, Object>> items = new ArrayList<>();
-        for (Analysis a : repo.list(st)) items.add(card(a));
+        for (Analysis a : repo.list(st)) {
+            if (includeSuperseded || a.supersededBy() == null) items.add(card(a));   // superada: só pelo id
+        }
         return Map.of("count", items.size(), "analyses", items);
     }
 
@@ -151,7 +155,7 @@ public class AraraController {
         ObjectNode out = JSON.valueToTree(card(a));
         var result = storage.file(id, "result.json");
         if (a.status() == JobStatus.COMPLETED && result.isPresent()) {
-            ObjectNode r = (ObjectNode) JSON.readTree(result.get().toFile());
+            ObjectNode r = Quality.apply((ObjectNode) JSON.readTree(result.get().toFile()));
             r.remove("status");
             out.setAll(r);
             out.put("layers_url", "/api/arara/analyses/" + id + "/layers");
@@ -164,11 +168,17 @@ public class AraraController {
         find(id);
         if ("csv".equalsIgnoreCase(format)) {
             Path csv = storage.file(id, "metrics.csv").orElseThrow(() -> new NoSuchElementException("análise sem métricas"));
+            String body = Files.readString(csv);
+            var result = storage.file(id, "result.json");
+            if (result.isPresent()) {
+                JsonNode r = JSON.readTree(result.get().toFile());
+                if (Quality.NO_RELIABLE_WATER.equals(Quality.of(r).quality())) body = scenesOnlyCsv(r);   // sem área de água
+            }
             return ResponseEntity.ok().contentType(new MediaType("text", "csv", java.nio.charset.StandardCharsets.UTF_8))
-                    .header("Content-Disposition", "attachment; filename=\"arara_" + id + ".csv\"").body(Files.readString(csv));
+                    .header("Content-Disposition", "attachment; filename=\"arara_" + id + ".csv\"").body(body);
         }
         Path json = storage.file(id, "metrics.json").orElseThrow(() -> new NoSuchElementException("análise sem métricas"));
-        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(JSON.readTree(json.toFile()));
+        return ResponseEntity.ok().contentType(MediaType.APPLICATION_JSON).body(Quality.apply((ObjectNode) JSON.readTree(json.toFile())));
     }
 
     @GetMapping("/analyses/{id}/layers")
@@ -212,6 +222,17 @@ public class AraraController {
                 .orElseThrow(() -> new NoSuchElementException("tile não encontrado")));
     }
 
+    /** CSV de uma análise sem água confiável: só as cenas usadas, nenhum número de água. */
+    static String scenesOnlyCsv(JsonNode r) {
+        StringBuilder sb = new StringBuilder("date,quality,margin_blocks,valid_fraction_aoi,crid,granule\n");
+        for (JsonNode d : r.path("dates")) {
+            sb.append(d.path("date").asText()).append(",no_reliable_water,").append(d.path("margin_blocks").asText(""))
+                    .append(',').append(d.path("valid_fraction_aoi").asText("")).append(',').append(d.path("crid").asText(""))
+                    .append(',').append(d.path("granule").asText("")).append('\n');
+        }
+        return sb.toString();
+    }
+
     private static ResponseEntity<Resource> image(Path p) {
         return ResponseEntity.ok().contentType(MediaType.IMAGE_PNG).cacheControl(CacheControl.maxAge(1, TimeUnit.HOURS))
                 .body(new FileSystemResource(p));
@@ -244,11 +265,16 @@ public class AraraController {
         m.put("start", a.startDate());
         m.put("end", a.endDate());
         m.put("algorithm_version", a.algorithmVersion());
+        if (a.supersededBy() != null) m.put("superseded_by", a.supersededBy());
         m.put("created_at", a.createdAt().toString());
         m.put("updated_at", a.updatedAt().toString());
         if (a.summaryJson() != null) {
             try {
-                m.put("summary", JSON.readTree(a.summaryJson()));
+                JsonNode s = JSON.readTree(a.summaryJson());
+                var result = storage.file(a.id(), "result.json");
+                if (!s.has("quality") && result.isPresent()) s = AnalysisService.summary(JSON.readTree(result.get().toFile()));
+                m.put("summary", s);
+                m.put("quality", s.path("quality").asText(Quality.EXPERIMENTAL));
             } catch (IOException ignored) {
                 // resumo ilegível: o card sai sem ele
             }

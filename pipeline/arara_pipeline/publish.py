@@ -1,5 +1,4 @@
-"""Publicação: reamostragem para Web Mercator/lat-lon, máscaras PNG, simplificação.
-Migrado de terrapulse/scripts/exportar_web.py; COG, tiles e JSON entram na etapa 3."""
+"""Publicação: reamostragem para Web Mercator/lat-lon, máscaras PNG, simplificação."""
 import numpy as np
 from PIL import Image
 from pyproj import Transformer

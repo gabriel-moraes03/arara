@@ -1,4 +1,4 @@
-"""Leitura e preparo do GCOV (HH/HV em dB) e limiar de água. Migrado de terrapulse/scripts/area_agua.py.
+"""Leitura e preparo do GCOV (HH/HV em dB) e limiar de água.
 
 Regras: mask do GCOV 0 e 255 inválidos, 1..254 válidos; dB uma única vez, a partir de potência linear;
 filtro 5x5 em dB; o mesmo limiar para todas as datas de uma análise.

@@ -59,7 +59,8 @@ class UnitTest {
                 echo 'linha que não é JSON'
                 echo '{"stage":"classify","progress":0.62,"message":"classificando"}'
                 if [ -n "$EARTHDATA_USERNAME" ] && [ -n "$EARTHDATA_PASSWORD" ]; then cred=true; else cred=false; fi
-                echo "{\\"status\\":\\"completed\\",\\"credenciais_no_ambiente\\":$cred,\\"args\\":\\"$*\\"}" > "$4/result.json"
+                args=$(echo "$*" | tr '\\\\' '/')     # caminhos do Windows: barra invertida quebraria o JSON
+                echo "{\\"status\\":\\"completed\\",\\"credenciais_no_ambiente\\":$cred,\\"args\\":\\"$args\\"}" > "$4/result.json"
                 """);
         Path out = Files.createDirectories(tmp.resolve("out"));
         Path spec = Files.writeString(tmp.resolve("spec.json"), "{}");
@@ -75,6 +76,55 @@ class UnitTest {
         var semCredencial = new AraraProperties(tmp.toString(), ".", ".", "python3", "v", "http://x", 2500, 12, 7, 100, 1, "", "");
         JsonNode r2 = new ProcessPipelineRunner(List.of("sh", script.toString()), tmp, semCredencial).run(spec, out, (s, p, m) -> { });
         assertThat(r2.get("credenciais_no_ambiente").asBoolean()).isFalse();
+    }
+
+    @Test
+    void processRunnerReadsAccentedProgressAsUtf8(@TempDir Path tmp) throws Exception {
+        Path script = tmp.resolve("fake.sh");
+        Files.writeString(script, """
+                #!/bin/sh
+                printf '{"stage":"publish","progress":0.9,"message":"gravando COGs, PNGs, tiles e métricas (%s)"}\\n' "$PYTHONIOENCODING"
+                echo '{"status":"completed"}' > "$4/result.json"
+                """, java.nio.charset.StandardCharsets.UTF_8);
+        Path out = Files.createDirectories(tmp.resolve("out"));
+        var props = new AraraProperties(tmp.toString(), ".", ".", "python3", "v", "http://x", 2500, 12, 7, 100, 1, "", "");
+        List<String> msgs = new ArrayList<>();
+        new ProcessPipelineRunner(List.of("sh", script.toString()), tmp, props)
+                .run(tmp.resolve("spec.json"), out, (s, p, m) -> msgs.add(m));
+        assertThat(msgs).containsExactly("gravando COGs, PNGs, tiles e métricas (utf-8)");
+    }
+
+    @Test
+    void qualityIsNeverPromoted() throws Exception {
+        var experimental = (com.fasterxml.jackson.databind.node.ObjectNode) json.readTree(
+                "{\"quality\":\"experimental\",\"quality_reasons\":[\"vento\"],\"experimental\":false,\"dates\":[]}");
+        assertThat(br.arara.application.Quality.apply(experimental).get("quality").asText()).isEqualTo("experimental");
+        assertThat(experimental.get("experimental").asBoolean()).isTrue();
+        var legacyBadIou = json.readTree("{\"experimental\":false,\"params\":{\"threshold_db\":-16.3},"
+                + "\"dates\":[{\"water_pct\":18.5,\"margin_blocks\":17}],"
+                + "\"optical_validation\":{\"status\":\"validated\",\"n_dates_validated\":10,\"mean_iou\":0.69}}");
+        assertThat(br.arara.application.Quality.of(legacyBadIou).quality()).isEqualTo("experimental");
+        var legacyWithForecast = (com.fasterxml.jackson.databind.node.ObjectNode) legacyBadIou.deepCopy();
+        legacyWithForecast.putObject("forecast").put("status", "ok");
+        assertThat(br.arara.application.Quality.apply(legacyWithForecast).path("forecast").path("status").asText()).isEqualTo("unavailable");
+        var legacyNoMargin = json.readTree("{\"experimental\":true,\"params\":{\"threshold_db\":-11.2,"
+                + "\"threshold\":{\"source\":\"limiar_bimodal\",\"date_index\":0}},\"dates\":[{\"water_pct\":63.1,\"margin_blocks\":0}]}");
+        assertThat(br.arara.application.Quality.of(legacyNoMargin).quality()).isEqualTo("no_reliable_water");
+    }
+
+    @Test
+    void radarAndSentinelOnlyAgreeWithinFivePoints() throws Exception {
+        // resultado gravado antes do rótulo: Nanuque 21/07 (vento) tinha 24,7% x 0% e a tabela dizia "concordam"
+        var r = (com.fasterxml.jackson.databind.node.ObjectNode) json.readTree("{\"quality\":\"no_reliable_water\",\"dates\":[],"
+                + "\"optical_validation\":{\"divergence\":{\"per_date\":["
+                + "{\"sar_water_fraction\":0.247,\"optical_water_fraction\":0.0,\"level\":\"wind\"},"
+                + "{\"sar_water_fraction\":0.22,\"optical_water_fraction\":0.17,\"level\":\"none\"},"
+                + "{\"sar_water_fraction\":0.2502,\"optical_water_fraction\":0.2536,\"level\":\"none\"}]}}}");
+        var rows = br.arara.application.Quality.apply(r).path("optical_validation").path("divergence").path("per_date");
+        assertThat(rows.get(0).path("agreement").asText()).isEqualTo("optical_no_water");
+        assertThat(rows.get(0).path("difference_pp").asDouble()).isEqualTo(24.7);
+        assertThat(rows.get(1).path("agreement").asText()).isEqualTo("diverge");
+        assertThat(rows.get(2).path("agreement").asText()).isEqualTo("agree");
     }
 
     @Test

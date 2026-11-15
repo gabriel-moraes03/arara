@@ -17,6 +17,13 @@ def _calmas(datas, areas, vento):
     return [(datetime.date.fromisoformat(d), float(a)) for d, a, v in zip(datas, areas, vento) if not v]
 
 
+def ruido_serie(areas_calmas):
+    """Ruído da série: mediana das variações entre passagens calmas seguidas (km²). Mesmo número no
+    alerta e na leitura (insights), para os dois nunca se contradizerem."""
+    a = np.asarray(areas_calmas, float)
+    return float(np.median(np.abs(np.diff(a)))) if len(a) >= 3 else None
+
+
 def tendencia(datas, areas, vento=None):
     """Theil-Sen (mediana das inclinações entre pares): robusto a uma data ruim. km² por semana."""
     c = _calmas(datas, areas, vento)
@@ -46,24 +53,38 @@ def anomalia(datas, areas, vento=None):
     ultima = float(areas[-1])
     z = (ultima - mediana) / mad if mad > 0 else 0.0
     pct = 100 * (ultima - mediana) / mediana if mediana else 0.0
-    nivel = "normal" if abs(z) < 2 else "atenção" if abs(z) < 3 else "alerta"
+    # só sobe de nível se o desvio sai da faixa p10-p90 dos resíduos das datas anteriores E passa o ruído
+    # entre passagens; senão é variação normal da medida, por maior que pareça o z
+    desvio = ultima - mediana
+    p10, p90 = (float(x) for x in np.percentile(np.array(antes) - mediana, [10, 90]))
+    ruido = ruido_serie([float(a) for a, v in zip(areas, vento) if not v])
+    fora = (desvio < p10 or desvio > p90) and (ruido is None or abs(desvio) > ruido)
+    nivel = "normal" if not fora or abs(z) < 2 else "atenção" if abs(z) < 3 else "alerta"
     return {"status": "ok", "level": nivel, "last_date": datas[-1], "last_km2": round(ultima, 3), "normal_km2": round(mediana, 3),
             "pct_vs_normal": round(pct, 2), "z": round(float(z), 2), "direction": "abaixo" if ultima < mediana else "acima",
+            "deviation_km2": round(desvio, 3), "residual_band_km2": [round(p10, 3), round(p90, 3)],
+            "series_noise_km2": None if ruido is None else round(ruido, 3), "within_noise": not fora,
             "last_is_wind_suspect": bool(vento[-1]),
             "note": "A última data tem suspeita de vento: a área pode estar subestimada." if vento[-1] else None}
 
 
-def permanencia(aguas, valido):
-    """Fração de datas em que cada pixel foi água -> permanente (>=90%), sazonal (25-90%), ocasional."""
-    if len(aguas) < 3:
-        return None, {"status": "unavailable", "reason": "frequência de água precisa de 3 datas"}
-    freq = np.mean(np.stack(aguas).astype("float32"), axis=0)
+def permanencia(aguas, valido, vento=None):
+    """Fração das datas sem suspeita de vento em que cada pixel foi água -> permanente (>=90%),
+    sazonal (25-90%), ocasional. Data com vento fica fora: nela a água encrespada some do radar e um
+    único dia derrubaria toda a lâmina permanente para sazonal."""
+    vento = vento or [False] * len(aguas)
+    calmas = [a for a, v in zip(aguas, vento) if not v]
+    if len(calmas) < 3:
+        return None, {"status": "unavailable", "reason": f"frequência de água precisa de 3 datas sem suspeita de vento (há {len(calmas)})"}
+    freq = np.mean(np.stack(calmas).astype("float32"), axis=0)
     cls = np.zeros(freq.shape, "uint8")
     cls[(freq > 0) & (freq < LIM_SAZONAL)] = OCASIONAL
     cls[(freq >= LIM_SAZONAL) & (freq < LIM_PERMANENTE)] = SAZONAL
     cls[freq >= LIM_PERMANENTE] = PERMANENTE
     cls[~valido] = 0
-    return cls, {"status": "ok", "n_dates": len(aguas), "thresholds": {"permanent": LIM_PERMANENTE, "seasonal": LIM_SAZONAL}, "freq": freq}
+    return cls, {"status": "ok", "n_dates": len(calmas), "n_wind_excluded": len(aguas) - len(calmas),
+                 "thresholds": {"permanent": LIM_PERMANENTE, "seasonal": LIM_SAZONAL}, "freq": freq,
+                 "note": VENTO_FORA if len(calmas) < len(aguas) else None}
 
 
 def resumo_permanencia(cls, area_px_m2):

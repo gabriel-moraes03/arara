@@ -1,5 +1,5 @@
 """Validação contra a ANA (só Furnas): cota dos boletins -> área esperada pela curva cota × área,
-comparada com a área medida pelo NISAR. Migrado de terrapulse/scripts/analise.py e exportar_web.py.
+comparada com a área medida pelo NISAR.
 
 As datas com suspeita de vento ficam na série, marcadas, e fora das métricas principais.
 """

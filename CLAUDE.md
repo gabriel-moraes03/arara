@@ -1,7 +1,7 @@
 # Arara
 
 Aplicação web de água vista pelo NISAR. Visão geral em `README.md`, execução em `docs/COMO_RODAR.md`,
-limites em `docs/LIMITACOES.md`.
+limites em `docs/LIMITACOES.md`, mudanças por versão em `docs/HISTORICO.md`.
 
 ## Comandos
 
@@ -25,6 +25,7 @@ limites em `docs/LIMITACOES.md`.
 
 - Pipeline: `pipeline/arara_pipeline/run.py` orquestra; cada etapa é um módulo. `ALGORITHM_VERSION` em
   `__init__.py` tem de bater com `arara.algorithm-version` no `application.yml` (entra no id da análise).
+  Ao subir a versão, registre o que mudou em `docs/HISTORICO.md`.
 - Backend: `br.arara` em domain / application / adapters. Os testes usam uma resposta real gravada da
   ASF e uma pipeline falsa (`FakePipeline`, só em `src/test`).
 - Globo: `frontend/globe/index.html`, arquivo único; fala com `api/arara`.

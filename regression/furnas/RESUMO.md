@@ -1,4 +1,4 @@
-# TerraPulse: Furnas 2026, NISAR × ANA (resumo)
+# Arara: Furnas 2026, NISAR × ANA (resumo)
 
 **Dados:** NISAR GCOV HH, trilha 024 D, frame 099, 9 datas (27/06 a 13/10/2026), pixel processado de 40 m. Limite do reservatório, curva cota × área e cota diária: ANA/SNIRH e boletins ANA/ONS.
 

@@ -5,6 +5,7 @@ import br.arara.adapters.pipeline.ProcessPipelineRunner;
 import java.nio.file.Path;
 import java.time.Duration;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.CacheControl;
@@ -43,6 +44,11 @@ public class AppConfig implements WebMvcConfigurer {
         String base = Path.of(props.frontendDir()).toAbsolutePath().normalize().toUri().toString();
         registry.addResourceHandler("/furnas/**").addResourceLocations(base + "furnas/").setCacheControl(CacheControl.noCache());
         registry.addResourceHandler("/estudo/**").addResourceLocations(base + "estudo/").setCacheControl(CacheControl.noCache());
+        // bibliotecas com versão fixa e mapas de base mudam raramente: o navegador guarda; o HTML sempre revalida
+        registry.addResourceHandler("/vendor/**").addResourceLocations(base + "globe/vendor/")
+                .setCacheControl(CacheControl.maxAge(7, TimeUnit.DAYS));
+        registry.addResourceHandler("/geo.json", "/bacias_mg.json", "/furnas_globe.json", "/favicon.ico").addResourceLocations(base + "globe/")
+                .setCacheControl(CacheControl.maxAge(1, TimeUnit.DAYS));
         registry.addResourceHandler("/**").addResourceLocations(base + "globe/").setCacheControl(CacheControl.noCache());
     }
 

@@ -98,7 +98,7 @@ public class AnalysisService {
         String geojson = rq.aoi() != null && !rq.aoi().isNull() ? geometryOf(rq.aoi()).toString() : bboxPolygon(e).toString();
         repo.upsert(new Analysis(id, hash, clean(rq.name()), JobStatus.QUEUED, geojson, e.getMinX(), e.getMinY(), e.getMaxX(), e.getMaxY(),
                 km2, rq.start(), rq.end(), blank(rq.groupId()), blank(rq.maturity()), props.algorithmVersion(),
-                null, null, null, now, now, null));
+                null, null, null, now, now, null, null));
         Job job = new Job(UUID.randomUUID().toString(), id, JobStatus.QUEUED, "queued", 0, "na fila", null, now, now);
         repo.insert(job);
         worker.submit(() -> run(job.id(), id));
@@ -143,20 +143,27 @@ public class AnalysisService {
         if (status != JobStatus.COMPLETED) {
             storage.delete(id);                       // nada de derivado parcial fica no disco
         }
-        repo.finish(id, status, reason, status == JobStatus.COMPLETED ? result.path("experimental").asBoolean(false) : null,
+        repo.finish(id, status, reason, status == JobStatus.COMPLETED ? !Quality.RELIABLE.equals(Quality.of(result).quality()) : null,
                 status == JobStatus.COMPLETED ? summary(result).toString() : null);
         repo.finishJob(jobId, status, reason);
+        if (status == JobStatus.COMPLETED) repo.markSuperseded();
     }
 
-    /** Resumo para os cards do globo (só números que a pipeline mediu). */
-    static ObjectNode summary(JsonNode r) {
+    /** Resumo para os cards do globo (só números que a pipeline mediu; sem água confiável, nenhum). */
+    public static ObjectNode summary(JsonNode raw) {
+        ObjectNode r = Quality.apply(raw.deepCopy());
+        boolean noWater = Quality.NO_RELIABLE_WATER.equals(r.path("quality").asText());
         ObjectNode s = JSON.createObjectNode();
         JsonNode dates = r.path("dates");
         s.put("n_dates", dates.size());
+        s.put("quality", r.path("quality").asText());
+        s.set("quality_reasons", r.path("quality_reasons"));
         if (dates.size() > 0) {
+            s.put("first_date", dates.get(0).path("date").asText());
+            s.put("last_date", dates.get(dates.size() - 1).path("date").asText());
+        }
+        if (dates.size() > 0 && !noWater) {
             JsonNode first = dates.get(0), last = dates.get(dates.size() - 1);
-            s.put("first_date", first.path("date").asText());
-            s.put("last_date", last.path("date").asText());
             s.set("water_km2_first", first.path("water_km2"));
             s.set("water_km2_last", last.path("water_km2"));
             s.set("water_pct_last", last.path("water_pct"));
@@ -170,13 +177,14 @@ public class AnalysisService {
         if (r.path("optical_validation").hasNonNull("mean_iou")) s.set("mean_iou", r.get("optical_validation").get("mean_iou"));
         s.set("group", r.path("group"));
         s.put("sensor", r.path("sensor").asText("NISAR"));
-        s.put("experimental", r.path("experimental").asBoolean(false));
+        s.put("experimental", !Quality.RELIABLE.equals(r.path("quality").asText()));
         return s;
     }
 
     /** Ao reiniciar: jobs que estavam na fila ou rodando voltam para a fila (o processo filho morreu junto). */
     @EventListener(ApplicationReadyEvent.class)
     public void recoverOrphans() {
+        repo.markSuperseded();
         for (Job j : repo.activeJobs()) {
             log.info("retomando job órfão {} ({})", j.id(), j.status());
             repo.progress(j.id(), JobStatus.QUEUED, "queued", 0, "retomado após reinício do servidor");

@@ -1,10 +1,12 @@
 <!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
 <title>Arara</title>
 <meta name="claude:viewport-fit-sides" content="cover">
+<link rel="icon" href="favicon.ico" sizes="any">
 <link rel="stylesheet" href="vendor/leaflet/leaflet.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap">
+<!-- fontes sem bloquear o primeiro desenho: a página abre com a fonte do sistema e troca quando chegam -->
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=IBM+Plex+Sans:wght@400;500;600&family=IBM+Plex+Mono:wght@400;500&display=swap" media="print" onload="this.media='all'">
 <style>
 /* Layout: globo em tela cheia sobre um céu estrelado; HUD flutuante nos cantos; painel de região à direita (folha inferior no celular); histórico detalhado em tela cheia por cima. Visual escuro único, de propósito. */
 :root {
@@ -89,8 +91,7 @@ button { font-family: var(--font-body); }
 .top > * { pointer-events: auto; }
 .brand { display: flex; flex-direction: column; gap: 2px; min-width: 0; }
 .brand h1 { margin: 0; font-family: var(--font-display); font-weight: 700; font-size: 30px; letter-spacing: -0.02em; display: flex; align-items: center; gap: 10px; }
-.feather { display: inline-flex; gap: 3px; }
-.feather i { width: 6px; height: 20px; border-radius: 6px 6px 1px 1px; display: block; transform: skewX(-14deg); }
+.logo .mark { width: 40px; height: auto; display: block; }
 .brand p { margin: 0; color: var(--ink-2); font-size: 13px; max-width: 34ch; }
 
 .search { position: relative; width: min(360px, 100%); }
@@ -277,6 +278,8 @@ a.more { text-decoration: none; box-sizing: border-box; }
 .chart-key i.wind { width: 8px !important; height: 8px !important; border-radius: 50%; border: 2px solid #f0b44c; background: none !important; }
 .tag em.real { font-style: normal; font-weight: 700; color: #ffd166; letter-spacing: .04em; text-transform: uppercase; margin-right: 4px; }
 .note { margin: 0; color: var(--ink-3); font-size: 11.5px; line-height: 1.5; }
+.note.warnnote { color: #f0b44c; border-left: 2px solid #f0b44c; padding-left: 8px; }
+.fact .reasons { margin: 8px 0 0; padding-left: 18px; font-size: 12.5px; line-height: 1.5; }
 .passes { display: flex; justify-content: space-between; gap: 10px; flex-wrap: wrap; font-family: var(--font-mono); font-size: 11.5px; color: var(--ink-3); border-top: 1px solid var(--glass-line); padding-top: 12px; }
 .more { display: flex; justify-content: space-between; align-items: center; width: 100%; padding: 12px 14px; border-radius: 10px; border: 1px solid color-mix(in srgb, var(--vc) 45%, transparent); background: color-mix(in srgb, var(--vc) 10%, transparent); color: var(--ink); font: 600 13.5px var(--font-body); cursor: pointer; }
 .more:hover, .more:focus-visible { background: color-mix(in srgb, var(--vc) 18%, transparent); outline: none; }
@@ -379,7 +382,7 @@ a.btn { text-decoration: none; }
 <div id="app">
   <aside id="side">
     <div class="sidehead">
-      <h1 class="logo"><span class="feather" aria-hidden="true"><i style="background:var(--macaw-red)"></i><i style="background:var(--macaw-yellow)"></i><i style="background:var(--macaw-blue)"></i></span>Arara</h1>
+      <h1 class="logo"><img class="mark" src="img/arara-marca.png" alt="" width="40" height="39">Arara</h1>
       <div class="seg viewsw" id="viewsw" role="group" aria-label="Tipo de mapa"><button type="button" data-v="globe" aria-pressed="true">Globo</button><button type="button" data-v="map" aria-pressed="false">Mapa plano</button></div>
     </div>
     <div class="search" role="search">
@@ -402,7 +405,7 @@ a.btn { text-decoration: none; }
         <div><h3>Bacias de Minas</h3><select id="homeBasin" aria-label="Escolher bacia de Minas"><option value="">Escolher uma bacia…</option></select></div>
         <div><h3>Lugares para explorar</h3><div class="places" id="homePlaces"></div></div>
         <div id="homeAreasWrap" hidden><h3>Minhas áreas</h3><ul id="homeAreas" class="studies"></ul></div>
-        <p class="foot"><a href="/furnas/">Estudo completo de Furnas</a> · <a href="https://github.com/gabriel-moraes03/arara" target="_blank" rel="noopener">GitHub</a></p>
+        <p class="foot"><a href="furnas/index.html">Estudo completo de Furnas</a> · <a href="https://github.com/gabriel-moraes03/arara" target="_blank" rel="noopener">GitHub</a></p>
       </section>
     </div>
   </aside>
@@ -456,8 +459,9 @@ a.btn { text-decoration: none; }
 </div>
 
 <script src="vendor/leaflet/leaflet.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/globe.gl@2.41.6/dist/globe.gl.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/topojson-client@3.1.0/dist/topojson-client.min.js"></script>
+<!-- globe.gl 2.41.6, three r176 e topojson-client 3.1.0 servidos daqui (sem depender do CDN na primeira carga) -->
+<script src="vendor/globe.gl/globe.gl.min.js"></script>
+<script src="vendor/topojson/topojson-client.min.js"></script>
 <script>
 (() => {
 'use strict';
@@ -791,9 +795,12 @@ function makeCard(d) {
   w.addEventListener('pointerdown', (e) => e.stopPropagation());
   return w;
 }
+const NO_WATER = 'no_reliable_water';
 function cardMetric(a) {
-  const m = a.summary || {};
-  return `${m.n_dates} ${m.n_dates === 1 ? 'passagem' : 'passagens'}${m.net_change_ha != null ? ` · saldo ${signed(m.net_change_ha, 0)} ha` : ''}${m.experimental ? ' · experimental' : ''}`;
+  const m = a.summary || {}, q = m.quality || a.quality;
+  const n = `${m.n_dates} ${m.n_dates === 1 ? 'passagem' : 'passagens'}`;
+  if (q === NO_WATER) return `sem água confiável · ${n}`;
+  return `${n}${m.net_change_ha != null ? ` · saldo ${signed(m.net_change_ha, 0)} ha` : ''}${q === 'experimental' || m.experimental ? ' · experimental' : ''}`;
 }
 function makeVertex(d) { const v = document.createElement('div'); v.className = 'vtx' + (d.first ? ' first' : ''); return v; }
 function measure(h) { const c = h.__el.querySelector('.card'); return [c.offsetWidth || 210, c.offsetHeight || 90]; }
@@ -844,6 +851,7 @@ function updateLOD(force) {
   if (alt < 1.35) country = countryAt(pt) || null;
   const mgView = !!(country && country.__a2 === 'BR' && alt < 1.0 && mgState && inFeature(pt, mgState));
   if (mgView && alt < (basinMode === 'bacia' ? 0.95 : 0.42)) inMG = true;
+  if (mgView) loadBasins();
   $('#mgmode').hidden = !mgView || current === 'area';
   const key = (country ? country.__a2 : '-') + (inMG ? ':MG' + basinMode : '') + (mgView ? ':v' : '') + ':' + areas.length + (alt < 0.05 ? ':z' : '');
   if (key === lodKeyNow && !force) return;
@@ -906,7 +914,7 @@ function setBasemap(on) {
 /* ---- camadas de água do Arara sobre o mapa: PNG lat/lon da pipeline colado na esfera ---- */
 let overlay = null, THREE_NS = null, pendingOverlay = null;
 // mesma revisão do three embutido no globo.gl 2.41.6 (r176); versões diferentes quebram o renderizador
-import('https://cdn.jsdelivr.net/npm/three@0.176.0/build/three.module.min.js').then(m => { THREE_NS = m; if (pendingOverlay) setOverlayGlobe(...pendingOverlay); }).catch(() => {});
+import(new URL('vendor/three/three.module.min.js', document.baseURI).href).then(m => { THREE_NS = m; if (pendingOverlay) setOverlayGlobe(...pendingOverlay); }).catch(() => {});
 function clearOverlayGlobe() {
   if (!overlay) return;
   if (gObj) gObj.remove(overlay);
@@ -1033,11 +1041,12 @@ function renderBasinPanel(ctx) {
     <span class="example">Contorno oficial · IGAM / IDE-Sisema</span>
     <dl class="bfacts"><dt>Sigla</dt><dd>${esc(P.sigla)} (${esc(P.ueg || '–')})</dd><dt>Comitê (CBH)</dt><dd>${esc(P.cbh === 'Sim' ? P.descr + ' · ' + P.situ_cbh : 'Sem comitê instalado')}</dd>${P.decreto ? `<dt>Decreto</dt><dd>${esc(P.decreto)}</dd>` : ''}</dl>
     <div class="facts"><section class="fact detected"><h3>Estudos de radar nesta bacia <span class="chip">${inside.length}</span></h3>${studies}</section>
-      <section class="fact cause"><h3>Cenas do NISAR sobre a bacia <span class="chip">ao vivo</span></h3><p id="bsc">Consultando o catálogo…</p></section></div>
+      <section class="fact cause"><h3>Cenas do NISAR sobre a bacia <span class="chip">${STATIC ? 'vitrine' : 'ao vivo'}</span></h3><p id="bsc">${STATIC ? esc(LIVE_MSG) : 'Consultando o catálogo…'}</p></section></div>
     <button class="more" type="button" id="bDraw">Marcar um reservatório ou trecho nesta bacia <span aria-hidden="true">→</span></button>
     <p class="note">Uma análise de água cobre até ${fmt(serverCfg.aoi_max_km2)} km² e esta bacia tem ${fmt(km2)} km². O estudo detalhado é feito por reservatório, rio ou várzea dentro da bacia: marque a área e o Arara mede a água ali.</p>`);
   panel.querySelectorAll('.studies button').forEach(b => b.addEventListener('click', () => openHotspot(inside[+b.dataset.h])));
   $('#bDraw').addEventListener('click', () => { const c = centerOf(f); goTo(c.lat, c.lng, 0.12, 1400); startDraw(); });
+  if (STATIC) return;
   api(`/scenes?bbox=${P.bbox.join(',')}&start=${period.start}&end=${period.end}`).then(r => {
     if (token !== live.token || activeCtx !== ctx) return;
     const g = (r.groups || [])[0];
@@ -1054,13 +1063,31 @@ function crumbsOf(ctx) {
 }
 /* ================= API do Arara: só dados reais ================= */
 const API = 'api/arara';
+// modo vitrine: build estático (scripts/exportar_vitrine.py) ou ?static=1; análises vêm de data/, sem servidor
+const STATIC = !!window.ARARA_STATIC || new URLSearchParams(location.search).has('static');
+const LIVE_MSG = 'Esta vitrine não tem servidor: mostra só análises já concluídas e não consulta o catálogo da NASA. Para analisar uma área nova, rode o Arara com o backend (instruções no GitHub).';
+// sem servidor nada é consultado ao vivo; o cabeçalho do painel diz o que a página realmente mostra
+const CATALOG_HEAD = STATIC ? 'Radar NISAR, banda L · vitrine com análises já concluídas' : 'Radar NISAR, banda L · catálogo consultado ao vivo (NASA / ASF DAAC)';
+const REPO = 'https://github.com/gabriel-moraes03/arara';
+const files = (id) => STATIC
+  ? { png: (l) => `data/analyses/${id}/png/${l}.png`, sources: `data/analyses/${id}/sources.json`, csv: `data/analyses/${id}/metrics.csv`, metrics: `data/analyses/${id}/metrics.json` }
+  : { png: (l) => `${API}/analyses/${id}/png/${l}.png`, sources: `${API}/analyses/${id}/sources`, csv: `${API}/analyses/${id}/metrics?format=csv`, metrics: `${API}/analyses/${id}/metrics` };
+function staticApi(path) {
+  const json = (u) => fetch(u).then(r => { if (!r.ok) throw Object.assign(new Error('análise não incluída nesta vitrine'), { status: r.status }); return r.json(); });
+  if (path === '/config') return Promise.resolve({ aoi_max_km2: 2500, on_demand_available: false, on_demand_reason: LIVE_MSG, static: true });
+  if (path.startsWith('/analyses?') || path === '/analyses') return json('data/analyses.json');
+  const m = path.match(/^\/analyses\/([0-9a-f]{8,64})$/);
+  if (m) return json(`data/analyses/${m[1]}/analysis.json`);
+  return Promise.reject(new Error(LIVE_MSG));
+}
 function api(path, opt) {
+  if (STATIC) return staticApi(path);
   const ctl = new AbortController(), timer = setTimeout(() => ctl.abort(), 60000);   // consulta nunca fica pendente para sempre
   return fetch(API + path, Object.assign({ signal: ctl.signal }, opt)).finally(() => clearTimeout(timer)).then(async (r) => {
     const j = await r.json().catch(() => ({}));
     if (!r.ok) throw Object.assign(new Error(j.reason || `erro ${r.status} no servidor do Arara`), { status: r.status });
     return j;
-  }, (e) => { throw new Error(e && e.name === 'AbortError' ? 'o servidor do Arara demorou mais de 60 s para responder' : 'não foi possível falar com o servidor do Arara (abra a página por http://localhost:8080/)'); });
+  }, (e) => { throw new Error(e && e.name === 'AbortError' ? 'o servidor do Arara demorou mais de 60 s para responder' : 'não foi possível falar com o servidor do Arara (abra a página pelo endereço do servidor do Arara)'); });
 }
 let serverCfg = { aoi_max_km2: 2500, on_demand_available: false, on_demand_reason: 'servidor do Arara não respondeu' };
 api('/config').then(c => { serverCfg = c; }).catch(() => {});
@@ -1115,7 +1142,7 @@ function renderPanel() {
 function renderCatalogPanel(ctx) {
   const b = ctx.f.__bb || (ctx.f.__bb = bbox(ctx.f));
   const km2 = ctx.lvl === 'area' ? ctx.ha / 100 : bboxKm2(b);
-  const head = panelHead(ctx, 'Radar NISAR, banda L · catálogo consultado ao vivo (NASA / ASF DAAC)');
+  const head = panelHead(ctx, CATALOG_HEAD);
   if (km2 > CATALOG_MAX_KM2) {
     showFootprints([]);
     setPanel(`${head}
@@ -1123,6 +1150,15 @@ function renderCatalogPanel(ctx) {
       <div class="facts"><section class="fact cause"><h3>Como medir a água aqui</h3>
         <p>Esta região é grande demais para uma análise (o limite é ${fmt(serverCfg.aoi_max_km2)} km² por área). Aproxime e use <b>Minha área</b> para desenhar o trecho de rio, represa ou várzea que interessa: o Arara busca as cenas do NISAR e mede a água ali.</p></section></div>
       <p class="note">O Arara só mostra números medidos. Regiões sem análise não têm valor estimado nem cor de mapa.</p>`);
+    return;
+  }
+  if (STATIC) {
+    showFootprints([]);
+    setPanel(`${head}
+      <span class="example">Vitrine · sem servidor</span>
+      <div class="facts"><section class="fact cause"><h3>Analisar água nesta área</h3><p>${esc(LIVE_MSG)}</p></section></div>
+      <a class="more" href="${REPO}" target="_blank" rel="noopener">Instruções para rodar o Arara <span aria-hidden="true">→</span></a>
+      <p class="note">Abra um dos estudos concluídos no início da página para ver uma análise completa.</p>`);
     return;
   }
   setPanel(`${head}${periodForm()}<span class="example">Consultando o catálogo NISAR…</span>`);
@@ -1163,7 +1199,7 @@ function showCatalog(ctx, r, km2) {
   else if (km2 > serverCfg.aoi_max_km2) block = `área de ${fmt(km2, 0)} km², acima do limite de ${fmt(serverCfg.aoi_max_km2)} km² por análise. Use Minha área para desenhar um trecho menor.`;
   else if (!serverCfg.on_demand_available) block = serverCfg.on_demand_reason || 'o servidor não está aceitando novas análises';
   const row = (g) => `<li><b>Trilha ${g.track} ${DIR[g.direction] || g.direction}, frame ${g.frame}</b><small>${MAT[g.maturity] || g.maturity} · ${g.n_dates} ${g.n_dates === 1 ? 'data' : 'datas'} · cobre ${fmt(g.aoi_coverage * 100, 0)}% · ${g.dates_with_hv} com HV · ${g.crids.join(', ')}</small></li>`;
-  setPanel(`${panelHead(ctx, 'Radar NISAR, banda L · catálogo consultado ao vivo (NASA / ASF DAAC)')}${periodForm()}
+  setPanel(`${panelHead(ctx, CATALOG_HEAD)}${periodForm()}
     <span class="example ${best.eligible ? 'real' : 'down'}">${best.eligible ? 'Disponível' : 'Indisponível'} · ${fmt(r.count)} cenas no catálogo</span>
     <div class="now">
       <div>
@@ -1264,17 +1300,42 @@ function validationText(a) {
   if (v.status !== 'validated') return `Sem validação óptica: ${esc(v.reason || 'não executada')}.`;
   return `Comparado com a água vista pelo Sentinel-2 (MNDWI) em ${v.n_dates_validated} de ${v.n_dates} datas: IoU médio ${fmt(v.mean_iou, 2)}, F1 ${fmt(v.mean_f1, 2)}, precisão ${fmt(v.mean_precision, 2)}, recall ${fmt(v.mean_recall, 2)}. O óptico é uma referência independente, não a verdade de campo.`;
 }
-function stateChips(a) {
-  const g = a.group || {};
-  const vd = ((a.optical_validation || {}).per_date || []).filter(p => p.status === 'validated' && p.optical_water_km2 > 0);
+function divergence(a) {
+  const v = a.optical_validation || {};
+  if (v.divergence) return { on: v.divergence.level !== 'none', n: v.divergence.n_strong + v.divergence.n_moderate, of: v.divergence.n_dates };
+  const vd = (v.per_date || []).filter(p => p.status === 'validated' && p.optical_water_km2 > 0);
   const nd = vd.filter(p => Math.abs(p.sar_water_km2 - p.optical_water_km2) / p.optical_water_km2 > 0.3).length;
-  const diverge = vd.length >= 3 && (nd >= 2 || ((a.optical_validation || {}).mean_iou < 0.7));
-  return (diverge ? `<span class="example warn" title="Em ${nd} de ${vd.length} datas a água do radar difere mais de 30% da vista pelo Sentinel-2">Radar diverge do Sentinel-2</span>` : '')
+  return { on: vd.length >= 3 && (nd >= 2 || v.mean_iou < 0.7), n: nd, of: vd.length };
+}
+function qualityReasons(a) { return a.quality_reasons || a.experimental_reasons || []; }
+function stateChips(a) {
+  const g = a.group || {}, d = divergence(a);
+  return (d.on ? `<span class="example warn" title="Em ${d.n} de ${d.of} datas a água do radar não bate com a vista pelo Sentinel-2">Radar diverge do Sentinel-2</span>` : '')
     + `<span class="example real">Analisado · dados reais · ${esc(MAT[g.maturity] || g.maturity || 'NISAR')}</span>`
-    + (a.experimental ? `<span class="example warn" title="${esc((a.experimental_reasons || []).join('; '))}">Experimental</span>` : '');
+    + (a.quality === NO_WATER ? `<span class="example down" title="${esc(qualityReasons(a).join('; '))}">Sem água confiável</span>`
+      : a.experimental ? `<span class="example warn" title="${esc(qualityReasons(a).join('; '))}">Experimental</span>` : '');
+}
+function noWaterPanel(ctx, a) {
+  const S = a.dates, first = S[0], last = S[S.length - 1], g = a.group || {}, f = files(a.analysis_id), v = a.optical_validation || {};
+  showFootprints(ctx.f.__temp ? ringsOf(a.aoi.geometry).map(p => ({ pts: p[0], color: '#f07a6a' })) : []);
+  setPanel(`${panelHead(ctx, `Radar NISAR, banda L (HH) · ${S.length} ${S.length === 1 ? 'passagem' : 'passagens'} de ${isoBR(first.date)} a ${isoBR(last.date)}`)}
+    <div class="chips">${stateChips(a)}</div>
+    <div class="facts">
+      <section class="fact cause"><h3>Não foi possível separar água de terra nesta área</h3>
+        <p>O radar não encontrou um contraste nítido entre água e terra aqui, então o Arara não publica área de água, saldo, tendência nem projeção para esta análise.</p>
+        <ul class="reasons">${qualityReasons(a).map(r => `<li>${esc(r)}</li>`).join('')}</ul></section>
+      <section class="fact detected"><h3>O que tentar</h3><p>${esc(a.what_to_try || 'desenhe uma área menor em volta do corpo d\'água, com margem de terra dos dois lados, ou escolha outra geometria no catálogo')}.</p></section>
+      ${v.status === 'validated' ? `<section class="fact cause"><h3>Validação <span class="chip">Sentinel-2</span></h3><p>${validationText(a)}</p></section>` : ''}
+    </div>
+    ${layerPicker(a)}
+    <a class="more" href="estudo/index.html?id=${a.analysis_id}" target="_blank" rel="noopener"><span style="color:var(--ink)">Abrir o estudo (cenas e radar para inspeção)</span> <span aria-hidden="true">→</span></a>
+    <div class="passes"><span>Trilha ${g.track ?? '–'} ${g.direction ?? ''} · frame ${g.frame ?? '–'}</span><span>${S.length} cenas usadas</span></div>
+    <p class="note">As imagens de radar HH continuam disponíveis para inspeção: água calma aparece escura. ${(a.warnings || []).map(esc).join(' ')} <a href="${f.sources}" target="_blank" rel="noopener">Cenas e proveniência</a></p>`);
+  bindLayers(a);
 }
 function renderAnalysisPanel(ctx, a) {
-  const S = a.dates, last = S[S.length - 1], first = S[0], c = a.comparison, g = a.group || {}, ins = a.insights;
+  if (a.quality === NO_WATER) return noWaterPanel(ctx, a);
+  const S = a.dates, last = S[S.length - 1], first = S[0], c = a.comparison, g = a.group || {}, ins = a.insights, f = files(a.analysis_id);
   showFootprints(ctx.f.__temp ? ringsOf(a.aoi.geometry).map(p => ({ pts: p[0], color: '#4fb6ee' })) : []);
   const wind = S.filter(p => p.suspeita_vento).map(p => isoBR(p.date).slice(0, 5));
   setPanel(`${panelHead(ctx, `Radar NISAR, banda L (HH) · ${S.length} ${S.length === 1 ? 'passagem' : 'passagens'} de ${isoBR(first.date)} a ${isoBR(last.date)}`)}
@@ -1286,11 +1347,12 @@ function renderAnalysisPanel(ctx, a) {
       </div>
       ${c ? `<span class="delta ${c.net_change_ha >= 0 ? 'up' : 'down'}">${signed(c.net_change_ha, 0)} ha desde ${isoBR(c.before).slice(0, 5)}</span>` : ''}
     </div>
+    ${a.experimental ? `<p class="note warnnote"><b>Experimental:</b> ${qualityReasons(a).map(esc).join('; ')}. Sem projeção.</p>` : ''}
     <div class="chart">${seriesChart(a)}
       <div class="chart-key"><span><i></i>Água medida pelo NISAR</span>${a.forecast && a.forecast.status === 'ok' ? '<span><i class="fc"></i>Projeção experimental</span>' : ''}${wind.length ? '<span><i class="wind"></i>Suspeita de vento</span>' : ''}</div>
     </div>
     ${layerPicker(a)}
-    <a class="more" href="/estudo/index.html?id=${a.analysis_id}" target="_blank" rel="noopener"><span style="color:var(--ink)">Abrir estudo completo (gerado automaticamente)</span> <span aria-hidden="true">→</span></a>
+    <a class="more" href="estudo/index.html?id=${a.analysis_id}" target="_blank" rel="noopener"><span style="color:var(--ink)">Abrir estudo completo (gerado automaticamente)</span> <span aria-hidden="true">→</span></a>
     <button class="more" type="button" id="moreBtn">Ver histórico detalhado e mapas <span aria-hidden="true">→</span></button>
     <div class="facts">
       <section class="fact detected"><h3>Mudança detectada <span class="chip">medido</span></h3><p>${measuredText(a)}</p></section>
@@ -1300,17 +1362,18 @@ function renderAnalysisPanel(ctx, a) {
       <section class="fact cause"><h3>Validação <span class="chip">Sentinel-2</span></h3><p>${validationText(a)}</p></section>
     </div>
     <div class="passes"><span>Limiar ${fmt(a.params.threshold_db, 2)} dB</span><span>Trilha ${g.track ?? '–'} ${g.direction ?? ''} · frame ${g.frame ?? '–'}</span><span>${wind.length ? 'Vento: ' + wind.join(', ') : 'Sem suspeita de vento'}</span></div>
-    <p class="note">Fonte: NISAR L2 GCOV (NASA / ASF DAAC), canal HH, média 5×5 em dB, limiar no vale água/terra desta área. ${(a.warnings || []).map(esc).join(' ')} <a href="${API}/analyses/${a.analysis_id}/sources" target="_blank" rel="noopener">Cenas e proveniência</a> · <a href="${API}/analyses/${a.analysis_id}/metrics?format=csv">CSV</a></p>`);
+    <p class="note">Fonte: NISAR L2 GCOV (NASA / ASF DAAC), canal HH, média 5×5 em dB, limiar no vale água/terra desta área. ${(a.warnings || []).map(esc).join(' ')} <a href="${f.sources}" target="_blank" rel="noopener">Cenas e proveniência</a> · <a href="${f.csv}">CSV</a></p>`);
   $('#moreBtn').addEventListener('click', openDetail);
   bindLayers(a);
 }
-const LKEY = { water: '<span style="color:#2e86de">■</span> água medida pelo radar', change: '<span style="color:#d93828">■</span> deixou de ser água · <span style="color:#1446d7">■</span> água nova · <span style="color:#7ab2eb">■</span> água nas duas datas', optical_water: '<span style="color:#40c4a0">■</span> água no Sentinel-2 (MNDWI)' };
+const LKEY = { backscatter: 'radar HH em dB: água calma aparece escura', water: '<span style="color:#2e86de">■</span> água medida pelo radar', change: '<span style="color:#d93828">■</span> deixou de ser água · <span style="color:#1446d7">■</span> água nova · <span style="color:#7ab2eb">■</span> água nas duas datas', optical_water: '<span style="color:#40c4a0">■</span> água no Sentinel-2 (MNDWI)' };
 function layerOptions(a) {
   const L = a.layers || [], w = L.filter(l => l.type === 'water'), out = [];
   if (w.length) out.push({ l: w[w.length - 1], t: `Água ${isoBR(w[w.length - 1].date).slice(0, 5)}` });
   if (w.length > 1) out.push({ l: w[0], t: `Água ${isoBR(w[0].date).slice(0, 5)}` });
   const ch = L.find(l => l.type === 'change'); if (ch) out.push({ l: ch, t: 'Mudança' });
   const op = L.filter(l => l.type === 'optical_water').pop(); if (op) out.push({ l: op, t: `Sentinel-2 ${isoBR(op.date).slice(0, 5)}` });
+  if (!w.length) L.filter(l => l.type === 'backscatter').forEach(l => out.push({ l, t: `Radar HH ${isoBR(l.date).slice(0, 5)}` }));
   return out;
 }
 function layerPicker(a) {
@@ -1321,7 +1384,7 @@ function bindLayers(a) {
   const o = layerOptions(a); if (!o.length) return;
   const apply = (id) => {
     const l = (a.layers || []).find(x => x.id === id);
-    setOverlay(l ? `${API}/analyses/${a.analysis_id}/png/${l.id}.png` : null, l && l.bounds);
+    setOverlay(l ? files(a.analysis_id).png(l.id) : null, l && l.bounds);
     $('#lyrKey').innerHTML = l ? LKEY[l.type] || '' : '';
     panel.querySelectorAll('.lyr button').forEach(b => b.setAttribute('aria-pressed', String(b.dataset.lyr === id)));
   };
@@ -1329,8 +1392,8 @@ function bindLayers(a) {
   apply(o[0].l.id);
 }
 
-/* ================= caso validado: Furnas (dados reais do TerraPulse) ================= */
-// cópia de furnas/data/serie.json e meta.json (pipeline TerraPulse, NISAR L2 GCOV, trilha 24 D, frame 99)
+/* ================= caso validado: Furnas (dados reais do Arara) ================= */
+// cópia de furnas/data/serie.json e meta.json (pipeline do Arara, NISAR L2 GCOV, trilha 24 D, frame 99)
 const FURNAS = {
   serie: [
     ['2026-06-27', 763.65, 1041.8, 1039.8, false], ['2026-07-09', 763.72, 1045.0, 1041.98, false],
@@ -1383,7 +1446,7 @@ function renderFurnasPanel(ctx) {
       <section class="fact cause"><h3>Por que confiar <span class="chip">validação</span></h3><p>A área responde à cota como a curva oficial: ${fmt(F.incN, 1)} km² por metro no radar contra ${fmt(F.incA, 1)} km² na ANA. Em 07/09 e 01/10 o vento encrespou a água e ela pareceu menor, por isso essas datas ficam marcadas e fora da conta.</p><p class="check">Método: canal HH, média 5×5 em dB, limiar −15,65 dB, só dentro do polígono oficial da ANA.</p></section>
     </div>
     <div class="passes"><span>Última passagem ${dIso(last.d)}/2026</span><span>Ruído ±${fmt(F.ruido, 1)} km²</span><span>Funil fora: só 21% no quadro</span></div>
-    <p class="note">Fonte: pipeline TerraPulse sobre NISAR L2 GCOV (ASF DAAC) e cota × área da ANA/SNIRH. O estudo completo traz os mapas de cada passagem e a imagem de antes e depois.</p>`;
+    <p class="note">Fonte: pipeline do Arara sobre NISAR L2 GCOV (ASF DAAC) e cota × área da ANA/SNIRH. O estudo completo traz os mapas de cada passagem e a imagem de antes e depois.</p>`;
   panel.querySelector('.close').addEventListener('click', closePanel);
 }
 
@@ -1402,7 +1465,7 @@ function renderDetail() {
   const ctx = activeCtx; if (!ctx || !ctx.analysisId) return;
   const a = analysesById.get(ctx.analysisId); if (!a) return;
   const S = a.dates, c = a.comparison, g = a.group || {}, v = a.optical_validation || {}, id = a.analysis_id;
-  const png = (layer) => `${API}/analyses/${id}/png/${layer}.png`;
+  const png = files(id).png;
   const has = (layer) => (a.layers || []).some(l => l.id === layer);
   const key = (d) => d.replaceAll('-', '');
   const fig = (base, over, cap, legend) => `<figure><div class="stack">${has(base) ? `<img src="${png(base)}" alt="" loading="lazy">` : ''}${has(over) ? `<img src="${png(over)}" alt="${esc(cap)}" loading="lazy">` : ''}</div><figcaption>${cap}</figcaption>${legend}</figure>`;
@@ -1429,7 +1492,7 @@ function renderDetail() {
       </div>
     </div>
     <div class="chips">${stateChips(a)}</div>
-    ${a.experimental ? `<p class="note">Experimental: ${(a.experimental_reasons || []).map(esc).join('; ')}.</p>` : ''}
+    ${a.experimental ? `<p class="note warnnote">Experimental: ${qualityReasons(a).map(esc).join('; ')}.</p>` : ''}
 
     <div class="box">
       <h3>Área de água a cada passagem (km²)</h3>
@@ -1474,7 +1537,7 @@ function renderDetail() {
     <div class="box">
       <div class="tabletools">
         <div><h3>Todas as passagens</h3><p class="lead" style="margin:0">Uma linha por cena usada. CRID é a versão de processamento do produto na NASA.</p></div>
-        <div style="display:flex;gap:10px;align-items:center"><a class="btn" href="${API}/analyses/${id}/metrics?format=csv" download>Baixar CSV</a></div>
+        <div style="display:flex;gap:10px;align-items:center"><a class="btn" href="${files(id).csv}" download>Baixar CSV</a></div>
       </div>
       <div class="tablewrap">
         <table>
@@ -1484,7 +1547,7 @@ function renderDetail() {
       </div>
       ${(a.skipped_scenes || []).length ? `<p class="note">Cenas descartadas: ${a.skipped_scenes.map(s => `${isoBR(s.date)} (${esc(s.reason)})`).join('; ')}.</p>` : ''}
     </div>
-    <p class="note">Sensor: ${esc(a.sensor)}. Método ${esc(a.method)}, versão ${esc(a.algorithm_version)}. ${(a.warnings || []).map(esc).join(' ')} <a href="${API}/analyses/${id}/sources" target="_blank" rel="noopener">Cenas, janelas lidas e proveniência (sources.json)</a></p>
+    <p class="note">Sensor: ${esc(a.sensor)}. Método ${esc(a.method)}, versão ${esc(a.algorithm_version)}. ${(a.warnings || []).map(esc).join(' ')} <a href="${files(id).sources}" target="_blank" rel="noopener">Cenas, janelas lidas e proveniência (sources.json)</a></p>
   </div>`;
   detail.querySelector('.back').addEventListener('click', closeDetail);
 }
@@ -1497,7 +1560,8 @@ function loadCards() {
       const s = a.summary || {};
       HOTSPOTS.push({ id: 'an-' + a.analysis_id, api: a, real: true, lat: a.center[1], lng: a.center[0], var: 'agua', select: {},
         place: a.name || 'Área analisada',
-        title: s.water_km2_last != null ? `${fmt(s.water_km2_last, s.water_km2_last < 100 ? 2 : 0)} km² de água em ${isoBR(s.last_date).slice(0, 5)}` : 'Análise concluída' });
+        title: (s.quality || a.quality) === NO_WATER ? 'Sem água confiável nesta área'
+          : s.water_km2_last != null ? `${fmt(s.water_km2_last, s.water_km2_last < 100 ? 2 : 0)} km² de água em ${isoBR(s.last_date).slice(0, 5)}` : 'Análise concluída' });
     });
     if (!drawMode) globe.htmlElementsData(HOTSPOTS);
     if (pin.shown) globe.pointsData(HOTSPOTS).ringsData(reduceMotion ? [] : HOTSPOTS);
@@ -1832,6 +1896,19 @@ function pickHit(h) {
 
 /* ================= dados ================= */
 function tag(f, lvl, extra) { return Object.assign(f, extra, { __lvl: lvl, __lvlLabel: LVL_LABEL[lvl] }); }
+// bacias de Minas (300 KB): só quando alguém abre o seletor, busca ou aproxima de Minas
+let basinsReq = null;
+function loadBasins() {
+  if (basinsReq || !world.length) return basinsReq;
+  basinsReq = fetch('bacias_mg.json').then(r => r.json()).then(b => {
+    basins = b.features.map(f => tag(f, 'bacia', { __name: f.properties.n, __key: f.properties.k, __parent: 'Minas Gerais', __country: 'Brasil', __ueg: f.properties.ueg }));
+    basins.forEach(f => searchIndex.push({ n: norm(f.__name + ' ' + (f.properties.federal || '')), f, rank: 1 }));
+    updateLOD(true); fillHome(); if (mapReady) map2dRefresh();
+  }).catch(() => { basinsReq = null; });
+  return basinsReq;
+}
+['pointerenter', 'focus', 'pointerdown'].forEach(ev => $('#homeBasin').addEventListener(ev, loadBasins));
+q.addEventListener('focus', loadBasins);
 fetch('geo.json').then(r => r.json()).then(geo => {
   world = topojson.feature(geo.world, geo.world.objects.countries).features
     .filter(f => f.properties.n !== 'Antarctica')
@@ -1847,11 +1924,6 @@ fetch('geo.json').then(r => r.json()).then(geo => {
     });
   });
   mgState = adm1.BR.find(f => f.properties.pc === 'MG' || f.properties.k === 'br-mg');
-  fetch('bacias_mg.json').then(r => r.json()).then(b => {
-    basins = b.features.map(f => tag(f, 'bacia', { __name: f.properties.n, __key: f.properties.k, __parent: 'Minas Gerais', __country: 'Brasil', __ueg: f.properties.ueg }));
-    basins.forEach(f => searchIndex.push({ n: norm(f.__name + ' ' + (f.properties.federal || '')), f, rank: 1 }));
-    updateLOD(true); fillHome(); if (mapReady) map2dRefresh();
-  }).catch(() => {});
   mgMun = geo.mgmun.map(f => tag(f, 'municipio', { __name: f.properties.n, __key: f.properties.k, __parent: 'MG', __country: 'Brasil' }));
   world.forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 0 }));
   Object.values(adm1).flat().forEach(f => searchIndex.push({ n: norm(f.__name), f, rank: 1 }));

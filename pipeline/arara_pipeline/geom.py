@@ -1,4 +1,4 @@
-"""Polígonos de referência, máscaras e limpeza da água. Migrado de terrapulse/scripts/area_agua.py."""
+"""Polígonos de referência, máscaras e limpeza da água."""
 import json
 import os
 

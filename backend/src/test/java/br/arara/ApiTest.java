@@ -9,6 +9,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.header;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -164,7 +165,7 @@ class ApiTest {
         assertThat(job.get("status").asText()).isEqualTo("completed");
         assertThat(job.get("progress").asDouble()).isEqualTo(1.0);
 
-        mvc.perform(get("/api/arara/analyses").param("status", "completed")).andExpect(status().isOk())
+        mvc.perform(get("/api/arara/analyses").param("status", "completed").param("include_superseded", "true")).andExpect(status().isOk())
                 .andExpect(jsonPath("$.analyses[?(@.analysis_id=='" + id + "')].summary.net_change_ha").value(-2225.0))
                 .andExpect(jsonPath("$.analyses[?(@.analysis_id=='" + id + "')].summary.wind_dates[0]").value("2026-10-09"));
         String detail = mvc.perform(get("/api/arara/analyses/" + id)).andExpect(status().isOk())
@@ -191,6 +192,67 @@ class ApiTest {
         mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON).content(analysisBody("2026-06-01")))
                 .andExpect(status().isOk()).andExpect(jsonPath("$.analysis_id").value(id))
                 .andExpect(jsonPath("$.reused").value(true)).andExpect(jsonPath("$.status").value("completed"));
+    }
+
+    @Test
+    void areaWithoutReliableWaterPublishesNoWaterNumbers() throws Exception {
+        for (String start : java.util.List.of("2026-06-02", "2026-06-03")) {    // pipeline nova e resultado antigo sem 'quality'
+            JsonNode created = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
+                    .content(analysisBody(start))).andExpect(status().isAccepted()));
+            String id = created.get("analysis_id").asText();
+            assertThat(waitJob(created.get("job_id").asText()).get("status").asText()).isEqualTo("completed");
+            String card = "$.analyses[?(@.analysis_id=='" + id + "')]";
+            mvc.perform(get("/api/arara/analyses").param("status", "completed").param("include_superseded", "true"))
+                    .andExpect(jsonPath(card + ".quality").value("no_reliable_water"))
+                    .andExpect(jsonPath(card + ".summary.quality").value("no_reliable_water"))
+                    .andExpect(jsonPath(card + ".summary.water_km2_last").isEmpty())
+                    .andExpect(jsonPath(card + ".summary.net_change_ha").isEmpty());
+            String detail = mvc.perform(get("/api/arara/analyses/" + id)).andExpect(status().isOk())
+                    .andExpect(jsonPath("$.quality").value("no_reliable_water"))
+                    .andExpect(jsonPath("$.quality_reasons[0]").value(org.hamcrest.Matchers.containsString("margem")))
+                    .andExpect(jsonPath("$.what_to_try").isNotEmpty())
+                    .andExpect(jsonPath("$.dates[0].water_km2").isEmpty())
+                    .andExpect(jsonPath("$.dates[0].suspeita_vento").isEmpty())
+                    .andExpect(jsonPath("$.comparison").isEmpty()).andExpect(jsonPath("$.patterns").isEmpty())
+                    .andExpect(jsonPath("$.forecast").isEmpty())
+                    .andExpect(jsonPath("$.layers[*].type", org.hamcrest.Matchers.everyItem(org.hamcrest.Matchers.is("backscatter"))))
+                    .andReturn().getResponse().getContentAsString();
+            assertThat(detail).doesNotContain("TypeError").doesNotContain("suspeita de vento (água").doesNotContain("43.29");
+            mvc.perform(get("/api/arara/analyses/" + id + "/metrics").param("format", "csv"))
+                    .andExpect(content().string(org.hamcrest.Matchers.startsWith("date,quality,margin_blocks")))
+                    .andExpect(content().string(org.hamcrest.Matchers.not(org.hamcrest.Matchers.containsString("120.5"))));
+        }
+    }
+
+    @Test
+    void redoneAnalysisSupersedesTheOldOneWithoutDeletingIt() throws Exception {
+        String old = null, current = null;
+        for (String start : java.util.List.of("2026-06-05", "2026-06-06")) {      // mesma área, refeita depois
+            JsonNode created = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
+                    .content(analysisBody(start))).andExpect(status().isAccepted()));
+            assertThat(waitJob(created.get("job_id").asText()).get("status").asText()).isEqualTo("completed");
+            old = current;
+            current = created.get("analysis_id").asText();
+        }
+        mvc.perform(get("/api/arara/analyses").param("status", "completed"))
+                .andExpect(jsonPath("$.analyses[?(@.analysis_id=='" + old + "')]").isEmpty())
+                .andExpect(jsonPath("$.analyses[?(@.analysis_id=='" + current + "')].superseded_by").isEmpty())
+                .andExpect(jsonPath("$.analyses[?(@.bbox[0]==-57.6)]", org.hamcrest.Matchers.hasSize(1)));
+        mvc.perform(get("/api/arara/analyses/" + old)).andExpect(status().isOk())          // continua acessível pelo id
+                .andExpect(jsonPath("$.superseded_by").value(current))
+                .andExpect(jsonPath("$.dates[0].water_km2").value(120.5));
+        mvc.perform(get("/api/arara/analyses").param("include_superseded", "true"))
+                .andExpect(jsonPath("$.analyses[?(@.analysis_id=='" + old + "')].superseded_by").value(current));
+    }
+
+    @Test
+    void reliableAnalysisKeepsItsNumbersAndQuality() throws Exception {
+        JsonNode created = body(mvc.perform(post("/api/arara/analysis").contentType(MediaType.APPLICATION_JSON)
+                .content(analysisBody("2026-06-04"))).andExpect(status().isAccepted()));
+        String id = created.get("analysis_id").asText();
+        waitJob(created.get("job_id").asText());
+        mvc.perform(get("/api/arara/analyses/" + id)).andExpect(jsonPath("$.quality").value("reliable"))
+                .andExpect(jsonPath("$.dates[0].water_km2").value(120.5)).andExpect(jsonPath("$.comparison.net_change_ha").value(-2225.0));
     }
 
     @Test
@@ -232,7 +294,7 @@ class ApiTest {
         repo.upsert(new AnalysisRepository.Analysis(id, id, "órfã", JobStatus.PROCESSING,
                 "{\"type\":\"Polygon\",\"coordinates\":[[[-57.6,-18.6],[-57.2,-18.6],[-57.2,-18.2],[-57.6,-18.2],[-57.6,-18.6]]]}",
                 -57.6, -18.6, -57.2, -18.2, 1900, "2026-06-01", "2026-11-14", null, null, "arara-water-0.1.0",
-                null, null, null, now, now, null));
+                null, null, null, now, now, null, null));
         repo.insert(new AnalysisRepository.Job("job-orfao", id, JobStatus.PROCESSING, "classify", 0.6, "no meio", null, now, now));
         service.recoverOrphans();
         assertThat(waitJob("job-orfao").get("status").asText()).isEqualTo("completed");
@@ -246,5 +308,21 @@ class ApiTest {
         assertThat(cfg).doesNotContain(SECRET_USER).doesNotContain(SECRET_PASS);
         mvc.perform(get("/index.html")).andExpect(status().isOk());
         mvc.perform(get("/furnas/index.html")).andExpect(status().isOk());
+    }
+
+    @Test
+    void globeLibrariesAreLocalAndCachedWhileHtmlRevalidates() throws Exception {
+        String html = mvc.perform(get("/index.html")).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("no-cache")))
+                .andReturn().getResponse().getContentAsString(java.nio.charset.StandardCharsets.UTF_8);
+        assertThat(html).contains("vendor/globe.gl/globe.gl.min.js").doesNotContain("cdn.jsdelivr.net/npm/globe.gl")
+                .contains("function loadBasins()");   // bacias de Minas só sob demanda
+        mvc.perform(get("/vendor/globe.gl/globe.gl.min.js")).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("max-age=604800")));
+        mvc.perform(get("/vendor/three/three.core.min.js")).andExpect(status().isOk());
+        mvc.perform(get("/geo.json")).andExpect(status().isOk())
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("max-age=86400")));
+        mvc.perform(get("/favicon.ico")).andExpect(status().isOk())          // sem 404 de favicon no app
+                .andExpect(header().string("Cache-Control", org.hamcrest.Matchers.containsString("max-age=86400")));
     }
 }

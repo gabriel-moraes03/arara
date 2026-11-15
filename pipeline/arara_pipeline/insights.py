@@ -2,11 +2,13 @@
 que conferir). O radar mede onde há água; a causa nunca é afirmada."""
 import numpy as np
 
+from .patterns import ruido_serie
+
 CONFERIR = ("nível ou vazão de uma estação próxima (ANA Hidroweb / SNIRH), chuva acumulada no período "
             "(GPM IMERG ou CHIRPS) e uma imagem óptica sem nuvem")
 
 
-def interpretar(datas, comparacao, validacao=None, experimental=False):
+def interpretar(datas, comparacao, validacao=None, experimental=False, alerta=None):
     if not comparacao:
         return {"measured": "Uma única passagem válida: há área de água medida, mas não há mudança para descrever.",
                 "hypothesis": None, "confidence": None, "check": None, "flags": ["single_date"]}
@@ -19,8 +21,9 @@ def interpretar(datas, comparacao, validacao=None, experimental=False):
               f"{c['water_km2_after']:.2f} km² ({pct:+.1f}%): {c['expansion_ha']:.1f} ha de água nova e "
               f"{c['retraction_ha']:.1f} ha que deixaram de ser água.")
     flags = []
-    # ruído da série: mediana das variações entre passagens calmas seguidas
-    ruido = float(np.median(np.abs(np.diff(areas)))) if len(areas) >= 3 else None
+    # ruído da série: o mesmo do alerta da última passagem
+    ruido = ruido_serie(areas)
+    alerta_ativo = bool(alerta and alerta.get("status") == "ok" and alerta.get("level") in ("atenção", "alerta"))
     if c.get("wind_caveat"):
         flags.append("wind")
     if experimental:
@@ -37,6 +40,11 @@ def interpretar(datas, comparacao, validacao=None, experimental=False):
         flags.append("within_noise")
         hip = ("A diferença é do tamanho da variação normal entre passagens desta série; não há indício de mudança "
                "além do ruído da medida.")
+        if alerta_ativo:
+            # primeira x última dentro do ruído, mas a última passagem saiu da faixa normal: diz as duas coisas
+            hip = ("Entre a primeira e a última data a diferença é do tamanho da variação normal da série, mas a última "
+                   f"passagem ficou {alerta['direction']} da faixa normal (alerta: {alerta['level']}); vale conferir "
+                   "as próximas passagens antes de tomar como mudança real.")
         conf = "média" if ruido is not None else "baixa"
     elif saldo_km2 < 0:
         hip = ("Recuo da lâmina d'água. As causas mais comuns são estiagem, vazante sazonal ou retirada de água "
@@ -54,4 +62,6 @@ def interpretar(datas, comparacao, validacao=None, experimental=False):
 
 def rodar(ctx, extras, progresso):
     progresso("insights", 0.89, "separando o que foi medido da hipótese de causa")
-    extras["insights"] = interpretar(ctx["datas"], ctx["comparacao"], extras.get("validacao"), ctx["cls"]["experimental"])
+    q = (ctx.get("quality") or {}).get("quality")
+    experimental = q != "reliable" if q else ctx["cls"]["experimental"]
+    extras["insights"] = interpretar(ctx["datas"], ctx["comparacao"], extras.get("validacao"), experimental, ctx.get("alerta"))

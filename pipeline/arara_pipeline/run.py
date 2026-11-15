@@ -18,7 +18,7 @@ import traceback
 
 import numpy as np
 
-from . import ALGORITHM_VERSION, catalog_nisar, change, gcov_read, patterns, publish, water
+from . import ALGORITHM_VERSION, catalog_nisar, change, gcov_read, patterns, publish, quality, water
 from .geom import aneis_do_geojson, mascara_do_poligono, reprojetar_aneis
 from .sar import db_filtrado
 
@@ -211,8 +211,9 @@ def executar(spec, saida):
     nomes = [d["date"] for d in datas]
     areas_km2 = [d["water_km2"] for d in datas]
     padroes = {"trend": patterns.tendencia(nomes, areas_km2, cls["wind"]), "anomaly": patterns.anomalia(nomes, areas_km2, cls["wind"])}
-    classes_freq, info_freq = patterns.permanencia(cls["water"], cls["common_valid"])
+    classes_freq, info_freq = patterns.permanencia(cls["water"], cls["common_valid"], cls["wind"])
     padroes["frequency"] = ({**patterns.resumo_permanencia(classes_freq, area_px), "n_dates": info_freq["n_dates"],
+                             "n_wind_excluded": info_freq["n_wind_excluded"], "note": info_freq["note"],
                              "thresholds": info_freq["thresholds"]} if classes_freq is not None else info_freq)
     padroes["retraction_hotspots"] = (patterns.trechos_secos(classes == change.RETRACAO, xs, ys, epsg, area_px) if classes is not None else [])
     classes_evento = None
@@ -224,8 +225,28 @@ def executar(spec, saida):
         padroes["event"] = {k: comparacao[k] for k in comparacao}
 
     contexto = {"spec": spec, "aoi": aoi, "xs": xs, "ys": ys, "epsg": epsg, "pixel_m": pixel_m, "area_px": area_px,
-                "cls": cls, "datas": datas, "comparacao": comparacao, "saida": saida, "avisos": avisos}
-    extras = etapas_opcionais(contexto)
+                "cls": cls, "datas": datas, "comparacao": comparacao, "saida": saida, "avisos": avisos,
+                "alerta": padroes["anomaly"]}
+    extras = etapas_opcionais(contexto, ("optical_stage",))
+
+    # ---- qualidade: decide o que pode ser publicado ----
+    q = quality.avaliar(cls, extras.get("validacao"))
+    contexto["quality"] = q
+    sem_agua = q["quality"] == quality.NO_RELIABLE_WATER
+    if q["quality"] == quality.RELIABLE:
+        etapas_opcionais(contexto, ("forecast", "insights"), extras)
+    elif q["quality"] == quality.EXPERIMENTAL:
+        extras["previsao"] = {"status": "unavailable", "experimental": True,
+                              "reason": "análise experimental: sem projeção (" + "; ".join(q["reasons"]) + ")"}
+        etapas_opcionais(contexto, ("insights",), extras)
+    if sem_agua:
+        # o radar não separou água de terra: nenhum número de água sai daqui, só status, motivos, cenas e HH
+        for d in datas:
+            d.update(water_km2=None, water_pct=None, hh_water_median_db=None, suspeita_vento=None)
+        for p in (extras.get("validacao") or {}).get("per_date", []):
+            p.pop("suspeita_vento", None)
+        avisos[:] = [w for w in avisos if not w.startswith("datas com suspeita de vento")]
+        comparacao, classes, classes_freq, classes_evento, padroes = None, None, None, None, None
 
     # ---- publish ----
     progresso("publish", 0.90, "gravando COGs, PNGs, tiles e métricas")
@@ -245,6 +266,8 @@ def executar(spec, saida):
         publish.salvar_cog(os.path.join(saida, "cog", f"hh_db_{s}.tif"), dbs[i], xs, ys, epsg, nodata=float("nan"))
         if hvs[i] is not None:
             publish.salvar_cog(os.path.join(saida, "cog", f"hv_db_{s}.tif"), hvs[i], xs, ys, epsg, nodata=float("nan"))
+        if sem_agua:
+            continue
         publish.salvar_cog(os.path.join(saida, "cog", f"water_{s}.tif"),
                            np.where(cls["common_valid"], cls["water"][i], 255).astype("uint8"), xs, ys, epsg, nodata=255)
         camada(f"water_{s}", "water", d["date"], publish.rgba_mascara(cls["water"][i]), f"Água em {d['date']}")
@@ -295,7 +318,8 @@ def executar(spec, saida):
         "params": {"step": passo, "filter": filtro, "threshold_db": cls["threshold_db"], "threshold": cls["threshold"]},
         "aoi": {"geometry": mapping(aoi), "area_km2": round(km2_aoi, 2), "bbox": [oeste, sul, leste, norte]},
         "group": grupo, "pixel_m": pixel_m, "pixel_area_m2": area_px,
-        "experimental": cls["experimental"], "experimental_reasons": cls["experimental_reasons"],
+        "quality": q["quality"], "quality_reasons": q["reasons"], "what_to_try": q.get("what_to_try"),
+        "experimental": q["quality"] != quality.RELIABLE, "experimental_reasons": q["reasons"],
         "dates": datas, "comparison": comparacao, "layers": camadas, "warnings": avisos, "skipped_scenes": puladas,
         "optical_validation": extras.get("validacao", {"status": "not_optically_validated",
                                                        "reason": "validação óptica não executada nesta versão"}),
@@ -303,28 +327,39 @@ def executar(spec, saida):
     }
     with open(os.path.join(saida, "metrics.json"), "w", encoding="utf-8") as f:
         json.dump({k: resultado[k] for k in ("analysis_id", "algorithm_version", "method", "sensor", "params", "group",
-                                              "experimental", "experimental_reasons", "dates", "comparison",
+                                              "quality", "quality_reasons", "experimental", "experimental_reasons", "dates", "comparison",
                                               "optical_validation", "forecast", "patterns", "warnings")}, f, ensure_ascii=False, indent=1)
     return resultado
 
 
-def etapas_opcionais(ctx):
-    """Validação óptica, previsão e interpretação: entram quando os módulos existirem; uma falha
-    aqui nunca derruba a análise de radar, só é registrada."""
-    extras = {}
-    for nome in ("optical_stage", "forecast", "insights"):
-        try:
-            modulo = __import__(f"arara_pipeline.{nome}", fromlist=["rodar"])
-        except ImportError:
-            continue
+FALHA_ETAPA = {
+    "optical_stage": "validação óptica indisponível nesta análise (erro ao comparar com o Sentinel-2)",
+    "forecast": "projeção indisponível nesta análise",
+    "insights": "leitura da mudança indisponível nesta análise",
+}
+
+
+def etapas_opcionais(ctx, nomes, extras=None):
+    """Validação óptica, previsão e interpretação: uma falha aqui nunca derruba a análise de radar.
+    O traceback vai só para o log do servidor (stderr); o usuário recebe uma frase simples."""
+    extras = {} if extras is None else extras
+    for nome in nomes:
+        modulo = __import__(f"arara_pipeline.{nome}", fromlist=["rodar"])
         try:
             modulo.rodar(ctx, extras, progresso)
-        except Exception as e:  # noqa: BLE001
-            ctx["avisos"].append(f"etapa {nome} falhou e foi ignorada: {type(e).__name__}: {e}")
+        except Exception:  # noqa: BLE001
+            traceback.print_exc(file=sys.stderr)
+            ctx["avisos"].append(FALHA_ETAPA[nome])
+            if nome == "optical_stage":
+                extras["validacao"] = {"status": "not_optically_validated", "reason": FALHA_ETAPA[nome]}
     return extras
 
 
 def main(argv=None):
+    # o backend lê o stdout como UTF-8; no Windows o padrão do pipe seria a página de código local
+    for fluxo in (sys.stdout, sys.stderr):
+        if hasattr(fluxo, "reconfigure"):
+            fluxo.reconfigure(encoding="utf-8")
     ap = argparse.ArgumentParser(description=__doc__.split("\n")[0])
     ap.add_argument("--spec", required=True)
     ap.add_argument("--out", required=True)
