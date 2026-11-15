@@ -1,0 +1,8 @@
+services:
+  caddy:
+    labels:
+      traefik.enable: "true"
+      traefik.http.routers.arara.rule: Host("arara.example.org")
+      traefik.http.routers.arara.entrypoints: websecure
+      traefik.http.routers.arara.tls.certresolver: letsencrypt
+      traefik.http.services.arara.loadbalancer.server.port: "80"

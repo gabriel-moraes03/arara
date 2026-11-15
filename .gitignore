@@ -36,3 +36,6 @@ baixados_temp/
 
 # seeds da VPS (gerados por deploy/gerar_seeds.py; vão por scp, não pelo Git)
 deploy/seed/*.gz
+
+# override do Traefik com o domínio real (cópia local de deploy/docker-compose.traefik.example.yml)
+deploy/docker-compose.traefik.yml

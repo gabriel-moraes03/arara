@@ -19,6 +19,7 @@ reason. Measurement is kept separate from cause: the radar says where there is e
 
 - Live app: https://arara.gabrielmoraes.tech
 - Demo video (30 s): https://www.youtube.com/watch?v=QIAv4xKA5V8
+- Space Apps team page: https://www.spaceappschallenge.org/2026/find-a-team/arara/
 
 ## Validation
 
@@ -178,14 +179,14 @@ reservoirs in southern Brazil, and the decision to validate against official ANA
 outputs were reviewed and tested by the team, and all reported results come from real NISAR data
 processed by our pipeline.
 
-The demo video was edited with AI assistance and carries an 'AI-assisted edit' watermark; its
-background music and sound effects were generated with AI-assisted code; the narration is our
-own. The ARARA logo was created with AI assistance.
+The demo video was edited with AI assistance and carries a visible 'AI-assisted edit' watermark;
+its background music and sound effects were generated with AI-assisted code; the narration is
+our own. The ARARA logo was created with AI assistance.
 
 ## Team
 
 Team **ARARA** — NASA Space Apps Challenge 2026, challenge *Dancing with the SARs*, local event
-Uberlândia, Brazil. Team page: https://www.spaceappschallenge.org/2026/find-a-team/arara/
+Uberlândia, Brazil.
 
 | Member | GitHub | LinkedIn |
 |---|---|---|

@@ -109,6 +109,49 @@ docker compose -f docker-compose.prod.yml restart
 
 Parar sem perder dados: `docker compose -f docker-compose.prod.yml down` (nunca `down -v`, que apaga os volumes).
 
+## Atrás de um Traefik já existente
+
+Quando a VPS já tem um Traefik ocupando as portas 80 e 443, o Caddy do Arara fica atrás dele, sem
+publicar essas portas nem pedir certificado: quem termina o HTTPS é o Traefik.
+
+1. Em `deploy/.env`, tire o Caddy das portas do Traefik e deixe o domínio vazio (o Caddy serve HTTP
+   puro na 80 interna):
+
+   ```
+   HTTP_PORT=8088
+   HTTPS_PORT=8443
+   DOMAIN=
+   ```
+
+2. Copie o exemplo (o arquivo copiado fica fora do Git) e troque `arara.example.org` pelo seu domínio:
+
+   ```
+   cp docker-compose.traefik.example.yml docker-compose.traefik.yml
+   nano docker-compose.traefik.yml
+   ```
+
+   A porta da label `loadbalancer.server.port` é a **80 interna** do container, não a `HTTP_PORT`: o
+   Traefik fala direto com o IP do container, na rede Docker. Por isso o Traefik precisa alcançar a
+   rede do compose do Arara (`arara-prod_default`).
+
+3. Todo comando passa a usar os dois arquivos:
+
+   ```
+   docker compose -f docker-compose.prod.yml -f docker-compose.traefik.yml up -d --build
+   docker compose -f docker-compose.prod.yml -f docker-compose.traefik.yml ps
+   ```
+
+   O `restore.sh` só usa o `docker-compose.prod.yml`; depois dele, recrie o Caddy com as labels:
+   `docker compose -f docker-compose.prod.yml -f docker-compose.traefik.yml up -d caddy`.
+
+Erros comuns:
+
+- Crases ou aspas perdidas na regra `Host`: tem de ser `Host("arara.exemplo.org")` (ou com crases,
+  `` Host(`arara.exemplo.org`) ``), com o domínio inteiro entre os delimitadores.
+- `ParseBool` em `traefik.enable`: no formato de lista (`- "traefik.enable=true"`), aspas duplas em
+  volta do `true` (`- traefik.enable="true"`) chegam ao Traefik como texto com aspas e ele recusa. Use o
+  formato de mapa do exemplo ou a lista sem aspas internas.
+
 ## Modo evento: o que está ligado e desligado
 
 | Variável (deploy/.env) | Padrão | Efeito |
